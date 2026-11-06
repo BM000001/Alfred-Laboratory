@@ -115,8 +115,8 @@
 
 ### Agenda e divergência de arquitetura
 - A branch `develop-app` contém importação manual `.ics` e implementação nativa Apple Calendar/EventKit, incluindo ponte Swift/TypeScript, seleção de calendários, snapshots completos e reconciliação local.
-- A integração Google Calendar continua **não implementada**. O documento `docs/integracao-calendarios.md` descrevia OAuth PKCE nativo e leitura somente; isso diverge da decisão expressa do usuário: Google Apps Script, sincronização bidirecional, leitura/escrita e confirmação individual de cada escrita.
-- Não iniciar a implementação Google até alinhar a especificação. Preservar a integração Apple já existente como provider independente; não substituir nem remover esse trabalho.
+- A integração Google Calendar continua **não implementada**, mas a arquitetura está agora confirmada pelo usuário: Google Apps Script como Web App, sincronização bidirecional (manual e automática), leitura/escrita e confirmação individual explícita antes de cada criação, atualização ou exclusão remota.
+- A especificação anterior de OAuth PKCE nativo e leitura somente foi substituída na documentação pela decisão confirmada. Preservar Apple/EventKit como provider independente; não substituir nem remover esse trabalho.
 - O roadmap anterior também estava desatualizado sobre a integração Apple. A branch `docs/reconcile-calendar-state-2026-11-06` registra a correção e a divergência para revisão.
 
 ### Próximos passos recomendados
