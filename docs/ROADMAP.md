@@ -23,7 +23,7 @@ O roadmap descreve o estado verificável do produto. Uma funcionalidade só é c
 - [x] Importação de arquivos iCalendar (.ics), com prévia e confirmação.
 - [x] Disciplinas, tópicos, anotações, conclusão e acompanhamento de progresso.
 - [x] Leitura do Calendário Apple via EventKit no contêiner nativo iOS, com seleção de calendários, upsert idempotente e reconciliação protegida por snapshot completo (implementação presente em `develop-app`; ainda não validada em iPhone real).
-- [ ] Integração Google Calendar — não implementada. A decisão registrada pelo usuário é Google Apps Script, sincronização bidirecional e permissões de leitura/escrita com confirmação individual das operações de escrita; a especificação atual de OAuth PKCE nativo e somente leitura diverge dessa decisão e precisa ser alinhada antes da implementação.
+- [ ] Integração Google Calendar via Google Apps Script — arquitetura confirmada pelo usuário: Web App, sincronização bidirecional manual/automática, leitura/escrita e confirmação individual antes de cada criação, atualização ou exclusão remota. Implementação ainda não iniciada.
 - [ ] Validar o contêiner nativo iOS e a experiência Safari/PWA em dispositivo real; build verde no CI não substitui testes físicos.
 - [ ] Tratamento de eventos recorrentes na importação — atualmente ignorados com aviso.
 
@@ -76,7 +76,7 @@ O roadmap descreve o estado verificável do produto. Uma funcionalidade só é c
 - [ ] Avaliar notificações configuráveis e comandos por voz, sem comprometer privacidade.
 
 ## Próximas prioridades
-1. Alinhar a especificação Google Calendar com as decisões explícitas do usuário (Google Apps Script, sincronização bidirecional e leitura/escrita com confirmação individual) antes de iniciar implementação.
+1. Projetar e implementar a integração Google Calendar via Apps Script conforme a arquitetura confirmada; definir contrato seguro, idempotência, sync tokens, conflitos e confirmação por escrita.
 2. Homologar a implementação Apple/EventKit em iPhone físico, incluindo permissão, seleção de calendários, eventos recorrentes, reconciliação e retorno ao primeiro plano.
 3. Validar o OCR local em iPhone/Safari, medir o peso dos assets (25,89 MiB preparados no CI) e avaliar divisão do bundle principal (aproximadamente 917 kB sem gzip).
 4. Executar o roteiro manual no iPhone/Safari, incluindo upload, leitura, flashcards, simulados, offline, backup/restauração e persistência.
