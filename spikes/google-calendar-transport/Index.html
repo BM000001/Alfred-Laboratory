@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Alfred transport bridge</title>
+  </head>
+  <body>
+    <p id="status">Ponte de comunicação do Alfred carregada.</p>
+    <script>
+      (() => {
+        'use strict';
+
+        const CHANNEL = 'alfred-google-calendar-transport-spike';
+        const VERSION = 1;
+        const ALLOWED_PARENT_ORIGINS = new Set([
+          'https://bm000001.github.io',
+          'http://localhost:5173',
+          'http://127.0.0.1:5173'
+        ]);
+
+        function isRequest(value) {
+          return value &&
+            value.channel === CHANNEL &&
+            value.protocolVersion === VERSION &&
+            value.type === 'request' &&
+            value.action === 'health' &&
+            typeof value.requestId === 'string' &&
+            value.requestId.length > 0 &&
+            value.requestId.length <= 100;
+        }
+
+        window.addEventListener('message', (event) => {
+          if (event.source !== window.parent) return;
+          if (!ALLOWED_PARENT_ORIGINS.has(event.origin)) return;
+          if (!isRequest(event.data)) return;
+
+          const request = {
+            protocolVersion: VERSION,
+            requestId: event.data.requestId
+          };
+
+          google.script.run
+            .withSuccessHandler((response) => {
+              window.parent.postMessage({
+                channel: CHANNEL,
+                protocolVersion: VERSION,
+                type: 'response',
+                requestId: request.requestId,
+                response
+              }, event.origin);
+              document.getElementById('status').textContent = 'Teste de transporte concluído.';
+            })
+            .withFailureHandler((error) => {
+              window.parent.postMessage({
+                channel: CHANNEL,
+                protocolVersion: VERSION,
+                type: 'error',
+                requestId: request.requestId,
+                error: String(error && error.message ? error.message : 'Falha no Apps Script.')
+              }, event.origin);
+              document.getElementById('status').textContent = 'Falha no teste de transporte.';
+            })
+            .health(request);
+        });
+
+        // The parent accepts this only from the exact iframe window and a Google origin.
+        window.parent.postMessage({
+          channel: CHANNEL,
+          protocolVersion: VERSION,
+          type: 'ready'
+        }, 'https://bm000001.github.io');
+
+        // Local development origins are also supported for the spike.
+        window.parent.postMessage({
+          channel: CHANNEL,
+          protocolVersion: VERSION,
+          type: 'ready'
+        }, 'http://localhost:5173');
+        window.parent.postMessage({
+          channel: CHANNEL,
+          protocolVersion: VERSION,
+          type: 'ready'
+        }, 'http://127.0.0.1:5173');
+      })();
+    </script>
+  </body>
+</html>
