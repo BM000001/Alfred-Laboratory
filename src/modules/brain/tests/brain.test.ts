@@ -28,15 +28,15 @@ describe('Brain foundation', () => {
     expect(classifyIntent('Como está meu progresso acadêmico?').intent).toBe('studies');
   });
 
-  it('delegates generation to the configured provider and returns classification metadata', async () => {
+  it('delegates unknown requests to the configured provider and returns classification metadata', async () => {
     const provider: AIProvider = {
       id: 'test-provider',
       generate: vi.fn(async () => ({ message: 'Há duas tarefas.', usedTools: ['tasks.list'], warnings: [] })),
     };
     const brain = new Brain({ provider });
-    const result = await brain.process([message], context);
+    const result = await brain.process([{ ...message, content: 'Conte uma piada' }], context);
     expect(result.message).toBe('Há duas tarefas.');
-    expect(result.intent).toBe('tasks');
+    expect(result.intent).toBe('unknown');
     expect(result.providerId).toBe('test-provider');
     expect(provider.generate).toHaveBeenCalledOnce();
   });
