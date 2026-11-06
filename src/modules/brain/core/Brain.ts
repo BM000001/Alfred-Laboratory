@@ -75,7 +75,7 @@ export class Brain {
         return {
           message: 'Não foi possível executar a consulta porque a ferramenta necessária não está disponível.',
           usedTools: [],
-          warnings: [\`Ferramenta obrigatória não registrada: \${toolId}. Execução bloqueada em modo fail-closed.\`],
+          warnings: ['Ferramenta obrigatória não registrada: ' + toolId + '. Execução bloqueada em modo fail-closed.'],
           intent: classification.intent,
           providerId: this.provider.id,
         };
