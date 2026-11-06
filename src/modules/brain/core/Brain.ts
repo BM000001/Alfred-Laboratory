@@ -71,7 +71,48 @@ export class Brain {
     const toolId = readToolByIntent[classification.intent];
     if (toolId) {
       const tool = this.tools.get(toolId);
-      if (tool) {
+      if (!tool) {
+        return {
+          message: 'Não foi possível executar a consulta porque a ferramenta necessária não está disponível.',
+          usedTools: [],
+          warnings: [`Ferramenta obrigatória não registrada: ${toolId}. Execução bloqueada em modo fail-closed.`],
+          intent: classification.intent,
+          providerId: this.provider.id,
+        };
+      }
+      if (tool.risk !== 'read' || tool.approval !== 'never') {
+        return {
+          message: 'A consulta foi bloqueada porque a ferramenta registrada não está configurada como somente leitura.',
+          usedTools: [],
+          warnings: ['Ferramenta insegura bloqueada pelo Brain; nenhuma execução foi realizada.'],
+          intent: classification.intent,
+          providerId: this.provider.id,
+        };
+      }
+
+      const input = classification.intent === 'studies'
+        ? { query: extractStudyQuery(prompt) }
+        : {};
+      const result = await this.tools.executeRead(toolId, input);
+      if (!isReadToolResult(result)) {
+        return {
+          message: 'A ferramenta retornou um formato inesperado. Não vou apresentar dados que não consegui validar.',
+          usedTools: [],
+          warnings: ['Formato de resposta inválido para ferramenta de consulta.'],
+          intent: classification.intent,
+          providerId: this.provider.id,
+        };
+      }
+      return {
+        message: result.summary + '\\n' + (result.items.length ? result.items.map((item) => '• ' + item).join('\\n') : 'Não há itens para mostrar.'),
+        usedTools: [toolId],
+        warnings: ['Consulta somente leitura. Nenhum dado foi alterado.'],
+        intent: classification.intent,
+        providerId: this.provider.id,
+      };
+    }
+
+    const response
         if (tool.risk !== 'read' || tool.approval !== 'never') {
           return {
             message: 'A consulta foi bloqueada porque a ferramenta registrada não está configurada como somente leitura.',
