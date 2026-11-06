@@ -94,3 +94,33 @@
 - Não afirmar testes locais: validação oficial deve ser comprovada no GitHub Actions.
 - Atualizar este documento em cada marco confirmado.
 - Não criar registros fictícios nem incluir segredos ou dados pessoais.
+
+## Estado verificado — 2026-11-06 (diagnóstico de continuidade)
+
+### Repositório e branches
+- Repositório de trabalho confirmado: `BM000001/Alfred-Laboratory`; permissões GitHub de leitura e escrita disponíveis.
+- Branch padrão: `main`. Ela contém a governança/documentação do laboratório e não possui ancestral comum com `develop-app`; não usar `main` como base de desenvolvimento do aplicativo.
+- Baseline somente leitura: `baseline/alfred-main`, HEAD `51c3b4fdaacbaa3a6259aecf5e480ed58257877d`.
+- Branch de integração do app: `develop-app`, HEAD `63fea4826da8ebc5968bac7c5e40fa1a59bf05ea`; está 5 commits à frente da baseline e não está protegida por branch protection no estado consultado.
+- PRs #1 e #2 do Laboratory estão fechados e merged em `develop-app`. Nenhum PR aberto foi encontrado. As branches de experimento correspondentes continuam no repositório; não apagá-las.
+- Este diagnóstico não consultou nem modificou o repositório original `BM000001/Alfred`.
+
+### Validação confirmada no HEAD de develop-app
+- Workflow `Validate Alfred`, run `42268011765`: sucesso. Instalação de dependências, testes e build concluídos.
+- Testes: **232 aprovados em 38 arquivos de teste**, nenhum reprovado.
+- Auditoria da instalação no CI: **0 vulnerabilidades** reportadas.
+- Build de produção: aprovado. O bundle JavaScript principal tem aproximadamente 917 kB (274 kB gzip), acima do aviso de 500 kB do Vite; os assets locais de OCR preparados somam aproximadamente 25,89 MiB. Avaliar divisão de bundle e custo de carregamento em mobile antes de otimizar.
+- Workflow `Alfred iOS Build`, run `42268011968`: sucesso; geração do projeto Xcode e compilação para simulador iOS concluídas.
+- Esses resultados são do CI. Não comprovam instalação, permissões EventKit, sincronização ou funcionamento em iPhone físico/Safari.
+
+### Agenda e divergência de arquitetura
+- A branch `develop-app` contém importação manual `.ics` e implementação nativa Apple Calendar/EventKit, incluindo ponte Swift/TypeScript, seleção de calendários, snapshots completos e reconciliação local.
+- A integração Google Calendar continua **não implementada**, mas a arquitetura está agora confirmada pelo usuário: Google Apps Script como Web App, sincronização bidirecional (manual e automática), leitura/escrita e confirmação individual explícita antes de cada criação, atualização ou exclusão remota.
+- A especificação anterior de OAuth PKCE nativo e leitura somente foi substituída na documentação pela decisão confirmada. Preservar Apple/EventKit como provider independente; não substituir nem remover esse trabalho.
+- O roadmap anterior também estava desatualizado sobre a integração Apple. A branch `docs/reconcile-calendar-state-2026-11-06` registra a correção e a divergência para revisão.
+
+### Próximos passos recomendados
+1. Revisar o PR de documentação que registra o estado atual e a decisão Google pendente; não fazer merge automaticamente.
+2. Confirmar que a arquitetura Google permanece Google Apps Script + sincronização bidirecional + leitura/escrita com confirmação individual; depois planejar a implementação em branch própria.
+3. Homologar a integração Apple no iPhone físico somente se ela continuar no escopo; o CI iOS não substitui essa etapa.
+4. Avaliar o bundle principal e os 25,89 MiB de assets OCR em dispositivo móvel.

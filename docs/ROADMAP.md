@@ -22,7 +22,9 @@ O roadmap descreve o estado verificável do produto. Uma funcionalidade só é c
 - [x] Detecção de conflitos de horário.
 - [x] Importação de arquivos iCalendar (.ics), com prévia e confirmação.
 - [x] Disciplinas, tópicos, anotações, conclusão e acompanhamento de progresso.
-- [ ] Sincronização direta com provedores de calendário — não implementada; a importação .ics é manual.
+- [x] Leitura do Calendário Apple via EventKit no contêiner nativo iOS, com seleção de calendários, upsert idempotente e reconciliação protegida por snapshot completo (implementação presente em `develop-app`; ainda não validada em iPhone real).
+- [ ] Integração Google Calendar via Google Apps Script — arquitetura confirmada pelo usuário: Web App, sincronização bidirecional manual/automática, leitura/escrita e confirmação individual antes de cada criação, atualização ou exclusão remota. Implementação ainda não iniciada.
+- [ ] Validar o contêiner nativo iOS e a experiência Safari/PWA em dispositivo real; build verde no CI não substitui testes físicos.
 - [ ] Tratamento de eventos recorrentes na importação — atualmente ignorados com aviso.
 
 ## Etapa 3A — Central de Estudos completa
@@ -74,11 +76,12 @@ O roadmap descreve o estado verificável do produto. Uma funcionalidade só é c
 - [ ] Avaliar notificações configuráveis e comandos por voz, sem comprometer privacidade.
 
 ## Próximas prioridades
-1. Confirmar a conclusão do CI e da publicação da última integração da Central de Estudos; não considerar publicada enquanto os workflows estiverem pendentes.
-2. Validar o OCR local em CI, medir o peso dos assets e testar em iPhone/Safari antes de considerá-lo concluído.
-3. Executar o roteiro manual no iPhone/Safari, incluindo upload, leitura, flashcards, simulados, offline e persistência.
-4. Adicionar extração local de DOCX/PPTX após estabilizar o fluxo PDF/OCR.
-5. Só então avaliar recursos generativos ou integrações externas, mantendo contexto mínimo e autorização explícita.
+1. Projetar e implementar a integração Google Calendar via Apps Script conforme a arquitetura confirmada; definir contrato seguro, idempotência, sync tokens, conflitos e confirmação por escrita.
+2. Homologar a implementação Apple/EventKit em iPhone físico, incluindo permissão, seleção de calendários, eventos recorrentes, reconciliação e retorno ao primeiro plano.
+3. Validar o OCR local em iPhone/Safari, medir o peso dos assets (25,89 MiB preparados no CI) e avaliar divisão do bundle principal (aproximadamente 917 kB sem gzip).
+4. Executar o roteiro manual no iPhone/Safari, incluindo upload, leitura, flashcards, simulados, offline, backup/restauração e persistência.
+5. Adicionar extração local de DOCX/PPTX após estabilizar os fluxos PDF/OCR e calendário.
+6. Só então avaliar recursos generativos ou outras integrações externas, mantendo contexto mínimo e autorização explícita.
 
 ## Regra de conclusão
 Uma tarefa só pode ser marcada como concluída quando estiver implementada, revisada e validada pelo tipo de teste apropriado. Registre resultados e limitações em `CONTINUIDADE.md`.
