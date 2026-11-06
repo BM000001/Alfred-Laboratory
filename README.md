@@ -1,28 +1,42 @@
 # Alfred Laboratory
 
-Ambiente independente de experimentação e validação do Alfred.
+Ambiente independente para experimentar, testar e revisar melhorias do Alfred sem alterar o repositório principal.
 
-## Objetivo
+## Repositórios
 
-Este repositório é destinado a testes de interface, integrações, automações e novas funcionalidades sem alterar o repositório principal `BM000001/Alfred`.
+- **Projeto original:** [BM000001/Alfred](https://github.com/BM000001/Alfred)
+- **Laboratório:** [BM000001/Alfred-Laboratory](https://github.com/BM000001/Alfred-Laboratory)
 
-## Regra de segurança
+## Branches
 
-- O repositório `BM000001/Alfred` continua sendo a referência estável.
-- Nenhuma alteração neste laboratório modifica automaticamente o Alfred principal.
-- Experimentos devem ser feitos em branches próprias e submetidos a revisão antes de qualquer integração.
-- Não remover nem substituir funcionalidades existentes sem autorização explícita.
-- Antes de propor integração, executar os testes disponíveis e registrar arquivos alterados, riscos e plano de reversão.
-- Segredos, tokens, certificados e dados pessoais reais não devem ser versionados.
+- `main`: regras e documentação estáveis do laboratório.
+- `develop`: integração de alterações que passaram por revisão.
+- `baseline/alfred-main`: snapshot de referência importado do Alfred original. Trate como somente leitura.
+- `experiment/<assunto>`: implementação isolada de uma melhoria.
+- `fix/<assunto>`: correção isolada.
+
+A baseline foi importada. Seu commit de referência é `51c3b4fdaacbaa3a6259aecf5e480ed58257877d`.
 
 ## Fluxo recomendado
 
-1. Criar uma branch `experiment/<assunto>` a partir de `main`.
-2. Implementar e testar a mudança isoladamente.
-3. Registrar resultados, limitações e possíveis regressões.
-4. Abrir Pull Request para `main` deste laboratório.
-5. Somente depois de validado, preparar uma proposta de integração para `BM000001/Alfred` por Pull Request — nunca por push direto.
+1. Crie uma branch `experiment/<assunto>` ou `fix/<assunto>` a partir de `baseline/alfred-main`.
+2. Faça mudanças pequenas e limitadas ao objetivo da tarefa.
+3. Execute testes e build; registre os comandos e resultados reais.
+4. Abra um Pull Request da branch de trabalho para `develop`.
+5. Revise o diff, os testes, os riscos e a preservação das funcionalidades existentes.
+6. Depois da validação, promova as mudanças de `develop` para `main` por Pull Request.
+7. Qualquer integração no repositório original deve ser uma etapa separada, por Pull Request próprio e autorização explícita.
 
-## Estado da cópia-base
+## Regras de segurança
 
-O repositório foi inicializado como laboratório independente. A importação integral do snapshot do Alfred principal ainda precisa ser concluída e verificada antes de iniciar experimentos sobre o código-fonte.
+- Nunca faça push de experimentos diretamente para o repositório original.
+- Não altere nem exclua a branch `baseline/alfred-main`.
+- Não faça merge, force-push ou exclusão de branches sem autorização explícita.
+- Preserve APIs, componentes, rotas, estilos, dados e integrações existentes.
+- Não remova funcionalidades não relacionadas à tarefa.
+- Nunca versione tokens, chaves, certificados, cookies ou dados pessoais reais.
+- Não declare testes aprovados sem executá-los.
+
+## Documentação
+
+Leia [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) antes de iniciar um trabalho com agentes de IA. Use o [template de Pull Request](.github/PULL_REQUEST_TEMPLATE.md) para registrar escopo, testes, riscos e plano de reversão.
