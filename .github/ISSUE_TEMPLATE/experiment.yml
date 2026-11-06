@@ -1,0 +1,33 @@
+name: Proposta de experimento
+description: Planejar uma mudança isolada no Alfred Laboratory
+title: "[Experimento]: "
+labels: ["experiment"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Objetivo
+      description: Qual problema ou oportunidade será tratado?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Escopo
+      description: Quais partes podem ser alteradas? O que deve permanecer intocado?
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Critérios de validação
+      description: Quais testes, build ou verificações demonstram que funcionou?
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Riscos e reversão
+      description: Possíveis regressões e como reverter a mudança.
+    validations:
+      required: true
