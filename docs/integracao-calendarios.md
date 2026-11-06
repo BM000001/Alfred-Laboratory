@@ -77,3 +77,19 @@ Adicionar “Conectar Google Agenda” com OAuth 2.0 usando Authorization Code +
 - [x] Atualização automática da Agenda aberta após notificações de mudança do EventKit e retorno do app ao primeiro plano.
 - [ ] Sincronização em segundo plano com o app suspenso e testes em dispositivo real.
 - [ ] Integração Google Agenda via OAuth.
+
+
+## Alinhamento obrigatório das decisões Google (2026-11-06)
+
+A especificação acima descreve OAuth 2.0 Authorization Code + PKCE no cliente nativo iOS e sincronização inicialmente somente de leitura. Isso **não corresponde** à decisão registrada pelo usuário para a integração Google Calendar:
+
+- Fonte: Google Calendar.
+- Backend/ponte: Google Apps Script.
+- Ambiente principal: Safari no iPhone.
+- Sincronização: manual e automática, nos dois sentidos.
+- Permissões: leitura e escrita.
+- Toda criação, atualização ou exclusão remota exige confirmação individual explícita.
+- O deployment do Apps Script deve executar como o usuário que acessa o Web App e ser acessível somente pelo próprio usuário.
+- Credenciais e tokens não devem ser solicitados ou enviados pelo chat, nem persistidos em armazenamento web inseguro.
+
+Portanto, a seção "Etapa Google (segunda)" e o modelo comum de sincronização precisam ser revisados antes de qualquer implementação Google. Não iniciar uma implementação OAuth nativa somente de leitura nem substituir a decisão por outra arquitetura sem autorização. A integração Apple/EventKit existente deve permanecer independente e preservada; ela não substitui a integração Google solicitada.
