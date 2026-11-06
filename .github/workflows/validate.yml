@@ -3,10 +3,12 @@ name: Validate Alfred
 on:
   pull_request:
     branches:
+      - develop-app
       - develop
       - main
   push:
     branches:
+      - develop-app
       - develop
 
 permissions:
