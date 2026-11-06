@@ -10,7 +10,7 @@ Ambiente independente para experimentar, testar e revisar melhorias do Alfred se
 ## Branches
 
 - `main`: regras e documentação estáveis do laboratório.
-- `develop`: integração de alterações que passaram por revisão.
+- `develop-app`: integração de alterações no código do Alfred; deriva da baseline importada.
 - `baseline/alfred-main`: snapshot de referência importado do Alfred original. Trate como somente leitura.
 - `experiment/<assunto>`: implementação isolada de uma melhoria.
 - `fix/<assunto>`: correção isolada.
@@ -22,9 +22,9 @@ A baseline foi importada. Seu commit de referência é `51c3b4fdaacbaa3a6259aecf
 1. Crie uma branch `experiment/<assunto>` ou `fix/<assunto>` a partir de `baseline/alfred-main`.
 2. Faça mudanças pequenas e limitadas ao objetivo da tarefa.
 3. Execute testes e build; registre os comandos e resultados reais.
-4. Abra um Pull Request da branch de trabalho para `develop`.
+4. Abra um Pull Request da branch de trabalho para `develop-app`.
 5. Revise o diff, os testes, os riscos e a preservação das funcionalidades existentes.
-6. Depois da validação, promova as mudanças de `develop` para `main` por Pull Request.
+6. Depois da validação, promova as mudanças de `develop-app` para `main` por Pull Request.
 7. Qualquer integração no repositório original deve ser uma etapa separada, por Pull Request próprio e autorização explícita.
 
 ## Regras de segurança
