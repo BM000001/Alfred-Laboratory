@@ -22,7 +22,9 @@ O roadmap descreve o estado verificável do produto. Uma funcionalidade só é c
 - [x] Detecção de conflitos de horário.
 - [x] Importação de arquivos iCalendar (.ics), com prévia e confirmação.
 - [x] Disciplinas, tópicos, anotações, conclusão e acompanhamento de progresso.
-- [ ] Sincronização direta com provedores de calendário — não implementada; a importação .ics é manual.
+- [x] Leitura do Calendário Apple via EventKit no contêiner nativo iOS, com seleção de calendários, upsert idempotente e reconciliação protegida por snapshot completo (implementação presente em `develop-app`; ainda não validada em iPhone real).
+- [ ] Integração Google Calendar — não implementada. A decisão registrada pelo usuário é Google Apps Script, sincronização bidirecional e permissões de leitura/escrita com confirmação individual das operações de escrita; a especificação atual de OAuth PKCE nativo e somente leitura diverge dessa decisão e precisa ser alinhada antes da implementação.
+- [ ] Validar o contêiner nativo iOS e a experiência Safari/PWA em dispositivo real; build verde no CI não substitui testes físicos.
 - [ ] Tratamento de eventos recorrentes na importação — atualmente ignorados com aviso.
 
 ## Etapa 3A — Central de Estudos completa
