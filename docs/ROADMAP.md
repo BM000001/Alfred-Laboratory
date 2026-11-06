@@ -76,11 +76,12 @@ O roadmap descreve o estado verificável do produto. Uma funcionalidade só é c
 - [ ] Avaliar notificações configuráveis e comandos por voz, sem comprometer privacidade.
 
 ## Próximas prioridades
-1. Confirmar a conclusão do CI e da publicação da última integração da Central de Estudos; não considerar publicada enquanto os workflows estiverem pendentes.
-2. Validar o OCR local em CI, medir o peso dos assets e testar em iPhone/Safari antes de considerá-lo concluído.
-3. Executar o roteiro manual no iPhone/Safari, incluindo upload, leitura, flashcards, simulados, offline e persistência.
-4. Adicionar extração local de DOCX/PPTX após estabilizar o fluxo PDF/OCR.
-5. Só então avaliar recursos generativos ou integrações externas, mantendo contexto mínimo e autorização explícita.
+1. Alinhar a especificação Google Calendar com as decisões explícitas do usuário (Google Apps Script, sincronização bidirecional e leitura/escrita com confirmação individual) antes de iniciar implementação.
+2. Homologar a implementação Apple/EventKit em iPhone físico, incluindo permissão, seleção de calendários, eventos recorrentes, reconciliação e retorno ao primeiro plano.
+3. Validar o OCR local em iPhone/Safari, medir o peso dos assets (25,89 MiB preparados no CI) e avaliar divisão do bundle principal (aproximadamente 917 kB sem gzip).
+4. Executar o roteiro manual no iPhone/Safari, incluindo upload, leitura, flashcards, simulados, offline, backup/restauração e persistência.
+5. Adicionar extração local de DOCX/PPTX após estabilizar os fluxos PDF/OCR e calendário.
+6. Só então avaliar recursos generativos ou outras integrações externas, mantendo contexto mínimo e autorização explícita.
 
 ## Regra de conclusão
 Uma tarefa só pode ser marcada como concluída quando estiver implementada, revisada e validada pelo tipo de teste apropriado. Registre resultados e limitações em `CONTINUIDADE.md`.
