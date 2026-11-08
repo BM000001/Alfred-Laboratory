@@ -1,0 +1,33 @@
+name: Prepare Alfred Laboratory main preview
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/prepare-main-preview.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/promote-laboratory-app-to-main
+          fetch-depth: 0
+      - name: Import develop-app into review branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main develop-app
+          git checkout origin/develop-app -- .
+          git show origin/main:README.md > README.md
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path(".github/workflows/deploy-pages.yml")
+          s = p.read_text().replace("branches: [develop-app]", "branches: [main]")
+          p.write_text(s)
+          PY
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "chore: stage app for Laboratory main preview"
+          git push origin HEAD:chore/promote-laboratory-app-to-main
