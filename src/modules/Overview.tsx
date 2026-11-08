@@ -119,7 +119,7 @@ export function Overview({ onNavigate }: Props) {
   const todayTopics = topics.filter((topic) => topic.status === 'pending').slice(0, 4);
   const studyProgress = summarizeStudyProgress(topics);
   const focusSummary = summarizeFocusSessions(focusSessions, now);
-  const briefingItems = buildDailyBriefing(tasks, appointments, now);
+  const briefingItems = buildDailyBriefing(tasks, appointments, now, topics);
   const mascotMood = overdueTasks.length > 0 ? 'warning' : briefingItems.length > 0 ? 'curious' : 'idle';
 
   function saveCity(event: FormEvent<HTMLFormElement>) {
@@ -163,7 +163,7 @@ export function Overview({ onNavigate }: Props) {
           <div className="dashboard-briefing-content">
             <span className="card-label">CONSELHO DO ALFRED</span>
             <h2 id="dashboard-briefing-title">{overdueTasks.length > 0 ? 'Vamos resolver o que ficou para trás.' : briefingItems.length > 0 ? 'Um ponto de atenção para o seu dia.' : 'Tudo em ordem por aqui.'}</h2>
-            <p>{overdueTasks.length > 0 ? `Você tem ${overdueTasks.length} tarefa(s) em atraso. Vale começar revisando os prazos mais antigos.` : briefingItems.length > 0 ? 'Separei alguns itens que merecem sua atenção, considerando prazos e compromissos próximos.' : 'Não encontrei prazos urgentes ou compromissos imediatos. Aproveite para avançar com tranquilidade.'}</p>
+            <p>{overdueTasks.length > 0 ? `Você tem ${overdueTasks.length} tarefa(s) em atraso. Vale começar revisando os prazos mais antigos.` : briefingItems.length > 0 ? 'Separei alguns itens que merecem sua atenção, considerando prazos, compromissos e conteúdos de estudo pendentes.' : 'Não encontrei prazos urgentes ou compromissos imediatos. Aproveite para avançar com tranquilidade.'}</p>
             {briefingItems.length > 0 && <ul className="dashboard-briefing-list">{briefingItems.slice(0, 3).map((item) => <li key={item.id}><span>{item.reason}</span><strong>{item.title}</strong><button type="button" className="dashboard-link" onClick={() => onNavigate(item.target)}>Abrir →</button></li>)}</ul>}
           </div>
         </section>
