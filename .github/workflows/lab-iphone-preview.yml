@@ -1,0 +1,39 @@
+name: Laboratory iPhone homologation build
+
+on:
+  push:
+    branches:
+      - feat/iphone-homologation-pipeline
+  pull_request:
+    branches:
+      - develop-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Test
+        run: npm test
+      - name: Build for isolated Laboratory path
+        run: |
+          node scripts/copy-ocr-assets.mjs
+          npx tsc -b
+          npx vite build --base=/Alfred-Laboratory/
+          cp manifest.webmanifest apple-touch-icon-180.png icon-192.png icon-512.png icon-maskable-512.png dist/
+      - name: Upload build for inspection (not a public deployment)
+        uses: actions/upload-artifact@v4
+        with:
+          name: alfred-laboratory-iphone-preview
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
