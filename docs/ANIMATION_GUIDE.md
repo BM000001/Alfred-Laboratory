@@ -70,3 +70,10 @@ A implementação atual altera aura, indicador e inclinação sutil. Não afirma
 - Nenhum estado novo foi inventado: as animações usam as classes de humor já conectadas aos estados reais da interface.
 
 A piscada é parte do SVG externo. Caso um navegador ou contexto bloqueie animação SMIL/CSS em imagens SVG, o mascote continua estático e funcional; verificar esse comportamento em Safari iOS e navegadores desktop.
+
+
+## Reação de sucesso após ação autorizada
+
+A tela do Assistente agora ativa o estado visual `success` somente depois que `executeApprovedProposal` termina sem erro. A expressão permanece por aproximadamente 1,8 segundo e retorna ao estado apropriado da interface. Se a execução falhar, o mascote assume `warning`; não há celebração antecipada.
+
+O movimento de sucesso é curto e respeita `prefers-reduced-motion`. Ele não substitui a mensagem textual de confirmação nem o registro persistido da ação.
