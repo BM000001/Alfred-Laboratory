@@ -12,6 +12,7 @@ import { LocalAssistantProvider } from './assistant/localAssistant';
 import { Brain } from './brain';
 import { AssistantMemoryPanel } from './AssistantMemoryPanel';
 import { ManualExportPanel } from './ManualExportPanel';
+import { AlfredMascot } from '../components/AlfredMascot';
 import { appointmentRepository, assistantMessageRepository, memoryRepository, studyTopicRepository, taskRepository } from '../storage/repositories';
 
 function createMessage(role: AssistantMessage['role'], content: string): AssistantMessage {
@@ -371,7 +372,7 @@ export function Assistant() {
   return (
     <section className="assistant-module" aria-label="Assistente Alfred">
       <header className="assistant-heading">
-        <div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div>
+        <div className="assistant-heading-main"><AlfredMascot mood={loading || approving ? 'thinking' : 'idle'} compact /><div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div></div>
         <div className="assistant-heading-actions">
           <span className="assistant-status"><i aria-hidden="true" /> Local</span>
           <button type="button" className="secondary-action" onClick={() => setConfirmClear(true)} disabled={!historyReady || loading || approving || pendingProposal !== null}>Limpar conversa</button>
