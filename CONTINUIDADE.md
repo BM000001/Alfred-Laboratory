@@ -100,5 +100,7 @@
 - Escopo: preparar instruções Codex/ECC para o laboratório e um roteiro reproduzível de instalação e avaliação; nenhuma alteração no comportamento do Alfred, chamadas remotas ou dependências do app.
 - Arquivos: `AGENTS.md`, `docs/ECC-PILOTO.md`, `README.md` e este registro.
 - Validação executada localmente em Node.js 24: `npm test` passou (38 arquivos, 232 testes); `npm run build` passou. O build mostrou o aviso já existente de chunk JS acima de 500 kB.
-- Limitação: este ambiente não tem Codex CLI instalado; portanto, a instalação e execução dos agentes ECC ainda não foram verificadas aqui. O piloto só poderá ser considerado validado após instalar no Codespace, usar os fluxos ECC numa tarefa real e confirmar o CI do PR.
+- PR #17 aberto como rascunho para `develop-app`; primeiro commit do piloto `85922ad11abf38cb5390abc68ec68c5a8e9d91c6`; sem merge.
+- CI do primeiro commit aprovado: Validate Alfred (run `42520313470`) e Alfred CI (run `42520313445`), ambos com testes e build concluídos.
+- Limitação: este ambiente não tem Codex CLI instalado; portanto, a instalação e execução dos agentes ECC ainda não foram verificadas aqui. O piloto só será validado após instalar no Codespace e usar os fluxos ECC numa tarefa real.
 - Próximo passo: no Codespace, instalar o plugin nativo com os comandos de `docs/ECC-PILOTO.md`, revisar pedidos de confiança para hooks/MCP e aplicar o fluxo a uma tarefa pequena e real. Não fazer merge sem autorização explícita.
