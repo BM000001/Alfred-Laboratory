@@ -32,6 +32,21 @@ describe('buildDailyBriefing', () => {
     ], now);
     expect(result.map((item) => item.id)).toEqual(['task:t1', 'appointment:today', 'appointment:tomorrow']);
   });
+  it('includes a small number of pending study topics after urgent tasks and appointments', () => {
+    const topics = [
+      { id: 'older', disciplineId: 'math', title: 'Revisar funções', status: 'pending' as const, createdAt: '2026-10-20T10:00:00.000Z' },
+      { id: 'newer', disciplineId: 'web', title: 'Praticar DOM', status: 'pending' as const, createdAt: '2026-11-01T10:00:00.000Z' },
+      { id: 'done', disciplineId: 'web', title: 'HTML básico', status: 'completed' as const, createdAt: '2026-10-01T10:00:00.000Z' },
+    ];
+    const result = buildDailyBriefing([], [], now, topics);
+    expect(result.map((item) => item.id)).toEqual(['study:older', 'study:newer']);
+    expect(result[0]).toMatchObject({ kind: 'study', target: 'estudos', reason: 'Conteúdo pendente' });
+  });
+  it('keeps urgent items ahead of study suggestions', () => {
+    const topic = { id: 's1', disciplineId: 'math', title: 'Revisar funções', status: 'pending' as const, createdAt: '2026-10-20T10:00:00.000Z' };
+    const result = buildDailyBriefing([task({ dueDate: '2026-11-01' })], [], now, [topic]);
+    expect(result.map((item) => item.id)).toEqual(['task:t1', 'study:s1']);
+  });
   it('does not mutate source records', () => {
     const source = [task({ dueDate: '2026-11-01' })];
     const before = structuredClone(source);
