@@ -456,3 +456,22 @@
   .alfred-mascot--thinking>img { animation:none; }
   .alfred-mascot--curious>img { transition:none; }
 }
+
+
+/* Brief success response after an explicitly approved action finishes. */
+.alfred-mascot--success>img {
+  transform-origin: 50% 62%;
+  animation: alfred-success-bounce .62s ease-out 2;
+}
+.alfred-mascot--success .alfred-mascot-aura {
+  opacity: 1;
+  background: radial-gradient(ellipse,rgba(217,166,78,.38),rgba(217,166,78,0) 70%);
+}
+@keyframes alfred-success-bounce {
+  0%,100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-5px) scale(1.025); }
+  65% { transform: translateY(0) scale(.995); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alfred-mascot--success>img { animation:none; }
+}
