@@ -117,9 +117,10 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: /^agenda$/i }));
     fireEvent.click(await screen.findByRole('button', { name: /novo compromisso/i }));
 
+    const selectedDate = (screen.getByLabelText('Data de referência') as HTMLInputElement).value;
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Revisão de algoritmos' } });
-    fireEvent.change(screen.getByLabelText('Início'), { target: { value: '2026-11-03T08:00' } });
-    fireEvent.change(screen.getByLabelText('Término'), { target: { value: '2026-11-03T09:00' } });
+    fireEvent.change(screen.getByLabelText('Início'), { target: { value: `${selectedDate}T08:00` } });
+    fireEvent.change(screen.getByLabelText('Término'), { target: { value: `${selectedDate}T09:00` } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar compromisso' }));
 
     expect(await screen.findByRole('heading', { name: 'Revisão de algoritmos' })).toBeInTheDocument();
