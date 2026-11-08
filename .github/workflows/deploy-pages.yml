@@ -1,8 +1,8 @@
-name: Deploy Alfred to GitHub Pages
+name: Deploy Alfred Laboratory to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [develop-app]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
+  group: laboratory-github-pages
   cancel-in-progress: true
 
 jobs:
@@ -20,21 +20,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Install dependencies
         run: npm install
-
       - name: Run tests
         run: npm test
-
-      - name: Build application
+      - name: Build for Laboratory Pages
+        env:
+          ALFRED_PAGES_BASE: /Alfred-Laboratory/
         run: npm run build:pages
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -50,7 +47,6 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
       - name: Verify published site responds
         env:
           SITE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -59,11 +55,11 @@ jobs:
           for attempt in $(seq 1 12); do
             status=$(curl --silent --show-error --output /tmp/alfred-pages.html --write-out '%{http_code}' "$SITE_URL" || true)
             if [ "$status" = "200" ] && grep -q 'id="root"' /tmp/alfred-pages.html; then
-              echo "GitHub Pages is serving Alfred successfully at $SITE_URL"
+              echo "Laboratory Pages responds at $SITE_URL"
               exit 0
             fi
-            echo "Attempt $attempt: HTTP $status; waiting for Pages propagation..."
+            echo "Attempt $attempt: HTTP $status; retrying..."
             sleep 10
           done
-          echo "GitHub Pages did not serve the expected Alfred index at $SITE_URL"
+          echo "Laboratory Pages did not serve expected index"
           exit 1
