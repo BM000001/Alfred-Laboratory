@@ -41,19 +41,47 @@ O workflow `Alfred iOS Build` gera o projeto e tenta compilar para o simulador i
 
 O projeto Xcode pode ser gerado a partir da especificação XcodeGen. A compilação automática está configurada, mas ainda precisa concluir com sucesso. A interface da Agenda agora detecta a ponte nativa, oferece conectar/sincronizar no contêiner iOS e faz upsert dos eventos por `apple:<eventIdentifier>`, sem duplicar eventos nem substituir compromissos manuais. Cada resposta de sincronização informa `snapshotComplete`, os calendários consultados e os instantes exatos de início e fim usados pelo EventKit. A reconciliação só é executada se o snapshot estiver explicitamente completo, corresponder exatamente à seleção atual, tiver intervalo válido e todos os eventos tiverem identificadores, calendários e datas válidos. Se o EventKit retornar qualquer evento sem identificador estável, o app interrompe a operação em vez de omiti-lo e potencialmente arquivá-lo por engano. A reconciliação usa o intervalo nativo exato, não um novo intervalo calculado no navegador. Eventos que possuem regras de repetição no EventKit são identificados com `hasRecurrenceRules` e recebem o indicador “Recorrente” na lista da Agenda; a informação é atualizada a cada sincronização. O nome do calendário de origem também é salvo e exibido em cada compromisso importado, permitindo distinguir, por exemplo, eventos vindos de “Universidade” e “Pessoal”. A importação não envia notas dos eventos para o armazenamento da Agenda. O site/PWA no navegador continua sem acesso direto ao EventKit; a importação .ics segue disponível. A identidade de sincronização agora combina o identificador externo fornecido pelo servidor (`calendarItemExternalIdentifier`) com `occurrenceDate` quando o evento pertence a uma série recorrente. O app nativo também observa notificações `EKEventStoreChanged` e o retorno do aplicativo ao primeiro plano; quando a Agenda está visível, esses sinais disparam uma nova leitura dos calendários selecionados. A sincronização inicial ao abrir a Agenda continua ativa. Se a Agenda não estiver visível, o Alfred aguarda até ela voltar a ficar visível/ser reaberta, em vez de tentar executar tarefas em segundo plano. A data original da ocorrência permanece estável mesmo quando uma ocorrência é deslocada, evitando que todas as instâncias da série sejam fundidas. O `eventIdentifier` continua sendo a chave rápida da ocorrência; se ele mudar após uma movimentação, o serviço tenta migrar o registro existente pela identidade estável. Se houver cópias externas ambíguas, o Alfred prefere criar um registro separado a fundir eventos diferentes. O `calendarItemExternalIdentifier` pode ser nulo ou repetido em cenários de cópias/convites, então não é tratado isoladamente como garantia universal de unicidade.
 
-## Etapa Google (segunda)
+## Etapa Google — Google Apps Script (decisão confirmada em 2026-11-06)
 
-Adicionar “Conectar Google Agenda” com OAuth 2.0 usando Authorization Code + PKCE e escopos mínimos de leitura. Tokens devem ficar no armazenamento seguro do sistema nativo (Keychain no iOS), nunca em código-fonte ou localStorage. Consultar a Google Calendar API e normalizar os eventos para o mesmo formato interno usado pela integração Apple.
+A integração Google Calendar será implementada por Google Apps Script como ponte entre a aplicação web/PWA do Alfred e a API do Google Calendar. O ambiente principal de uso é Safari no iPhone; a implementação deve continuar compatível com o uso em navegador.
+
+Decisões obrigatórias:
+- Provedor: Google Calendar.
+- Backend/ponte: Google Apps Script publicado como Web App.
+- Identidade de execução: executar como o usuário que acessa o Web App; restringir o acesso ao próprio usuário.
+- Sincronização: bidirecional, com sincronização manual e automática.
+- Permissões funcionais: leitura e escrita.
+- Escritas remotas: cada criação, atualização ou exclusão exige confirmação explícita e individual antes de enviar a operação.
+- Não realizar escrita remota em lote sem confirmação por operação; não interpretar a autorização geral de escrita como consentimento para cada alteração.
+- Preservar a arquitetura local-first: dados locais continuam sendo a base de trabalho; sincronizar apenas o necessário.
+- Não solicitar que o usuário compartilhe senhas, tokens ou segredos pelo chat. Segredos devem permanecer em mecanismos apropriados do Google Apps Script e nas configurações autorizadas.
+- A integração Google deve ser um provider independente; não acoplar sua disponibilidade ao provider Apple/EventKit.
+
+Fluxo de escrita esperado:
+1. O Alfred prepara uma operação e apresenta resumo do evento, calendário, horário e tipo de alteração.
+2. O usuário confirma ou cancela aquela operação específica.
+3. Somente após confirmação, o Alfred envia a operação ao Apps Script.
+4. O Apps Script valida a solicitação e executa a alteração na conta Google autorizada.
+5. O Alfred reconcilia a resposta com o estado local e registra o resultado sem armazenar conteúdo sensível desnecessário.
+
+Antes de implementar, especificar contrato de API, autenticação/identificação da sessão, proteção contra CSRF/replay, validação de origem e payload, idempotência, paginação/sync tokens, tratamento de conflitos e estratégia de exclusões. Não presumir que um segredo embutido no frontend seja confidencial.
 
 ## Modelo comum e sincronização
 
 - Cada evento importado deve guardar provedor, calendário de origem e identificador externo estável.
 - Importações repetidas devem atualizar o mesmo evento, não criar cópias.
-- Eventos removidos na origem devem ser tratados com cuidado: primeiro marcar como removidos/sincronizados, sem apagar compromissos manuais.
-- O usuário escolhe quais calendários conectar e pode desconectar a qualquer momento.
-- A sincronização deve ser somente leitura inicialmente; criar/editar eventos na origem exige uma decisão explícita posterior.
-- O Alfred deve informar a última sincronização e apresentar erros de permissão/rede de forma clara.
+- Alterações locais devem permanecer pendentes até a confirmação explícita da operação remota correspondente.
+- Eventos removidos na origem devem ser reconciliados sem apagar compromissos manuais locais.
+- O usuário escolhe quais calendários conectar e pode desconectar cada provider independentemente.
+- A interface deve mostrar estado da sincronização, última sincronização e erros de permissão/rede de forma clara.
+- Conflitos entre alterações locais e remotas devem ser apresentados ao usuário; não sobrescrever silenciosamente.
+- A sincronização automática pode buscar alterações e preparar propostas, mas não pode executar escritas sem a confirmação individual definida acima.
 
+## Separação dos providers
+
+- Apple Calendar/EventKit permanece como integração nativa independente, preservando a implementação já existente.
+- Google Calendar via Apps Script é uma integração separada, acessível pelo ambiente web/PWA.
+- O modelo interno de eventos pode ser compartilhado, mas autenticação, sincronização, permissões, filas de escrita e tratamento de erros devem permanecer específicos de cada provider.
 ## Estado
 
 - [x] Importação manual de arquivos .ics na versão web.
@@ -77,3 +105,19 @@ Adicionar “Conectar Google Agenda” com OAuth 2.0 usando Authorization Code +
 - [x] Atualização automática da Agenda aberta após notificações de mudança do EventKit e retorno do app ao primeiro plano.
 - [ ] Sincronização em segundo plano com o app suspenso e testes em dispositivo real.
 - [ ] Integração Google Agenda via OAuth.
+
+
+## Alinhamento obrigatório das decisões Google (2026-11-06)
+
+A especificação acima descreve OAuth 2.0 Authorization Code + PKCE no cliente nativo iOS e sincronização inicialmente somente de leitura. Isso **não corresponde** à decisão registrada pelo usuário para a integração Google Calendar:
+
+- Fonte: Google Calendar.
+- Backend/ponte: Google Apps Script.
+- Ambiente principal: Safari no iPhone.
+- Sincronização: manual e automática, nos dois sentidos.
+- Permissões: leitura e escrita.
+- Toda criação, atualização ou exclusão remota exige confirmação individual explícita.
+- O deployment do Apps Script deve executar como o usuário que acessa o Web App e ser acessível somente pelo próprio usuário.
+- Credenciais e tokens não devem ser solicitados ou enviados pelo chat, nem persistidos em armazenamento web inseguro.
+
+Portanto, a seção "Etapa Google (segunda)" e o modelo comum de sincronização precisam ser revisados antes de qualquer implementação Google. Não iniciar uma implementação OAuth nativa somente de leitura nem substituir a decisão por outra arquitetura sem autorização. A integração Apple/EventKit existente deve permanecer independente e preservada; ela não substitui a integração Google solicitada.
