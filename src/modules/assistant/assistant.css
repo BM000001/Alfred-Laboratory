@@ -427,3 +427,32 @@
 @media(prefers-reduced-motion:reduce) {
   .alfred-mascot--curious img { transform: none; }
 }
+
+
+/* Subtle character motion: breathing at rest, attentive movement while thinking. */
+.alfred-mascot--idle>img {
+  transform-origin: 50% 62%;
+  animation: alfred-idle-breathe 4.8s ease-in-out infinite;
+}
+.alfred-mascot--thinking>img {
+  transform-origin: 50% 62%;
+  animation: alfred-thinking-shift 2.6s ease-in-out infinite;
+}
+.alfred-mascot--curious>img {
+  transform-origin: 50% 55%;
+  transition: transform .28s ease;
+}
+@keyframes alfred-idle-breathe {
+  0%,100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.012); }
+}
+@keyframes alfred-thinking-shift {
+  0%,100% { transform: translateY(0) rotate(0); }
+  35% { transform: translateY(-1px) rotate(-1.1deg); }
+  70% { transform: translateY(0) rotate(.7deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alfred-mascot--idle>img,
+  .alfred-mascot--thinking>img { animation:none; }
+  .alfred-mascot--curious>img { transition:none; }
+}
