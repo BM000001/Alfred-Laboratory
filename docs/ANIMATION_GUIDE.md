@@ -47,3 +47,15 @@ Dar vida ao mascote sem torná-lo invasivo. A animação deve reforçar estados 
 ## Estado atual
 
 Este documento especifica a próxima etapa. Não significa que as animações já estejam implementadas ou conectadas aos estados funcionais.
+
+
+## Estados integrados na interface (primeira versão)
+
+O componente `AlfredMascot` está conectado aos estados já existentes na tela do Assistente:
+
+- `idle`: disponível quando não há processamento, proposta pendente ou erro.
+- `thinking`: durante processamento ou confirmação/salvamento em andamento.
+- `curious`: enquanto existe uma proposta aguardando confirmação explícita do usuário.
+- `warning`: quando a interface apresenta um erro.
+
+A implementação atual altera aura, indicador e inclinação sutil. Não afirma que o mascote escuta ou fala; esses estados só devem ser adicionados quando houver captura de voz ou reprodução de áudio efetivamente conectadas.
