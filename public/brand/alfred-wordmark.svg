@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 260" role="img" aria-labelledby="title">
+  <title id="title">Alfred</title>
+  <defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#F7D99A"/><stop offset=".52" stop-color="#D9A64E"/><stop offset="1" stop-color="#A96F25"/></linearGradient></defs>
+  <g transform="translate(24 16) scale(.42)"><path fill="url(#gold)" d="M256 54 34 438h91L256 211l131 227h91L256 54Z"/><path fill="#08090C" d="M256 211 196 315h120l-60-104Z"/><path fill="url(#gold)" d="m256 257 16 31 35 5-25 24 6 35-32-17-32 17 6-35-25-24 35-5 16-31Z"/></g>
+  <text x="260" y="166" fill="url(#gold)" font-family="Arial, Helvetica, sans-serif" font-size="124" font-weight="500" letter-spacing="24">ALFRED</text>
+</svg>
