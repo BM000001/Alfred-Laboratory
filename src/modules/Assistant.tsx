@@ -35,9 +35,16 @@ export function Assistant() {
   const [approving, setApproving] = useState(false);
   const [pendingProposal, setPendingProposal] = useState<PendingTaskProposal | null>(null);
   const [error, setError] = useState('');
+  const [celebrating, setCelebrating] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const recentTaskIdRef = useRef<string | null>(null);
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    if (!celebrating) return;
+    const timeoutId = window.setTimeout(() => setCelebrating(false), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [celebrating]);
 
   const welcomeMessage = 'À sua disposição. Posso consultar suas tarefas pendentes, próximos compromissos e progresso dos estudos, além de preparar propostas para criar, concluir, ajustar prioridades, definir prazos e editar descrições de tarefas. Nenhuma alteração será feita sem sua confirmação explícita.';
 
@@ -322,6 +329,7 @@ export function Assistant() {
     };
     try {
       await executeApprovedProposal(proposal, decision, tools);
+      setCelebrating(true);
       setPendingProposal(null);
       if (pending.action === 'complete') {
         recentTaskIdRef.current = pending.task.id;
@@ -372,7 +380,7 @@ export function Assistant() {
   return (
     <section className="assistant-module" aria-label="Assistente Alfred">
       <header className="assistant-heading">
-        <div className="assistant-heading-main"><AlfredMascot mood={error ? 'warning' : loading || approving ? 'thinking' : pendingProposal ? 'curious' : 'idle'} compact /><div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div></div>
+        <div className="assistant-heading-main"><AlfredMascot mood={error ? 'warning' : loading || approving ? 'thinking' : pendingProposal ? 'curious' : celebrating ? 'success' : 'idle'} compact /><div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div></div>
         <div className="assistant-heading-actions">
           <span className="assistant-status"><i aria-hidden="true" /> Local</span>
           <button type="button" className="secondary-action" onClick={() => setConfirmClear(true)} disabled={!historyReady || loading || approving || pendingProposal !== null}>Limpar conversa</button>
