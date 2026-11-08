@@ -56,5 +56,6 @@ export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], n
       target: 'estudos', reason: 'Conteúdo pendente', urgency: 5,
     });
   }
-  return items.sort((a, b) => a.urgency - b.urgency || a.title.localeCompare(b.title, 'pt-BR')).slice(0, 6);
+  // Stable sort preserves the source order for equally urgent items (including oldest-first study topics).
+  return items.sort((a, b) => a.urgency - b.urgency).slice(0, 6);
 }
