@@ -1,5 +1,7 @@
-const APP_CACHE = 'alfred-app-shell-v1';
-const OCR_CACHE = 'alfred-ocr-assets-v1';
+const IS_LABORATORY_SCOPE = new URL(self.registration.scope).pathname.startsWith('/Alfred-Laboratory/');
+const CACHE_PREFIX = IS_LABORATORY_SCOPE ? 'laboratory-alfred-' : 'alfred-';
+const APP_CACHE = `${CACHE_PREFIX}app-shell-v1`;
+const OCR_CACHE = `${CACHE_PREFIX}ocr-assets-v1`;
 
 async function cacheAppShell() {
   const scope = new URL(self.registration.scope);
@@ -65,7 +67,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys
-      .filter((key) => key.startsWith('alfred-') && ![APP_CACHE, OCR_CACHE].includes(key))
+      .filter((key) => key.startsWith(CACHE_PREFIX) && ![APP_CACHE, OCR_CACHE].includes(key))
       .map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
