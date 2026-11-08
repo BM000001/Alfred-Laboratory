@@ -32,6 +32,11 @@ export function createAgendaService(
       if (location) updated.location = location;
       else delete updated.location;
     }
+    if (changes.disciplineId !== undefined) {
+      const disciplineId = changes.disciplineId.trim();
+      if (disciplineId) updated.disciplineId = disciplineId;
+      else delete updated.disciplineId;
+    }
 
     await repository.save(updated);
     return updated;
@@ -62,6 +67,7 @@ export function createAgendaService(
         createdAt: now().toISOString(),
         ...(input.description?.trim() ? { description: input.description.trim() } : {}),
         ...(input.location?.trim() ? { location: input.location.trim() } : {}),
+        ...(input.disciplineId?.trim() ? { disciplineId: input.disciplineId.trim() } : {}),
       };
 
       await repository.save(appointment);

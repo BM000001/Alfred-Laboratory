@@ -270,7 +270,7 @@ export function Agenda() {
       return;
     }
     try {
-      const input = { title, type, startsAt: start.toISOString(), endsAt: end.toISOString(), location: location.trim(), description: description.trim(), ...(disciplineId ? { disciplineId } : {}) };
+      const input = { title, type, startsAt: start.toISOString(), endsAt: end.toISOString(), location: location.trim(), description: description.trim(), disciplineId };
       if (editingId) await agenda.update(editingId, input);
       else await agenda.create(input);
       resetForm();
