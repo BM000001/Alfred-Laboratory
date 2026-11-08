@@ -1,8 +1,8 @@
-name: Deploy Alfred to GitHub Pages
+name: Deploy Alfred Laboratory preview to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [experiment/alfred-brand-identity]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
+  group: alfred-laboratory-preview
   cancel-in-progress: true
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
         run: npm test
 
       - name: Build application
-        run: npm run build:pages
+        run: VITE_BASE_PATH=/Alfred-Laboratory/ npm run build:pages
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
