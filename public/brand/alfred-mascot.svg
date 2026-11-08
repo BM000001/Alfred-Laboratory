@@ -4,7 +4,15 @@
   <circle cx="256" cy="178" r="150" fill="none" stroke="url(#gold)" stroke-width="8" opacity=".8" stroke-dasharray="690 40"/>
   <path d="M157 111 190 65l132-7 47 49-7 150-45 42H194l-42-43Z" fill="#17181D" stroke="url(#gold)" stroke-width="8" stroke-linejoin="round"/>
   <path d="m188 67 27-36 104-4 35 37-15 36-139 8-24-41Z" fill="#292A30" stroke="url(#gold)" stroke-width="7" stroke-linejoin="round"/>
-  <path d="M203 155h28v54h-28zM281 155h28v54h-28z" rx="12" fill="#F5D18A"/>
+  <style>
+    @keyframes alfred-eye-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.08); } }
+    #eyes { transform-box: fill-box; transform-origin: center; animation: alfred-eye-blink 5.8s infinite; }
+    @media (prefers-reduced-motion: reduce) { #eyes { animation: none; } }
+  </style>
+  <g id="eyes">
+    <rect x="203" y="155" width="28" height="54" rx="12" fill="#F5D18A"/>
+    <rect x="281" y="155" width="28" height="54" rx="12" fill="#F5D18A"/>
+  </g>
   <path d="m178 300-65 40-30 164 55 14 54-117 20 196h88l20-196 54 117 55-14-30-164-65-40-47 30h-72Z" fill="url(#coat)" stroke="url(#gold)" stroke-width="7" stroke-linejoin="round"/>
   <path d="m211 301 45 42 45-42 25 34-45 56-25-21-25 21-45-56Z" fill="#24252B" stroke="url(#gold)" stroke-width="5" stroke-linejoin="round"/>
   <path d="m241 354 15-12 15 12 18 115-33 45-33-45Z" fill="url(#gold)"/>
