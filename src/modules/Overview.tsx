@@ -119,7 +119,7 @@ export function Overview({ onNavigate }: Props) {
   const todayTopics = topics.filter((topic) => topic.status === 'pending').slice(0, 4);
   const studyProgress = summarizeStudyProgress(topics);
   const focusSummary = summarizeFocusSessions(focusSessions, now);
-  const briefingItems = buildDailyBriefing(tasks, appointments, now, topics);
+  const briefingItems = buildDailyBriefing(tasks, appointments, now, topics, disciplines);
   const mascotMood = overdueTasks.length > 0 ? 'warning' : briefingItems.length > 0 ? 'curious' : 'idle';
 
   function saveCity(event: FormEvent<HTMLFormElement>) {
