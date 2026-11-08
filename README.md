@@ -46,6 +46,7 @@ Para testar localmente, sirva a pasta `site/` por qualquer servidor estático. P
 - `docs/arquitetura.md`: camadas, formato de backup e regras de privacidade.
 - `docs/status-etapa-1.md`: o que foi feito, testes executados e limitações conhecidas.
 - `docs/testes-manuais-iphone.md`: roteiro de testes que exigem dispositivo real.
+- `docs/ECC-PILOTO.md`: instalação e avaliação do ECC como ferramenta opcional de desenvolvimento no Codex.
 - `NOTICE.md` e `THIRD_PARTY.md`: atribuições e licenças de dependências.
 
 ## Licença
