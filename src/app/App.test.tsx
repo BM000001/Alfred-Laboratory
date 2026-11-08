@@ -118,8 +118,11 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: /novo compromisso/i }));
 
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Revisão de algoritmos' } });
-    fireEvent.change(screen.getByLabelText('Início'), { target: { value: '2026-11-03T08:00' } });
-    fireEvent.change(screen.getByLabelText('Término'), { target: { value: '2026-11-03T09:00' } });
+    // Use a date in the currently displayed week; a fixed date becomes invisible over time.
+    const today = new Date();
+    const localDay = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+    fireEvent.change(screen.getByLabelText('Início'), { target: { value: `${localDay}T08:00` } });
+    fireEvent.change(screen.getByLabelText('Término'), { target: { value: `${localDay}T09:00` } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar compromisso' }));
 
     expect(await screen.findByRole('heading', { name: 'Revisão de algoritmos' })).toBeInTheDocument();
