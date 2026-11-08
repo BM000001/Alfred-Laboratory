@@ -53,6 +53,35 @@ describe('buildDailyBriefing', () => {
     expect(result.map((item) => item.id)).toEqual(['task:t1', 'study:s1']);
     expect(result[1].title).toBe('Estudo: Revisar funções');
   });
+  it('prioritizes study topics linked to a discipline with an exam or deadline in the next seven days', () => {
+    const disciplines: Discipline[] = [
+      { id: 'math', name: 'Matemática', createdAt: '2026-10-01T10:00:00.000Z' },
+      { id: 'web', name: 'Desenvolvimento Web', createdAt: '2026-10-01T10:00:00.000Z' },
+    ];
+    const topics = [
+      { id: 'older-web', disciplineId: 'web', title: 'Revisar DOM', status: 'pending' as const, createdAt: '2026-10-10T10:00:00.000Z' },
+      { id: 'math-topic', disciplineId: 'math', title: 'Revisar funções', status: 'pending' as const, createdAt: '2026-11-01T10:00:00.000Z' },
+    ];
+    const result = buildDailyBriefing([], [
+      appointment({ id: 'math-exam', type: 'exam', disciplineId: 'math', startsAt: '2026-11-05T15:00:00.000Z', endsAt: '2026-11-05T16:00:00.000Z' }),
+    ], now, topics, disciplines);
+    expect(result[0]).toMatchObject({
+      id: 'study:math-topic', title: 'Matemática: Revisar funções',
+      reason: 'Prova em 3 dia(s)', urgency: 3,
+    });
+    expect(result[1].id).toBe('study:older-web');
+  });
+  it('does not prioritize a cancelled or distant assessment', () => {
+    const topics = [
+      { id: 'older', disciplineId: 'math', title: 'Mais antigo', status: 'pending' as const, createdAt: '2026-10-10T10:00:00.000Z' },
+      { id: 'newer', disciplineId: 'web', title: 'Mais recente', status: 'pending' as const, createdAt: '2026-11-01T10:00:00.000Z' },
+    ];
+    const result = buildDailyBriefing([], [
+      appointment({ id: 'cancelled-exam', type: 'exam', disciplineId: 'web', status: 'cancelled', startsAt: '2026-11-03T15:00:00.000Z' }),
+      appointment({ id: 'distant-deadline', type: 'deadline', disciplineId: 'web', startsAt: '2026-11-15T15:00:00.000Z' }),
+    ], now, topics);
+    expect(result.map((item) => item.id)).toEqual(['study:older', 'study:newer']);
+  });
   it('does not mutate source records', () => {
     const source = [task({ dueDate: '2026-11-01' })];
     const before = structuredClone(source);
