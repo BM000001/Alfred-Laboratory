@@ -59,3 +59,14 @@ O componente `AlfredMascot` está conectado aos estados já existentes na tela d
 - `warning`: quando a interface apresenta um erro.
 
 A implementação atual altera aura, indicador e inclinação sutil. Não afirma que o mascote escuta ou fala; esses estados só devem ser adicionados quando houver captura de voz ou reprodução de áudio efetivamente conectadas.
+
+
+## Microanimações implementadas
+
+- Piscada periódica dos olhos no SVG do mascote.
+- Respiração visual quase imperceptível no estado `idle`.
+- Inclinação/oscillação curta durante `thinking`.
+- As animações são desativadas ou reduzidas com `prefers-reduced-motion: reduce`.
+- Nenhum estado novo foi inventado: as animações usam as classes de humor já conectadas aos estados reais da interface.
+
+A piscada é parte do SVG externo. Caso um navegador ou contexto bloqueie animação SMIL/CSS em imagens SVG, o mascote continua estático e funcional; verificar esse comportamento em Safari iOS e navegadores desktop.
