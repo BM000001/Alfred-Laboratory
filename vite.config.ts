@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => ({
   // GitHub Pages publica o site no caminho do repositório.
-  base: mode === 'github-pages' ? '/Alfred/' : '/',
+  base: mode === 'github-pages' ? (process.env.VITE_BASE_PATH ?? '/Alfred/') : '/',
   plugins: [react()],
   test: {
     environment: 'jsdom',
