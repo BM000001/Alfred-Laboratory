@@ -1,6 +1,6 @@
 import type { Task } from './tasks/types';
 import type { Appointment } from './agenda/types';
-import type { StudyTopic } from './studies/types';
+import type { Discipline, StudyTopic } from './studies/types';
 
 export type BriefingItem = {
   id: string; kind: 'task' | 'appointment' | 'study'; title: string; reason: string;
@@ -18,7 +18,7 @@ function daysBetween(dateKey: string, now: Date): number {
 }
 
 /** Produces recommendations only; never mutates persisted records. */
-export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], now = new Date(), topics: StudyTopic[] = []): BriefingItem[] {
+export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], now = new Date(), topics: StudyTopic[] = [], disciplines: Discipline[] = []): BriefingItem[] {
   const tomorrow = localDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
   const today = localDateKey(now);
   const items: BriefingItem[] = [];
@@ -52,7 +52,7 @@ export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], n
     .slice(0, 2);
   for (const topic of pendingTopics) {
     items.push({
-      id: `study:${topic.id}`, kind: 'study', title: topic.title,
+      id: `study:${topic.id}`, kind: 'study', title: `${disciplines.find((discipline) => discipline.id === topic.disciplineId)?.name ?? 'Estudo'}: ${topic.title}`,
       target: 'estudos', reason: 'Conteúdo pendente', urgency: 5,
     });
   }
