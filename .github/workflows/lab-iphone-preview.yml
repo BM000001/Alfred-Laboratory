@@ -26,7 +26,11 @@ jobs:
       - name: Test
         run: npm test
       - name: Build for isolated Laboratory path
-        run: npm run build:lab
+        run: |
+          node scripts/copy-ocr-assets.mjs
+          npx tsc -b
+          npx vite build --base=/Alfred-Laboratory/
+          cp manifest.webmanifest apple-touch-icon-180.png icon-192.png icon-512.png icon-maskable-512.png dist/
       - name: Upload build for inspection (not a public deployment)
         uses: actions/upload-artifact@v4
         with:
