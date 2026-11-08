@@ -3049,3 +3049,19 @@ select:focus-visible, textarea:focus-visible {
 .ocr-progress-panel progress { width: 100%; height: 9px; accent-color: var(--blue); }
 .ocr-progress-panel .text-action { justify-self: start; }
 .ocr-confidence { display: block; margin-top: 7px; color: var(--muted); font-size: 10px; }
+
+
+/* Briefing diário: presença do Alfred no resumo, sem executar ações automaticamente */
+.dashboard-briefing{display:grid;grid-template-columns:76px minmax(0,1fr);gap:18px;align-items:start;margin:16px 0;padding:20px;border:1px solid rgba(197,160,89,.3);border-radius:14px;background:linear-gradient(120deg,rgba(23,36,58,.045),rgba(197,160,89,.07)),#fff}
+.dashboard-briefing-mascot{display:grid;place-items:center;min-height:76px;padding:7px;border-radius:12px;background:#111722}
+.dashboard-briefing-mascot .alfred-mascot{width:60px;height:60px}
+.dashboard-briefing-content{min-width:0}
+.dashboard-briefing-content .card-label{margin:0 0 7px}
+.dashboard-briefing-content h2{margin:0;color:var(--navy);font-family:'Playfair Display',serif;font-size:20px;font-weight:500;line-height:1.3}
+.dashboard-briefing-content>p{margin:7px 0 0;color:#667286;font-size:12px;line-height:1.6}
+.dashboard-briefing-list{display:grid;gap:0;margin:13px 0 0;padding:0;list-style:none}
+.dashboard-briefing-list li{display:grid;grid-template-columns:minmax(100px,.7fr) minmax(0,2fr) auto;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #e9edf2}
+.dashboard-briefing-list li>span{color:#9a752d;font-size:10px;font-weight:600}
+.dashboard-briefing-list li>strong{min-width:0;color:var(--navy);font-size:11px;overflow-wrap:anywhere}
+.dashboard-briefing-list .dashboard-link{white-space:nowrap}
+@media(max-width:600px){.dashboard-briefing{grid-template-columns:52px minmax(0,1fr);gap:12px;padding:14px}.dashboard-briefing-mascot{min-height:52px;padding:3px}.dashboard-briefing-mascot .alfred-mascot{width:46px;height:46px}.dashboard-briefing-content h2{font-size:17px}.dashboard-briefing-list li{grid-template-columns:minmax(0,1fr) auto;gap:5px 8px}.dashboard-briefing-list li>span{grid-column:1/-1}.dashboard-briefing-list li>strong{font-size:10px}}
