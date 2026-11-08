@@ -475,3 +475,27 @@
 @media (prefers-reduced-motion: reduce) {
   .alfred-mascot--success>img { animation:none; }
 }
+
+
+/* Mascote interativo: apresentação opcional e acessível */
+.assistant-mascot-toggle {
+  position:relative;
+  display:grid;
+  flex:0 0 auto;
+  place-items:center;
+  padding:5px;
+  border:1px solid rgba(197,160,89,.28);
+  border-radius:14px;
+  background:rgba(10,18,30,.58);
+  cursor:pointer;
+  transition:border-color .18s ease,transform .18s ease,background .18s ease;
+}
+.assistant-mascot-toggle:hover { border-color:rgba(197,160,89,.62); background:rgba(197,160,89,.07); transform:translateY(-1px); }
+.assistant-mascot-toggle:focus-visible { outline:2px solid #c5a059; outline-offset:3px; }
+.assistant-mascot-toggle-hint { position:absolute; right:-4px; bottom:-4px; display:grid; width:17px; height:17px; place-items:center; border:1px solid rgba(197,160,89,.5); border-radius:50%; color:#f1d69e; background:#17243a; font-size:12px; line-height:1; }
+.assistant-mascot-intro { padding:14px 17px; border:1px solid rgba(197,160,89,.2); border-radius:12px; background:linear-gradient(120deg,rgba(197,160,89,.08),rgba(17,30,50,.72)); }
+.assistant-mascot-intro[hidden] { display:none; }
+.assistant-mascot-intro strong { color:#e8d2a4; font-size:12px; }
+.assistant-mascot-intro p { max-width:680px; margin:6px 0 0; color:#9eacc1; font-size:10px; line-height:1.7; }
+@media (prefers-reduced-motion:reduce) { .assistant-mascot-toggle { transition:none; } }
+@media (max-width:420px) { .assistant-mascot-toggle { padding:3px; } }
