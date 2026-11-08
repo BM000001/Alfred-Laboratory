@@ -2,9 +2,9 @@ name: Alfred CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop-app]
   pull_request:
-    branches: [main]
+    branches: [main, develop-app]
   workflow_dispatch:
 
 permissions:
