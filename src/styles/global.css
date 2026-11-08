@@ -57,11 +57,16 @@ button, input, textarea { font: inherit; }
   height: 34px;
   display: grid;
   place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(217, 166, 78, .42);
   border-radius: 10px;
-  color: white;
-  background: var(--navy);
-  font-family: 'Playfair Display', serif;
-  font-size: 21px;
+  background: #101116;
+}
+.brand-mark img {
+  display: block;
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
 }
 
 .brand-period { color: var(--bronze); }
