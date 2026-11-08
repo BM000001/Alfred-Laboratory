@@ -1,0 +1,36 @@
+name: Alfred
+options:
+  bundleIdPrefix: com.bm000001
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  Alfred:
+    type: application
+    platform: iOS
+    sources:
+      - AlfredApp.swift
+      - AlfredWebView.swift
+      - AlfredCalendarAccess.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bm000001.alfred
+        PRODUCT_NAME: Alfred
+        INFOPLIST_FILE: Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        CODE_SIGN_STYLE: Automatic
+    scheme:
+      gatherCoverageData: false
+      testTargets: []
