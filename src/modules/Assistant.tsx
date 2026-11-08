@@ -12,6 +12,7 @@ import { LocalAssistantProvider } from './assistant/localAssistant';
 import { Brain } from './brain';
 import { AssistantMemoryPanel } from './AssistantMemoryPanel';
 import { ManualExportPanel } from './ManualExportPanel';
+import { AlfredMascot } from '../components/AlfredMascot';
 import { appointmentRepository, assistantMessageRepository, memoryRepository, studyTopicRepository, taskRepository } from '../storage/repositories';
 
 function createMessage(role: AssistantMessage['role'], content: string): AssistantMessage {
@@ -34,9 +35,17 @@ export function Assistant() {
   const [approving, setApproving] = useState(false);
   const [pendingProposal, setPendingProposal] = useState<PendingTaskProposal | null>(null);
   const [error, setError] = useState('');
+  const [celebrating, setCelebrating] = useState(false);
+  const [mascotExpanded, setMascotExpanded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const recentTaskIdRef = useRef<string | null>(null);
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    if (!celebrating) return;
+    const timeoutId = window.setTimeout(() => setCelebrating(false), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [celebrating]);
 
   const welcomeMessage = 'À sua disposição. Posso consultar suas tarefas pendentes, próximos compromissos e progresso dos estudos, além de preparar propostas para criar, concluir, ajustar prioridades, definir prazos e editar descrições de tarefas. Nenhuma alteração será feita sem sua confirmação explícita.';
 
@@ -321,6 +330,7 @@ export function Assistant() {
     };
     try {
       await executeApprovedProposal(proposal, decision, tools);
+      setCelebrating(true);
       setPendingProposal(null);
       if (pending.action === 'complete') {
         recentTaskIdRef.current = pending.task.id;
@@ -371,7 +381,9 @@ export function Assistant() {
   return (
     <section className="assistant-module" aria-label="Assistente Alfred">
       <header className="assistant-heading">
-        <div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div>
+      <div id="assistant-mascot-intro" className={`assistant-mascot-intro ${mascotExpanded ? 'is-expanded' : ''}`} hidden={!mascotExpanded}><strong>À sua disposição.</strong><p>Sou Alfred, seu conselheiro digital. Posso ajudar a organizar tarefas, acompanhar compromissos e estruturar seus estudos. Você mantém o controle: ações que alteram seus dados sempre pedem confirmação.</p></div>
+      
+        <div className="assistant-heading-main"><button type="button" className="assistant-mascot-toggle" aria-label={mascotExpanded ? "Recolher apresentação do Alfred" : "Conhecer o Alfred"} aria-expanded={mascotExpanded} aria-controls="assistant-mascot-intro" onClick={() => setMascotExpanded((expanded) => !expanded)}><AlfredMascot mood={error ? 'warning' : loading || approving ? 'thinking' : pendingProposal ? 'curious' : celebrating ? 'success' : 'idle'} compact /><span className="assistant-mascot-toggle-hint" aria-hidden="true">{mascotExpanded ? '−' : '+'}</span></button><div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div></div>
         <div className="assistant-heading-actions">
           <span className="assistant-status"><i aria-hidden="true" /> Local</span>
           <button type="button" className="secondary-action" onClick={() => setConfirmClear(true)} disabled={!historyReady || loading || approving || pendingProposal !== null}>Limpar conversa</button>

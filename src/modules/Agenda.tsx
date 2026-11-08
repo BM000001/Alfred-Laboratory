@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { Appointment, AppointmentType } from './agenda/types';
 import { classifyImportedAppointment, findAppointmentConflicts, sortAppointmentsByStart } from './agenda/agendaRules';
 import { createAgendaService } from './agenda/agendaService';
-import { appointmentRepository } from '../storage/repositories';
+import { appointmentRepository, disciplineRepository } from '../storage/repositories';
 import { ICalendarImport } from './ICalendarImport';
 import { connectAppleCalendar, isNativeAppleCalendarAvailable, syncAppleCalendar, type NativeCalendarInfo } from './agenda/nativeCalendarBridge';
 
@@ -32,10 +32,12 @@ function typeLabel(type: AppointmentType): string {
 
 export function Agenda() {
   const [items, setItems] = useState<Appointment[]>([]);
+  const [disciplines, setDisciplines] = useState<{ id: string; name: string }[]>([]);
   const [selectedDate, setSelectedDate] = useState(dateKey(new Date()));
   const [view, setView] = useState<ViewMode>('week');
   const [title, setTitle] = useState('');
   const [type, setType] = useState<AppointmentType>('personal');
+  const [disciplineId, setDisciplineId] = useState('');
   const [startsAt, setStartsAt] = useState(() => localDateTime(new Date(Date.now() + 60 * 60_000)));
   const [endsAt, setEndsAt] = useState(() => localDateTime(new Date(Date.now() + 2 * 60 * 60_000)));
   const [location, setLocation] = useState('');
@@ -165,6 +167,9 @@ export function Agenda() {
 
   useEffect(() => {
     let active = true;
+    disciplineRepository.getAll().then((loaded) => { if (active) setDisciplines(loaded); }).catch(() => {
+      if (active) setError('Não foi possível carregar as disciplinas.');
+    });
     agenda.list().then((loaded) => {
       if (active) setItems(sortAppointmentsByStart(loaded));
     }).catch(() => {
@@ -265,7 +270,7 @@ export function Agenda() {
       return;
     }
     try {
-      const input = { title, type, startsAt: start.toISOString(), endsAt: end.toISOString(), location: location.trim(), description: description.trim() };
+      const input = { title, type, startsAt: start.toISOString(), endsAt: end.toISOString(), location: location.trim(), description: description.trim(), disciplineId };
       if (editingId) await agenda.update(editingId, input);
       else await agenda.create(input);
       resetForm();
@@ -278,6 +283,7 @@ export function Agenda() {
   function resetForm() {
     setTitle('');
     setType('personal');
+    setDisciplineId('');
     setStartsAt(localDateTime(new Date(Date.now() + 60 * 60_000)));
     setEndsAt(localDateTime(new Date(Date.now() + 2 * 60 * 60_000)));
     setLocation('');
@@ -292,6 +298,7 @@ export function Agenda() {
     setEditingId(item.id);
     setTitle(item.title);
     setType(item.type);
+    setDisciplineId(item.disciplineId ?? '');
     setStartsAt(localDateTime(new Date(item.startsAt)));
     setEndsAt(localDateTime(new Date(item.endsAt)));
     setLocation(item.location ?? '');
@@ -374,6 +381,7 @@ export function Agenda() {
           <input id="appointment-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="Ex.: Aula de programação" required />
           <div className="form-grid agenda-form-grid">
             <div><label className="field-label" htmlFor="appointment-type">Tipo</label><select id="appointment-type" value={type} onChange={(event) => setType(event.target.value as AppointmentType)}><option value="class">Aula</option><option value="exam">Prova</option><option value="deadline">Prazo</option><option value="personal">Pessoal</option><option value="other">Outro</option></select></div>
+            <div><label className="field-label" htmlFor="appointment-discipline">Disciplina <span className="optional-label">· opcional</span></label><select id="appointment-discipline" value={disciplineId} onChange={(event) => setDisciplineId(event.target.value)}><option value="">Sem disciplina</option>{disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}</select></div>
             <div><label className="field-label" htmlFor="appointment-start">Início</label><input id="appointment-start" type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></div>
             <div><label className="field-label" htmlFor="appointment-end">Término</label><input id="appointment-end" type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} required /></div>
           </div>
@@ -398,6 +406,7 @@ export function Agenda() {
               <div className="appointment-details">
                 <span className={`appointment-type type-${item.type}`}>{typeLabel(item.type)}</span>{item.isRecurring && <span className="appointment-origin-tag">Recorrente</span>}{item.importedCalendarName && <span className="appointment-source-tag">{item.importedCalendarName}</span>}
                 <h3>{item.title}</h3>
+                {item.disciplineId && disciplines.find((discipline) => discipline.id === item.disciplineId) && <p>{disciplines.find((discipline) => discipline.id === item.disciplineId)?.name}</p>}
                 <p>{new Date(item.startsAt).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}{item.location ? ` · ${item.location}` : ''}</p>
                 {item.description && <p>{item.description}</p>}
               </div>

@@ -389,3 +389,113 @@
 .assistant-export-result input,.assistant-export-result select,.assistant-export-result textarea{width:100%;min-height:36px;box-sizing:border-box;padding:9px 10px;border:1px solid rgba(145,174,224,.18);border-radius:8px;color:#dce6f6;background:rgba(5,12,22,.65);font:inherit;font-size:10px;line-height:1.55}
 .assistant-export-result textarea{resize:vertical}
 .assistant-export-result button{min-height:38px;padding:0 13px;border-radius:8px;font-size:10px}
+
+
+/* Alfred mascot — visual status follows the assistant's real local activity. */
+.assistant-heading-main{display:flex;align-items:center;gap:14px;min-width:0}
+.assistant-heading-main>div:last-child{min-width:0}
+.alfred-mascot{position:relative;isolation:isolate;width:82px;height:96px;flex:0 0 auto;display:grid;place-items:center}
+.alfred-mascot>img{position:relative;z-index:1;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 12px rgba(0,0,0,.24))}
+.alfred-mascot-aura{position:absolute;inset:12% 8% 8%;z-index:0;border-radius:50%;background:radial-gradient(ellipse,rgba(217,166,78,.22),rgba(217,166,78,0) 68%)}
+.alfred-mascot-status{position:absolute;right:5px;bottom:8px;z-index:2;width:9px;height:9px;border:2px solid #111a29;border-radius:50%;background:#79c69d;box-shadow:0 0 0 3px rgba(121,198,157,.12)}
+.alfred-mascot--thinking .alfred-mascot-aura{animation:alfred-aura-pulse 1.8s ease-in-out infinite}
+.alfred-mascot--thinking .alfred-mascot-status{background:#e2b969;box-shadow:0 0 0 3px rgba(226,185,105,.14)}
+.alfred-mascot--success .alfred-mascot-status{background:#79c69d}
+.alfred-mascot--compact{width:66px;height:78px}
+@keyframes alfred-aura-pulse{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+@media(prefers-reduced-motion:reduce){.alfred-mascot--thinking .alfred-mascot-aura{animation:none;opacity:.8}}
+@media(max-width:600px){.assistant-heading-main{align-items:flex-start;gap:8px}.alfred-mascot--compact{width:52px;height:64px}}
+
+
+/* Alfred mood states: visual cues follow actual assistant UI state. */
+.alfred-mascot--curious .alfred-mascot-aura {
+  opacity: .9;
+  background: radial-gradient(ellipse,rgba(217,166,78,.3),rgba(217,166,78,0) 68%);
+}
+.alfred-mascot--curious .alfred-mascot-status {
+  background: #d9a64e;
+  box-shadow: 0 0 0 3px rgba(217,166,78,.16);
+}
+.alfred-mascot--warning .alfred-mascot-aura {
+  background: radial-gradient(ellipse,rgba(214,145,105,.24),rgba(214,145,105,0) 68%);
+}
+.alfred-mascot--warning .alfred-mascot-status {
+  background: #d99169;
+  box-shadow: 0 0 0 3px rgba(217,145,105,.15);
+}
+.alfred-mascot--curious img { transform: translateY(-2px) rotate(-1deg); }
+@media(prefers-reduced-motion:reduce) {
+  .alfred-mascot--curious img { transform: none; }
+}
+
+
+/* Subtle character motion: breathing at rest, attentive movement while thinking. */
+.alfred-mascot--idle>img {
+  transform-origin: 50% 62%;
+  animation: alfred-idle-breathe 4.8s ease-in-out infinite;
+}
+.alfred-mascot--thinking>img {
+  transform-origin: 50% 62%;
+  animation: alfred-thinking-shift 2.6s ease-in-out infinite;
+}
+.alfred-mascot--curious>img {
+  transform-origin: 50% 55%;
+  transition: transform .28s ease;
+}
+@keyframes alfred-idle-breathe {
+  0%,100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.012); }
+}
+@keyframes alfred-thinking-shift {
+  0%,100% { transform: translateY(0) rotate(0); }
+  35% { transform: translateY(-1px) rotate(-1.1deg); }
+  70% { transform: translateY(0) rotate(.7deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alfred-mascot--idle>img,
+  .alfred-mascot--thinking>img { animation:none; }
+  .alfred-mascot--curious>img { transition:none; }
+}
+
+
+/* Brief success response after an explicitly approved action finishes. */
+.alfred-mascot--success>img {
+  transform-origin: 50% 62%;
+  animation: alfred-success-bounce .62s ease-out 2;
+}
+.alfred-mascot--success .alfred-mascot-aura {
+  opacity: 1;
+  background: radial-gradient(ellipse,rgba(217,166,78,.38),rgba(217,166,78,0) 70%);
+}
+@keyframes alfred-success-bounce {
+  0%,100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-5px) scale(1.025); }
+  65% { transform: translateY(0) scale(.995); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alfred-mascot--success>img { animation:none; }
+}
+
+
+/* Mascote interativo: apresentação opcional e acessível */
+.assistant-mascot-toggle {
+  position:relative;
+  display:grid;
+  flex:0 0 auto;
+  place-items:center;
+  padding:5px;
+  border:1px solid rgba(197,160,89,.28);
+  border-radius:14px;
+  background:rgba(10,18,30,.58);
+  cursor:pointer;
+  transition:border-color .18s ease,transform .18s ease,background .18s ease;
+}
+.assistant-mascot-toggle:hover { border-color:rgba(197,160,89,.62); background:rgba(197,160,89,.07); transform:translateY(-1px); }
+.assistant-mascot-toggle:focus-visible { outline:2px solid #c5a059; outline-offset:3px; }
+.assistant-mascot-toggle-hint { position:absolute; right:-4px; bottom:-4px; display:grid; width:17px; height:17px; place-items:center; border:1px solid rgba(197,160,89,.5); border-radius:50%; color:#f1d69e; background:#17243a; font-size:12px; line-height:1; }
+.assistant-mascot-intro { padding:14px 17px; border:1px solid rgba(197,160,89,.2); border-radius:12px; background:linear-gradient(120deg,rgba(197,160,89,.08),rgba(17,30,50,.72)); }
+.assistant-mascot-intro[hidden] { display:none; }
+.assistant-mascot-intro strong { color:#e8d2a4; font-size:12px; }
+.assistant-mascot-intro p { max-width:680px; margin:6px 0 0; color:#9eacc1; font-size:10px; line-height:1.7; }
+@media (prefers-reduced-motion:reduce) { .assistant-mascot-toggle { transition:none; } }
+@media (max-width:420px) { .assistant-mascot-toggle { padding:3px; } }

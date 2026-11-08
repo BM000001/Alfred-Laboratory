@@ -101,7 +101,7 @@ function App() {
     <main className="app-shell">
       <header className="topbar">
         <a className="brand" href="/Alfred/" aria-label="Alfred, início" onClick={(event) => { event.preventDefault(); navigate('inicio'); }}>
-          <span className="brand-mark" aria-hidden="true"><Icon name="sparkles" /></span>
+          <span className="brand-mark" aria-hidden="true"><img src="/Alfred/brand/alfred-mark.svg" alt="" /></span>
           <span>Alfred<span className="brand-period">.</span></span>
         </a>
         <div className="topbar-meta">

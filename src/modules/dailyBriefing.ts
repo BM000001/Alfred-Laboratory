@@ -1,9 +1,10 @@
 import type { Task } from './tasks/types';
 import type { Appointment } from './agenda/types';
+import type { Discipline, StudyTopic } from './studies/types';
 
 export type BriefingItem = {
-  id: string; kind: 'task' | 'appointment'; title: string; reason: string;
-  urgency: number; target: 'tarefas' | 'agenda';
+  id: string; kind: 'task' | 'appointment' | 'study'; title: string; reason: string;
+  urgency: number; target: 'tarefas' | 'agenda' | 'estudos';
 };
 
 function localDateKey(date: Date): string {
@@ -17,7 +18,7 @@ function daysBetween(dateKey: string, now: Date): number {
 }
 
 /** Produces recommendations only; never mutates persisted records. */
-export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], now = new Date()): BriefingItem[] {
+export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], now = new Date(), topics: StudyTopic[] = [], disciplines: Discipline[] = []): BriefingItem[] {
   const tomorrow = localDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
   const today = localDateKey(now);
   const items: BriefingItem[] = [];
@@ -45,5 +46,41 @@ export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], n
       urgency: date === today ? 2 : 4,
     });
   }
-  return items.sort((a, b) => a.urgency - b.urgency || a.title.localeCompare(b.title, 'pt-BR')).slice(0, 6);
+  const upcomingAssessments = new Map<string, { type: 'exam' | 'deadline'; days: number }>();
+  for (const appointment of appointments) {
+    if (appointment.status !== 'scheduled' || !appointment.disciplineId ||
+        (appointment.type !== 'exam' && appointment.type !== 'deadline')) continue;
+    const start = Date.parse(appointment.startsAt);
+    if (!Number.isFinite(start) || start < now.getTime()) continue;
+    const days = daysBetween(localDateKey(new Date(start)), now);
+    if (days < 0 || days > 7) continue;
+    const current = upcomingAssessments.get(appointment.disciplineId);
+    if (!current || days < current.days || (days === current.days && appointment.type === 'exam')) {
+      upcomingAssessments.set(appointment.disciplineId, { type: appointment.type, days });
+    }
+  }
+  const pendingTopics = topics
+    .filter((topic) => topic.status === 'pending')
+    .sort((a, b) => {
+      const aAssessment = upcomingAssessments.get(a.disciplineId);
+      const bAssessment = upcomingAssessments.get(b.disciplineId);
+      if (aAssessment && !bAssessment) return -1;
+      if (!aAssessment && bAssessment) return 1;
+      if (aAssessment && bAssessment && aAssessment.days !== bAssessment.days) return aAssessment.days - bAssessment.days;
+      return a.createdAt.localeCompare(b.createdAt);
+    })
+    .slice(0, 2);
+  for (const topic of pendingTopics) {
+    const assessment = upcomingAssessments.get(topic.disciplineId);
+    const assessmentLabel = assessment?.type === 'exam' ? 'Prova' : 'Entrega';
+    const reason = assessment
+      ? assessment.days === 0 ? `${assessmentLabel} hoje` : `${assessmentLabel} em ${assessment.days} dia(s)`
+      : 'Conteúdo pendente';
+    items.push({
+      id: `study:${topic.id}`, kind: 'study', title: `${disciplines.find((discipline) => discipline.id === topic.disciplineId)?.name ?? 'Estudo'}: ${topic.title}`,
+      target: 'estudos', reason, urgency: assessment ? 3 : 5,
+    });
+  }
+  // Stable sort preserves the source order for equally urgent items (including oldest-first study topics).
+  return items.sort((a, b) => a.urgency - b.urgency).slice(0, 6);
 }

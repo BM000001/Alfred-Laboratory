@@ -23,11 +23,14 @@ describe('agendaService', () => {
     const appointment = await service.create({
       title: 'Aula de programação',
       type: 'class',
+      disciplineId: 'math',
       startsAt: '2026-11-03T08:00:00.000-03:00',
       endsAt: '2026-11-03T09:30:00.000-03:00',
     });
 
-    expect(appointment).toMatchObject({ id: 'appointment-1', status: 'scheduled', type: 'class' });
+    expect(appointment).toMatchObject({ id: 'appointment-1', status: 'scheduled', type: 'class', disciplineId: 'math' });
+    const updated = await service.update(appointment.id, { disciplineId: '' });
+    expect(updated.disciplineId).toBeUndefined();
   });
 
   it('rejects invalid time ranges', async () => {

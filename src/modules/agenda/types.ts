@@ -12,6 +12,7 @@ export interface Appointment {
   isAllDay?: boolean;
   isRecurring?: boolean;
   location?: string;
+  disciplineId?: string;
   createdAt: string;
   importedUid?: string;
   importedStableUid?: string;
@@ -20,8 +21,8 @@ export interface Appointment {
 }
 
 export type CreateAppointmentInput = Pick<Appointment, 'title' | 'type' | 'startsAt' | 'endsAt'> &
-  Partial<Pick<Appointment, 'description' | 'location' | 'isAllDay' | 'isRecurring' | 'importedCalendarName' | 'importedStableUid'>>;
+  Partial<Pick<Appointment, 'description' | 'location' | 'disciplineId' | 'isAllDay' | 'isRecurring' | 'importedCalendarName' | 'importedStableUid'>>;
 
 export type UpdateAppointmentInput = Partial<
-  Pick<Appointment, 'title' | 'description' | 'type' | 'status' | 'startsAt' | 'endsAt' | 'location' | 'isAllDay' | 'isRecurring' | 'importedCalendarName'>
+  Pick<Appointment, 'title' | 'description' | 'type' | 'status' | 'startsAt' | 'endsAt' | 'location' | 'disciplineId' | 'isAllDay' | 'isRecurring' | 'importedCalendarName'>
 >;
