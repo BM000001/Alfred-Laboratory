@@ -405,3 +405,25 @@
 @keyframes alfred-aura-pulse{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
 @media(prefers-reduced-motion:reduce){.alfred-mascot--thinking .alfred-mascot-aura{animation:none;opacity:.8}}
 @media(max-width:600px){.assistant-heading-main{align-items:flex-start;gap:8px}.alfred-mascot--compact{width:52px;height:64px}}
+
+
+/* Alfred mood states: visual cues follow actual assistant UI state. */
+.alfred-mascot--curious .alfred-mascot-aura {
+  opacity: .9;
+  background: radial-gradient(ellipse,rgba(217,166,78,.3),rgba(217,166,78,0) 68%);
+}
+.alfred-mascot--curious .alfred-mascot-status {
+  background: #d9a64e;
+  box-shadow: 0 0 0 3px rgba(217,166,78,.16);
+}
+.alfred-mascot--warning .alfred-mascot-aura {
+  background: radial-gradient(ellipse,rgba(214,145,105,.24),rgba(214,145,105,0) 68%);
+}
+.alfred-mascot--warning .alfred-mascot-status {
+  background: #d99169;
+  box-shadow: 0 0 0 3px rgba(217,145,105,.15);
+}
+.alfred-mascot--curious img { transform: translateY(-2px) rotate(-1deg); }
+@media(prefers-reduced-motion:reduce) {
+  .alfred-mascot--curious img { transform: none; }
+}
