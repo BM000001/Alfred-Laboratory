@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDailyBriefing } from './dailyBriefing';
 import type { Task } from './tasks/types';
 import type { Appointment } from './agenda/types';
+import type { Discipline } from './studies/types';
 
 const task = (overrides: Partial<Task> = {}): Task => ({
   id: 't1', title: 'Entregar trabalho', status: 'pending', priority: 'medium',
@@ -33,19 +34,24 @@ describe('buildDailyBriefing', () => {
     expect(result.map((item) => item.id)).toEqual(['task:t1', 'appointment:today', 'appointment:tomorrow']);
   });
   it('includes a small number of pending study topics after urgent tasks and appointments', () => {
+    const disciplines: Discipline[] = [
+      { id: 'math', name: 'Matemática', createdAt: '2026-10-01T10:00:00.000Z' },
+      { id: 'web', name: 'Desenvolvimento Web', createdAt: '2026-10-01T10:00:00.000Z' },
+    ];
     const topics = [
       { id: 'older', disciplineId: 'math', title: 'Revisar funções', status: 'pending' as const, createdAt: '2026-10-20T10:00:00.000Z' },
       { id: 'newer', disciplineId: 'web', title: 'Praticar DOM', status: 'pending' as const, createdAt: '2026-11-01T10:00:00.000Z' },
       { id: 'done', disciplineId: 'web', title: 'HTML básico', status: 'completed' as const, createdAt: '2026-10-01T10:00:00.000Z' },
     ];
-    const result = buildDailyBriefing([], [], now, topics);
+    const result = buildDailyBriefing([], [], now, topics, disciplines);
     expect(result.map((item) => item.id)).toEqual(['study:older', 'study:newer']);
-    expect(result[0]).toMatchObject({ kind: 'study', target: 'estudos', reason: 'Conteúdo pendente' });
+    expect(result[0]).toMatchObject({ kind: 'study', target: 'estudos', reason: 'Conteúdo pendente', title: 'Matemática: Revisar funções' });
   });
   it('keeps urgent items ahead of study suggestions', () => {
     const topic = { id: 's1', disciplineId: 'math', title: 'Revisar funções', status: 'pending' as const, createdAt: '2026-10-20T10:00:00.000Z' };
     const result = buildDailyBriefing([task({ dueDate: '2026-11-01' })], [], now, [topic]);
     expect(result.map((item) => item.id)).toEqual(['task:t1', 'study:s1']);
+    expect(result[1].title).toBe('Estudo: Revisar funções');
   });
   it('does not mutate source records', () => {
     const source = [task({ dueDate: '2026-11-01' })];
