@@ -40,3 +40,29 @@ A identidade do Alfred combina um conselheiro sábio e discreto com uma figura m
 ## Próxima etapa
 
 Integrar o símbolo ao cabeçalho, favicon e ícones PWA; revisar o mascote e validar visualmente as telas em celular e desktop sem alterar fluxos funcionais.
+
+
+## Refinamento de direção — mascote e aplicações
+
+### Silhueta aprovada para exploração
+- Cabeça facetada e compacta, com topo levemente inclinado e laterais estruturadas; evitar aparência de capacete ou esfera genérica.
+- Olhos simples e luminosos, sem boca detalhada obrigatória.
+- Ombros largos em relação ao tronco, postura vertical e base firme para transmitir presença.
+- Roupa formal estilizada: gola/colarinhos e gravata como assinatura visual, sem copiar uniformes de personagens existentes.
+- Detalhes dourados devem funcionar como acentos, não como contorno em todas as peças.
+
+### Regras para o símbolo A
+- O A deve continuar legível em monocromia e em 16–24 px.
+- A estrela central é um detalhe secundário; testar também uma versão sem estrela para tamanhos muito pequenos.
+- Não usar gradiente como requisito para reconhecimento: preparar versões flat dourada, branca e preta.
+- O ícone deve ter margem de segurança e fundo sólido para boa leitura em telas pequenas.
+
+### Próxima validação visual
+1. Conferir a cabeça e a silhueta em tamanhos 24 px, 48 px e 256 px.
+2. Conferir contraste em tema claro e escuro.
+3. Comparar o símbolo A com e sem estrela.
+4. Verificar se o mascote funciona em uma cor só antes de aprovar animações.
+5. Só então substituir os demais elementos da interface e os ícones PNG do PWA.
+
+### Estado
+Esta é uma proposta inicial de identidade, ainda sujeita a revisão visual e validação técnica. A arte conceitual de apresentação não substitui os arquivos vetoriais de produção.
