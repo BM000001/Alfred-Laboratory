@@ -28,15 +28,15 @@ describe('Brain foundation', () => {
     expect(classifyIntent('Como está meu progresso acadêmico?').intent).toBe('studies');
   });
 
-  it('delegates generation to the configured provider and returns classification metadata', async () => {
+  it('delegates unknown requests to the configured provider and returns classification metadata', async () => {
     const provider: AIProvider = {
       id: 'test-provider',
       generate: vi.fn(async () => ({ message: 'Há duas tarefas.', usedTools: ['tasks.list'], warnings: [] })),
     };
     const brain = new Brain({ provider });
-    const result = await brain.process([message], context);
+    const result = await brain.process([{ ...message, content: 'Conte uma piada' }], context);
     expect(result.message).toBe('Há duas tarefas.');
-    expect(result.intent).toBe('tasks');
+    expect(result.intent).toBe('unknown');
     expect(result.providerId).toBe('test-provider');
     expect(provider.generate).toHaveBeenCalledOnce();
   });
@@ -86,6 +86,22 @@ describe('Brain foundation', () => {
     expect(classification.confidence).toBe('low');
   });
 
+
+  it('fails closed when a required mapped tool is not registered', async () => {
+    const provider: AIProvider = {
+      id: 'provider-without-tools',
+      generate: vi.fn(async () => ({ message: 'unsafe fallback', usedTools: [], warnings: [] })),
+    };
+    const brain = new Brain({ provider, tools: new ToolRegistry() });
+    const result = await brain.process([message], context);
+
+    expect(provider.generate).not.toHaveBeenCalled();
+    expect(result.message).toContain('ferramenta necessária não está disponível');
+    expect(result.usedTools).toEqual([]);
+    expect(result.warnings).toContain(
+      'Ferramenta obrigatória não registrada: tasks.list. Execução bloqueada em modo fail-closed.',
+    );
+  });
 
   it('dispatches a registered read-only task tool without calling the provider', async () => {
     const execute = vi.fn(async (_input: unknown) => ({ summary: '1 tarefa pendente.', items: ['Estudar Python'] }));
