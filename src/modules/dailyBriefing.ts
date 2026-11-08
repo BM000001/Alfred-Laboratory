@@ -1,9 +1,10 @@
 import type { Task } from './tasks/types';
 import type { Appointment } from './agenda/types';
+import type { StudyTopic } from './studies/types';
 
 export type BriefingItem = {
-  id: string; kind: 'task' | 'appointment'; title: string; reason: string;
-  urgency: number; target: 'tarefas' | 'agenda';
+  id: string; kind: 'task' | 'appointment' | 'study'; title: string; reason: string;
+  urgency: number; target: 'tarefas' | 'agenda' | 'estudos';
 };
 
 function localDateKey(date: Date): string {
@@ -17,7 +18,7 @@ function daysBetween(dateKey: string, now: Date): number {
 }
 
 /** Produces recommendations only; never mutates persisted records. */
-export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], now = new Date()): BriefingItem[] {
+export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], now = new Date(), topics: StudyTopic[] = []): BriefingItem[] {
   const tomorrow = localDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
   const today = localDateKey(now);
   const items: BriefingItem[] = [];
@@ -43,6 +44,16 @@ export function buildDailyBriefing(tasks: Task[], appointments: Appointment[], n
       id: `appointment:${appointment.id}`, kind: 'appointment', title: appointment.title,
       target: 'agenda', reason: date === today ? 'Compromisso de hoje' : 'Compromisso de amanhã',
       urgency: date === today ? 2 : 4,
+    });
+  }
+  const pendingTopics = topics
+    .filter((topic) => topic.status === 'pending')
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .slice(0, 2);
+  for (const topic of pendingTopics) {
+    items.push({
+      id: `study:${topic.id}`, kind: 'study', title: topic.title,
+      target: 'estudos', reason: 'Conteúdo pendente', urgency: 5,
     });
   }
   return items.sort((a, b) => a.urgency - b.urgency || a.title.localeCompare(b.title, 'pt-BR')).slice(0, 6);
