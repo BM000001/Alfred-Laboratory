@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 6104)
-Total output lines: 412
-
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { Appointment, AppointmentType } from './agenda/types';
 import { classifyImportedAppointment, findAppointmentConflicts, sortAppointmentsByStart } from './agenda/agendaRules';
@@ -199,7 +196,125 @@ export function Agenda() {
         if (!active) return;
         const count = await saveAppleEvents(response);
         if (active) {
-          setAppleImportedCount(count)…1104 tokens truncated…eric',
+          setAppleImportedCount(count);
+          setAppleLastResult('success');
+          setAppleMessage(reason === 'change'
+            ? `Calendário Apple alterado: ${count} evento(s) atualizado(s) automaticamente.`
+            : `Sincronização automática: ${count} evento(s) atualizado(s).`);
+        }
+      } catch (cause) {
+        if (active) {
+          setAppleLastResult('error');
+          setAppleMessage(cause instanceof Error ? cause.message : 'Não foi possível atualizar o Calendário Apple.');
+        }
+      } finally {
+        appleSyncInFlight.current = false;
+        if (active) setAppleBusy(false);
+      }
+    };
+    const onCalendarChanged = () => {
+      if (document.visibilityState === 'visible') void synchronize('change');
+    };
+    window.addEventListener('alfred-native-calendar-changed', onCalendarChanged);
+    void synchronize('initial');
+    return () => {
+      active = false;
+      window.removeEventListener('alfred-native-calendar-changed', onCalendarChanged);
+    };
+  // Rebind when the selected calendars change so native notifications always use
+  // the current selection rather than a stale closure.
+  }, [appleAvailable, selectedAppleCalendars]);
+
+  const range = useMemo(() => {
+    const selected = new Date(`${selectedDate}T12:00:00`);
+    const start = startOfDay(selected);
+    if (view === 'day') return { start, end: new Date(start.getTime() + 86400000) };
+    if (view === 'week') {
+      start.setDate(start.getDate() - start.getDay());
+      return { start, end: new Date(start.getTime() + 7 * 86400000) };
+    }
+    return {
+      start: new Date(selected.getFullYear(), selected.getMonth(), 1),
+      end: new Date(selected.getFullYear(), selected.getMonth() + 1, 1),
+    };
+  }, [selectedDate, view]);
+
+  const visibleItems = useMemo(() => items.filter((item) => {
+    const date = new Date(item.startsAt);
+    return date >= range.start && date < range.end && item.status !== 'cancelled';
+  }), [items, range]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setConflicts([]);
+    const start = new Date(startsAt);
+    const end = new Date(endsAt);
+    if (!startsAt || !endsAt || !Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+      setError('Informe datas e horários válidos para o compromisso.');
+      return;
+    }
+    if (end <= start) {
+      setError('O horário de término deve ser posterior ao início.');
+      return;
+    }
+    const candidate = { id: '__new__', startsAt: start.toISOString(), endsAt: end.toISOString() };
+    const overlaps = findAppointmentConflicts(items, { ...candidate, id: editingId ?? candidate.id });
+    if (overlaps.length) {
+      setConflicts(overlaps);
+      setError('Este horário coincide com outro compromisso. Ajuste o horário antes de salvar.');
+      return;
+    }
+    try {
+      const input = { title, type, startsAt: start.toISOString(), endsAt: end.toISOString(), location: location.trim(), description: description.trim() };
+      if (editingId) await agenda.update(editingId, input);
+      else await agenda.create(input);
+      resetForm();
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o compromisso.');
+    }
+  }
+
+  function resetForm() {
+    setTitle('');
+    setType('personal');
+    setStartsAt(localDateTime(new Date(Date.now() + 60 * 60_000)));
+    setEndsAt(localDateTime(new Date(Date.now() + 2 * 60 * 60_000)));
+    setLocation('');
+    setDescription('');
+    setEditingId(null);
+    setShowForm(false);
+    setConflicts([]);
+    setError('');
+  }
+
+  function editAppointment(item: Appointment) {
+    setEditingId(item.id);
+    setTitle(item.title);
+    setType(item.type);
+    setStartsAt(localDateTime(new Date(item.startsAt)));
+    setEndsAt(localDateTime(new Date(item.endsAt)));
+    setLocation(item.location ?? '');
+    setDescription(item.description ?? '');
+    setConflicts([]);
+    setError('');
+    setShowForm(true);
+  }
+
+  async function cancelAppointment(item: Appointment) {
+    if (!window.confirm(`Cancelar "${item.title}"?`)) return;
+    try {
+      await agenda.cancel(item.id);
+      await refresh();
+    } catch {
+      setError('Não foi possível cancelar o compromisso.');
+    }
+  }
+
+  const selectedLabel = new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric',
     ...(view === 'day' ? { day: 'numeric' as const } : {}),
   });
 
