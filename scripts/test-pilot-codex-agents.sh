@@ -78,10 +78,60 @@ printf 'FAKE_CLI_ONLY: native delegation not tested\n' > "$output"
 FAKE_CODEX
 
 chmod +x "$TMP/bin/codex"
-PATH="$TMP/bin:$PATH" bash scripts/pilot-codex-agents.sh --run > "$TMP/result.txt" 2> "$TMP/error.txt" || {
+
+# The real PR checkout is detached in Actions. Build a clean local fixture
+# with the approved remote and branch without modifying the original checkout.
+FIXTURE="$TMP/alfred-checkout"
+mkdir -p "$FIXTURE/scripts"
+cp scripts/pilot-codex-agents.sh scripts/check-agent-profiles.py "$FIXTURE/scripts/"
+cp -R .codex "$FIXTURE/.codex"
+(
+  cd "$FIXTURE"
+  git init -q
+  git config user.email 'codex-test@example.invalid'
+  git config user.name 'Codex Fixture'
+  git checkout -q -b feat/ecc-codex-multiagent-20261109
+  git remote add origin https://github.com/BM000001/Alfred-Laboratory.git
+  git add .codex scripts
+  git commit -qm 'ci: mock Codex pilot checkout'
+)
+
+(cd "$FIXTURE" && PATH="$TMP/bin:$PATH" bash scripts/pilot-codex-agents.sh --run) > "$TMP/result.txt" 2> "$TMP/error.txt" || {
   cat "$TMP/error.txt" >&2
   exit 1
 }
 grep -q "Codex turn.completed=1" "$TMP/result.txt"
 grep -q "Subagent creation NOT independently proven" "$TMP/result.txt"
-echo "PASS: mocked Codex CLI accepted only safe flags; no model was invoked."
+
+# A cloned lookalike from another owner must never invoke an AI agent.
+git -C "$FIXTURE" remote set-url origin https://github.com/other/Alfred-Laboratory.git
+if (cd "$FIXTURE" && PATH="$TMP/bin:$PATH" bash scripts/pilot-codex-agents.sh --check) > "$TMP/remote.log" 2>&1; then
+  echo "FAIL: unauthorized GitHub remote accepted" >&2
+  exit 1
+fi
+grep -q "origin must point to BM000001/Alfred-Laboratory" "$TMP/remote.log"
+git -C "$FIXTURE" remote set-url origin https://github.com/BM000001/Alfred-Laboratory.git
+
+# A dirty checkout must not be analyzed by a real Codex invocation.
+printf 'not committed\n' > "$FIXTURE/untracked-file"
+if (cd "$FIXTURE" && PATH="$TMP/bin:$PATH" bash scripts/pilot-codex-agents.sh --run) > "$TMP/dirty.log" 2>&1; then
+  echo "FAIL: dirty checkout accepted" >&2
+  exit 1
+fi
+grep -q "checkout has changes/untracked files" "$TMP/dirty.log"
+rm "$FIXTURE/untracked-file"
+
+# An unrelated branch or detached checkout must not invoke the model.
+git -C "$FIXTURE" checkout -q -b unrelated-experiment
+if (cd "$FIXTURE" && PATH="$TMP/bin:$PATH" bash scripts/pilot-codex-agents.sh --run) > "$TMP/branch.log" 2>&1; then
+  echo "FAIL: unapproved branch accepted" >&2
+  exit 1
+fi
+grep -q "requires the approved pilot branch or main" "$TMP/branch.log"
+git -C "$FIXTURE" checkout -q --detach HEAD
+if (cd "$FIXTURE" && PATH="$TMP/bin:$PATH" bash scripts/pilot-codex-agents.sh --run) > "$TMP/detached.log" 2>&1; then
+  echo "FAIL: detached checkout accepted" >&2
+  exit 1
+fi
+grep -q "requires the approved pilot branch or main" "$TMP/detached.log"
+echo "PASS: mock Codex invocation and repository/branch/dirty-tree fail-closed guards; no model invoked."
