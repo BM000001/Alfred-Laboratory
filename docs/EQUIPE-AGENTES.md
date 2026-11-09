@@ -23,6 +23,18 @@ Até três auxiliares simultâneos; nenhum auxiliar redelega. Acione somente pap
 ## Critério de conclusão
 Requisitos satisfeitos, diff revisado, validação pertinente executada, limitações registradas e PR contra main. Nenhum merge ou deploy sem autorização. O coordenador publica um resumo único; não transfere ao usuário a fiscalização de cada agente.
 
+## Validação do carregamento dos perfis
+
+Antes de iniciar o piloto de navegação, abra uma sessão nova do Codex a partir do checkout da branch do PR. Registre a versão do Codex e o SHA do checkout. Peça ao coordenador para iniciar `explorer` e `reviewer` pelos nomes configurados, em tarefas somente de leitura sobre o mesmo SHA.
+
+| Resultado observado | Registro |
+|---|---|
+| A sessão inicia os dois perfis pelos nomes e cada um devolve evidência da tarefa | Carregamento e execução validados para esses dois perfis |
+| A sessão só inicia agentes genéricos e o coordenador fornece as instruções manualmente | Piloto manual concluído, carregamento dos perfis pendente |
+| A sessão não consegue iniciar um dos perfis | Registre qual perfil falhou, a mensagem observada e o ambiente |
+
+Use a identificação do perfil retornada pela sessão como evidência. Se o ambiente só exibir o texto da resposta, registre o carregamento como inconclusivo. Registre separadamente a execução da automação em segundo plano, com horário e link para o resultado ou PR quando houver. Um disparo do agendamento confirma que a automação iniciou, e o resultado da execução mostra o que ela realizou.
+
 ## Primeiro piloto
 Use a pendência real de melhoria de navegação mobile do Alfred: explorer identifica redundâncias e ux_reviewer avalia ações e acessibilidade; planner propõe uma melhoria pequena com critérios. Mudança de identidade visual ampla exige decisão do usuário. Implementer executa o escopo autorizado, QA verifica e reviewer examina o diff. Segurança entra se persistência ou rede mudar.
 
