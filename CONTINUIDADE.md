@@ -94,3 +94,13 @@
 - Não afirmar testes locais: validação oficial deve ser comprovada no GitHub Actions.
 - Atualizar este documento em cada marco confirmado.
 - Não criar registros fictícios nem incluir segredos ou dados pessoais.
+
+## Marco de trabalho — 2026-11-09 — testes de edição da Agenda (PR pendente)
+- Base: `main` em `df723c16a588dc74a46bfe5f377d3ff5c7f6c1ce`; branch isolada `test/agenda-editing-regressions-20261109`.
+- Escopo autorizado em “Pontos de atenção conhecidos”: ampliar testes de edição de compromissos (conflito próprio, outro compromisso, limpeza de campos).
+- Papel efetivamente exercido: coordenador atuou manualmente como explorer/implementer/reviewer com GitHub connector; **nenhum subagente foi iniciado** e **ECC não foi carregado nativamente**. Perfis `qa` e `reviewer` consultados como orientação, não como execução autônoma.
+- Arquivo: `src/modules/agenda/agendaEditing.test.ts`; casos de limpeza de descrição/localização, rejeição de intervalo inválido sem persistir alteração e exclusão do próprio evento na detecção de conflitos.
+- Commit do teste: `d3eeddf18850c92f031c6570135d2f851cb22b66`.
+- Comandos executados: nenhum teste/build local; escrita realizada via GitHub API, sem checkout executável. Resultado de `npm test` e `npm run build:pages` **ainda não comprovado** para este commit. Aguardar GitHub Actions do PR e verificar logs por SHA.
+- PR #21 (link da marca) já aberto e validado estaticamente, sem duplicação. Homologação Safari ainda não executada; sem merge/deploy.
+- Próxima ação: conferir CI no SHA final deste PR, corrigir qualquer falha e revisar diff; testes de UI e Safari continuam separados.
