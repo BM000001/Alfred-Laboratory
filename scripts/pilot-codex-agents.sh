@@ -16,6 +16,21 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "ERROR: pilot requires a Git checkout of Alfred-Laboratory." >&2
   exit 1
 fi
+# Refuse to run the pilot from a different repository or nested checkout.
+CHECKOUT_ROOT="$(git rev-parse --show-toplevel)"
+if [[ "$(cd "$CHECKOUT_ROOT" && pwd -P)" != "$(pwd -P)" ]]; then
+  echo "ERROR: run the pilot from the Alfred-Laboratory repository root." >&2
+  exit 1
+fi
+REMOTE_URL="$(git remote get-url origin 2>/dev/null || true)"
+case "$REMOTE_URL" in
+  https://github.com/BM000001/Alfred-Laboratory|https://github.com/BM000001/Alfred-Laboratory.git|git@github.com:BM000001/Alfred-Laboratory|git@github.com:BM000001/Alfred-Laboratory.git|ssh://git@github.com/BM000001/Alfred-Laboratory|ssh://git@github.com/BM000001/Alfred-Laboratory.git)
+    ;;
+  *)
+    echo "ERROR: origin must point to BM000001/Alfred-Laboratory on github.com; no agent started." >&2
+    exit 1
+    ;;
+esac
 if [[ "$MODE" == "--check" ]]; then
   if command -v codex >/dev/null 2>&1; then
     codex --version
@@ -25,6 +40,17 @@ if [[ "$MODE" == "--check" ]]; then
   fi
   exit 0
 fi
+
+# Only the approved pilot branch and main (after integration) are allowed.
+# Detached PR checkouts are supported by --check, never by --run.
+ACTIVE_BRANCH="$(git symbolic-ref --quiet --short HEAD || true)"
+case "$ACTIVE_BRANCH" in
+  feat/ecc-codex-multiagent-20261109|main) ;;
+  *)
+    echo "ERROR: --run requires the approved pilot branch or main, not a detached/other branch." >&2
+    exit 1
+    ;;
+esac
 
 # No auto-installation, credential creation, write access, merge or deployment.
 if ! command -v codex >/dev/null 2>&1; then
