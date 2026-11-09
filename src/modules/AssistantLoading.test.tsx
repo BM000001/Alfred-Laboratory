@@ -38,7 +38,9 @@ describe('Assistant loading state', () => {
     expect(finishRead).toBeDefined();
     finishRead!(await originalGetAll());
 
-    expect(await within(screen.getByRole('log')).findByText(/tarefa\\(s\\) pendente\\(s\\) encontrada\\(s\\)|Nenhuma tarefa pendente encontrada/)).toBeInTheDocument();
+    expect(await within(screen.getByRole('log')).findByText((text) =>
+      text.includes('tarefa(s) pendente(s) encontrada(s).') || text.includes('Nenhuma tarefa pendente encontrada.'),
+    )).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
     expect(screen.getByLabelText('Mensagem para Alfred')).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled();
