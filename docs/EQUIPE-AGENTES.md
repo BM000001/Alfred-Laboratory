@@ -35,6 +35,15 @@ Antes de iniciar o piloto de navegação, abra uma sessão nova do Codex a parti
 
 Use a identificação do perfil retornada pela sessão como evidência. Se o ambiente só exibir o texto da resposta, registre o carregamento como inconclusivo. Registre separadamente a execução da automação em segundo plano, com horário e link para o resultado ou PR quando houver. Um disparo do agendamento confirma que a automação iniciou, e o resultado da execução mostra o que ela realizou.
 
+## Piloto executável em Codex (sem alteração de código)
+
+O script `scripts/pilot-codex-agents.sh` executa uma tentativa **real** e limitada de delegação `explorer` + `reviewer` via `codex exec` em um Codespace Linux ou checkout confiável. Ele **não** instala Codex, não autentica contas, não faz merge, não habilita o agendamento de 30 minutos e não usa o ECC automaticamente.
+
+1. Na branch deste PR e com `python3`, `git` e checkout disponível, `bash scripts/pilot-codex-agents.sh --check` verifica perfis e pré-requisitos **sem consumir tokens**.
+2. Num ambiente com `codex` autenticado (`codex login status`), execute `bash scripts/pilot-codex-agents.sh --run` apenas quando autorizado. É exigido checkout limpo e GNU `timeout`; o processo Codex tem limite de 600 segundos. A chamada pode consumir franquia de uso do plano ou gerar custo se o Codex estiver configurado com API paga; confira a conta antes de executar.
+3. O script aplica sandbox de leitura, aprovações desabilitadas para escalonamento e máximo de dois subagentes. Salva saída e JSONL num diretório privado temporário fora do repositório. **Resultado textual do modelo não comprova por si só o spawn dos subagentes**: confira as threads e a trilha real. Formatos JSONL podem mudar entre versões.
+4. O GitHub Actions apenas roda `bash -n` e `--check` sem Codex; CI verde comprova preflight, não execução nativa. Não alegar que o ECC ou os dois perfis executaram sem evidência concreta.
+
 ## Primeiro piloto
 Use a pendência real de melhoria de navegação mobile do Alfred: explorer identifica redundâncias e ux_reviewer avalia ações e acessibilidade; planner propõe uma melhoria pequena com critérios. Mudança de identidade visual ampla exige decisão do usuário. Implementer executa o escopo autorizado, QA verifica e reviewer examina o diff. Segurança entra se persistência ou rede mudar.
 
