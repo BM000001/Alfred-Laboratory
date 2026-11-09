@@ -35,6 +35,20 @@ Antes de iniciar o piloto de navegação, abra uma sessão nova do Codex a parti
 
 Use a identificação do perfil retornada pela sessão como evidência. Se o ambiente só exibir o texto da resposta, registre o carregamento como inconclusivo. Registre separadamente a execução da automação em segundo plano, com horário e link para o resultado ou PR quando houver. Um disparo do agendamento confirma que a automação iniciou, e o resultado da execução mostra o que ela realizou.
 
+## Codespaces pronto para os agentes (configuração opcional)
+
+Para reduzir comandos manuais, o PR #20 inclui a configuração **Alfred Laboratory - Codex agents (opt-in)** em `.devcontainer/agents/devcontainer.json`. Abra um *novo* Codespace do repositório `BM000001/Alfred-Laboratory`, selecionando **a branch `feat/ecc-codex-multiagent-20261109`** e essa configuração de devcontainer. Não use por engano a branch `main`: os arquivos ainda estão apenas no PR. A configuração é opcional e não altera outros Codespaces por padrão.
+
+O `postCreateCommand` instala dependências do projeto e `@openai/codex@0.167.0`, confere os perfis e roda somente o modo `--check`. O Codex **não** inicia agentes nem autentica a conta automaticamente. O ambiente precisa de internet para instalar os pacotes; a criação do Codespace está sujeita aos limites/cobrança do GitHub Codespaces.
+
+No editor Codespaces, use **Terminal → Run Task** (ou **Tasks: Run Task** na paleta de comandos) e siga esta sequência:
+
+1. **Alfred: 1. Verificar ambiente de agentes (sem IA)** — confirma a preparação sem executar modelo.
+2. **Alfred: 2. Conectar Codex à conta (ação humana)** — inicia o login por código no navegador; não cole códigos de autenticação no GitHub, nos PRs ou nesta conversa.
+3. **Alfred: 3. Testar explorer + reviewer (somente leitura)** — após login, tenta a delegação e salva trilha privada em um diretório temporário. Consome a franquia de uso do Codex ou pode gerar custo **se** a conta estiver usando API paga; confira a autenticação antes de executar.
+
+O piloto tem prazo limite, não faz alterações no repositório e **não** equivale ao GitHub Actions executando agentes a cada 30 minutos. Ele apenas prepara a prova de funcionamento de dois subagentes nativos.
+
 ## Piloto executável em Codex (sem alteração de código)
 
 O script `scripts/pilot-codex-agents.sh` executa uma tentativa **real** e limitada de delegação `explorer` + `reviewer` via `codex exec` em um Codespace Linux ou checkout confiável. Ele **não** instala Codex, não autentica contas, não faz merge, não habilita o agendamento de 30 minutos e não usa o ECC automaticamente.
