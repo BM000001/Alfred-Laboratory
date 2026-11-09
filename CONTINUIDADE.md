@@ -1,5 +1,14 @@
 # Continuidade do Alfred
 
+## Marco — teste de mensagens longas do assistente (2026-11-09)
+
+- Escopo: prioridade 3 do backlog (mensagens longas da interface conversacional), independente dos arquivos de código dos PRs #20–#28.
+- Implementação: commit `34f2086086fb5809b35d27f28797bbaff8978cea`, arquivo `src/modules/AssistantLongMessage.test.tsx`. Testa envio de mensagem entre 400 e 500 caracteres, renderização exata, persistência no IndexedDB simulado e limpeza do campo.
+- Papéis: exploração, implementação, QA por inspeção e revisão estática aplicados manualmente pelo coordenador; nenhum subagente delegado, nenhum carregamento nativo ECC.
+- Evidência: leitura do código `src/modules/Assistant.tsx`, `src/modules/Assistant.test.tsx`, `package.json`, PRs abertos e diffs. `npm test` e `npm run build:pages` não executados neste ambiente; CI ainda a verificar, não afirmar sucesso. Safari/iPhone não testado.
+- Riscos: o workflow de PRs recentes apresentou falhas antes da criação de jobs; não atribuir tais falhas ao teste sem logs. Próxima ação: conferir execução de testes/build e revisar o PR sem merge.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
