@@ -39,7 +39,7 @@ Use a identificação do perfil retornada pela sessão como evidência. Se o amb
 
 Para reduzir comandos manuais, o PR #20 inclui a configuração **Alfred Laboratory - Codex agents (opt-in)** em `.devcontainer/agents/devcontainer.json`. Abra um *novo* Codespace do repositório `BM000001/Alfred-Laboratory`, selecionando **a branch `feat/ecc-codex-multiagent-20261109`** e essa configuração de devcontainer. Não use por engano a branch `main`: os arquivos ainda estão apenas no PR. A configuração é opcional e não altera outros Codespaces por padrão.
 
-O `postCreateCommand` instala dependências do projeto e `@openai/codex@0.167.0`, confere os perfis e roda somente o modo `--check`. O Codex **não** inicia agentes nem autentica a conta automaticamente. O ambiente precisa de internet para instalar os pacotes; a criação do Codespace está sujeita aos limites/cobrança do GitHub Codespaces.
+O `postCreateCommand` instala **apenas o Codex CLI global** (`@openai/codex@0.167.0`), confere os perfis e roda somente `--check`. Não instala dependências do aplicativo nesta etapa: sem `package-lock.json` versionado ou `.gitignore` para `node_modules`, isso poderia deixar o checkout sujo e bloquear o piloto `--run`. As dependências do aplicativo são validadas separadamente no CI. O Codex **não** inicia agentes nem autentica a conta automaticamente. O ambiente precisa de internet para instalar os pacotes; a criação do Codespace está sujeita aos limites/cobrança do GitHub Codespaces.
 
 No editor Codespaces, use **Terminal → Run Task** (ou **Tasks: Run Task** na paleta de comandos) e siga esta sequência:
 
