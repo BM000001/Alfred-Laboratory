@@ -3,6 +3,7 @@ import type { Appointment, AppointmentType } from './agenda/types';
 import { classifyImportedAppointment, findAppointmentConflicts, sortAppointmentsByStart } from './agenda/agendaRules';
 import { createAgendaService } from './agenda/agendaService';
 import { appointmentRepository } from '../storage/repositories';
+import { getAlfredLocalStorageKey } from '../storage/namespace';
 import { ICalendarImport } from './ICalendarImport';
 import { connectAppleCalendar, isNativeAppleCalendarAvailable, syncAppleCalendar, type NativeCalendarInfo } from './agenda/nativeCalendarBridge';
 
@@ -50,11 +51,11 @@ export function Agenda() {
   const [appleLastResult, setAppleLastResult] = useState<'success' | 'error' | null>(null);
   const [appleImportedCount, setAppleImportedCount] = useState(0);
   const [appleMessage, setAppleMessage] = useState('');
-  const [appleLastSync, setAppleLastSync] = useState<string | null>(() => window.localStorage.getItem('alfred.appleCalendarLastSync'));
+  const [appleLastSync, setAppleLastSync] = useState<string | null>(() => window.localStorage.getItem(getAlfredLocalStorageKey('alfred.appleCalendarLastSync')));
   const [appleCalendars, setAppleCalendars] = useState<NativeCalendarInfo[]>([]);
   const [selectedAppleCalendars, setSelectedAppleCalendars] = useState<string[]>(() => {
     try {
-      const saved = window.localStorage.getItem('alfred.appleCalendarIds');
+      const saved = window.localStorage.getItem(getAlfredLocalStorageKey('alfred.appleCalendarIds'));
       const parsed: unknown = saved ? JSON.parse(saved) : [];
       return Array.isArray(parsed) && parsed.every((value): value is string => typeof value === 'string') ? parsed : [];
     } catch {
@@ -122,7 +123,7 @@ export function Agenda() {
     await refresh();
     const syncedAt = new Date().toISOString();
     setAppleLastSync(syncedAt);
-    window.localStorage.setItem('alfred.appleCalendarLastSync', syncedAt);
+    window.localStorage.setItem(getAlfredLocalStorageKey('alfred.appleCalendarLastSync'), syncedAt);
     if (removed > 0) setAppleMessage(`${removed} evento(s) removido(s) da origem foram arquivados na Agenda.`);
     return imported;
   }
@@ -177,7 +178,7 @@ export function Agenda() {
 
   useEffect(() => {
     if (appleConnected) {
-      window.localStorage.setItem('alfred.appleCalendarIds', JSON.stringify(selectedAppleCalendars));
+      window.localStorage.setItem(getAlfredLocalStorageKey('alfred.appleCalendarIds'), JSON.stringify(selectedAppleCalendars));
     }
   }, [appleConnected, selectedAppleCalendars]);
 

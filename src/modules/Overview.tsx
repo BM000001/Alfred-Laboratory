@@ -4,6 +4,7 @@ import type { Appointment } from './agenda/types';
 import type { Discipline, StudyTopic } from './studies/types';
 import type { FocusSession } from './productivity/types';
 import { taskRepository, appointmentRepository, studyTopicRepository, disciplineRepository, focusSessionRepository } from '../storage/repositories';
+import { getAlfredLocalStorageKey } from '../storage/namespace';
 import { summarizeStudyProgress } from './studies/studyRules';
 import { summarizeFocusSessions } from './productivity/productivityRules';
 import { isTaskOverdue } from './tasks/taskRules';
@@ -43,8 +44,8 @@ export function Overview({ onNavigate }: Props) {
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [weatherCity, setWeatherCity] = useState(() => localStorage.getItem('alfred-weather-city') ?? '');
-  const [cityInput, setCityInput] = useState(() => localStorage.getItem('alfred-weather-city') ?? '');
+  const [weatherCity, setWeatherCity] = useState(() => localStorage.getItem(getAlfredLocalStorageKey('alfred-weather-city')) ?? '');
+  const [cityInput, setCityInput] = useState(() => localStorage.getItem(getAlfredLocalStorageKey('alfred-weather-city')) ?? '');
   const [weather, setWeather] = useState<Weather | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState('');
@@ -122,7 +123,7 @@ export function Overview({ onNavigate }: Props) {
     event.preventDefault();
     const city = cityInput.trim();
     if (!city) return;
-    localStorage.setItem('alfred-weather-city', city);
+    localStorage.setItem(getAlfredLocalStorageKey('alfred-weather-city'), city);
     setWeatherCity(city);
     setShowCityForm(false);
   }

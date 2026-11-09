@@ -1,4 +1,6 @@
-export const ALFRED_DATABASE_NAME = 'alfred';
+import { getAlfredDatabaseName } from './namespace';
+
+export const ALFRED_DATABASE_NAME = getAlfredDatabaseName(import.meta.env.BASE_URL);
 export const ALFRED_DATABASE_VERSION = 10;
 export const STORE_NAMES = {
   tasks: 'tasks',
