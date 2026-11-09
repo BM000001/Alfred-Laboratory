@@ -1,5 +1,14 @@
 # Continuidade do Alfred
 
+## Piloto de testes das consultas locais — 2026-11-09
+
+- Branch `test/assistant-read-domains-20261109`, base/destino `main`. Commit de implementação: `6fc289240bdc71f88bda7d617cabd7b9d86e50e4`.
+- Arquivo novo: `src/modules/assistant/localAssistantDomains.test.ts`. Três testes de regressão autorizados pela prioridade de ampliar consultas dos três domínios: agenda só mostra futuros agendados; estudos calcula progresso sem escrita; consulta de agenda não revela tarefas.
+- Papéis: exploração, implementação e revisão manual pelo coordenador; nenhum subagente foi iniciado, nenhum perfil foi carregado nativamente via ECC.
+- Verificações: leitura do código `localAssistant.ts`, `readTools.ts` e contratos; conferência de arquivos dos PRs abertos e ausência de sobreposição com este teste. Testes/build locais não executados neste ambiente; CI do PR é a validação pendente, não presumida.
+- Próxima ação: conferir CI e revisar eventuais falhas reais, sem merge ou deploy.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
