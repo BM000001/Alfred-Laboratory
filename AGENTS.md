@@ -15,8 +15,8 @@ Antes de começar, leia `README.md`, `CLAUDE.md`, `CONTINUIDADE.md` e `docs/AI_W
 ## Uso de ECC e agentes do Codex
 
 - Use apenas as skills e papéis relevantes à tarefa.
-- Delegue exploração, pesquisa documental e revisão como tarefas independentes e somente de leitura; os papéis estão em `.codex/agents/`.
-- O agente principal é responsável por sintetizar resultados, editar, validar e preparar o PR.
+- Selecione os papéis em `.codex/agents/` conforme `docs/EQUIPE-AGENTES.md`. Delegue explicitamente as tarefas; não execute os oito papéis em toda mudança.
+- O agente principal coordena escopo, arquivos, critérios de aceite e resultado. Apenas um escritor por checkout: principal, implementer e qa nunca editam simultaneamente. Leituras de revisão devem usar um SHA estável. Auxiliares não criam subagentes. As permissões são herdadas da sessão; instruções de leitura não são um sandbox.
 - Para mudanças de código, use TDD quando a skill estiver disponível; use revisão de segurança para dados, autenticação, criptografia ou rede; faça verificação final antes do PR.
 - Trate toda recomendação de agente como hipótese a verificar no código, nos testes e na documentação.
 - Não afirme que ECC ou um papel foi executado se não esteve disponível na sessão.
