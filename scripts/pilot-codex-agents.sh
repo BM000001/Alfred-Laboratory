@@ -31,6 +31,10 @@ if ! command -v codex >/dev/null 2>&1; then
   echo "ERROR: codex CLI not installed; no agents started." >&2
   exit 1
 fi
+if ! command -v timeout >/dev/null 2>&1; then
+  echo "ERROR: GNU timeout is required to enforce the pilot's 10-minute safety limit." >&2
+  exit 1
+fi
 if ! codex login status >/dev/null 2>&1; then
   echo "ERROR: Codex not authenticated; log in interactively before running the pilot." >&2
   exit 1
@@ -62,7 +66,7 @@ PILOT
 )"
 
 set +e
-printf '%s\n' "$PROMPT" | codex exec \
+printf '%s\n' "$PROMPT" | timeout --signal=TERM --kill-after=10s 600s codex exec \
   --cd "$ROOT" \
   --sandbox read-only \
   --ask-for-approval never \
