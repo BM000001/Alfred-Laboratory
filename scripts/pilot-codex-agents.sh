@@ -69,7 +69,7 @@ set +e
 printf '%s\n' "$PROMPT" | timeout --signal=TERM --kill-after=10s 600s codex exec \
   --cd "$ROOT" \
   --sandbox read-only \
-  --ask-for-approval never \
+  -c approval_policy=never \
   -c agents.enabled=true \
   -c agents.max_concurrent_threads_per_session=2 \
   --json \
