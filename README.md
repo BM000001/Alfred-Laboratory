@@ -9,23 +9,24 @@ Ambiente independente para experimentar, testar e revisar melhorias do Alfred se
 
 ## Branches
 
-- `main`: regras e documentação estáveis do laboratório.
-- `develop-app`: integração de alterações no código do Alfred; deriva da baseline importada.
+- `main`: base ativa do Alfred-Laboratory e destino dos PRs.
+- `develop-app`: branch legada; não use como base nem destino enquanto não for reparada.
 - `baseline/alfred-main`: snapshot de referência importado do Alfred original. Trate como somente leitura.
-- `experiment/<assunto>`: implementação isolada de uma melhoria.
-- `fix/<assunto>`: correção isolada.
+- `feat/<assunto>`, `fix/<assunto>` ou `experiment/<assunto>`: uma branch isolada por tarefa.
 
 A baseline foi importada. Seu commit de referência é `51c3b4fdaacbaa3a6259aecf5e480ed58257877d`.
 
 ## Fluxo recomendado
 
-1. Crie uma branch `experiment/<assunto>` ou `fix/<assunto>` a partir de `baseline/alfred-main`.
-2. Faça mudanças pequenas e limitadas ao objetivo da tarefa.
-3. Execute testes e build; registre os comandos e resultados reais.
-4. Abra um Pull Request da branch de trabalho para `develop-app`.
-5. Revise o diff, os testes, os riscos e a preservação das funcionalidades existentes.
-6. Depois da validação, promova as mudanças de `develop-app` para `main` por Pull Request.
-7. Qualquer integração no repositório original deve ser uma etapa separada, por Pull Request próprio e autorização explícita.
+1. Confira o estado do repositório e os PRs abertos.
+2. Crie uma branch de trabalho a partir de `main`.
+3. Faça mudanças pequenas e limitadas ao objetivo da tarefa.
+4. Execute testes e build pertinentes; registre os comandos e resultados reais.
+5. Abra um Pull Request da branch de trabalho para `main`.
+6. Revise diff, verificações, riscos e preservação das funcionalidades antes de integrar.
+7. Qualquer integração no repositório original deve ser uma etapa separada, por PR próprio e autorização explícita.
+
+Mudanças integradas em `main` podem ser publicadas pelo GitHub Pages. Um PR aberto não publica a aplicação.
 
 ## Regras de segurança
 
@@ -39,4 +40,4 @@ A baseline foi importada. Seu commit de referência é `51c3b4fdaacbaa3a6259aecf
 
 ## Documentação
 
-Leia [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) antes de iniciar um trabalho com agentes de IA. Use o [template de Pull Request](.github/PULL_REQUEST_TEMPLATE.md) para registrar escopo, testes, riscos e plano de reversão.
+Leia [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) antes de iniciar um trabalho com agentes de IA. Veja [docs/ECC-SETUP.md](docs/ECC-SETUP.md) para configurar e usar o ECC no Codex. Use o [template de Pull Request](.github/PULL_REQUEST_TEMPLATE.md) para registrar escopo, testes, riscos e plano de reversão.
