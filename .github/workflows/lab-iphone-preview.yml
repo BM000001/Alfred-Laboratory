@@ -32,6 +32,27 @@ jobs:
           bash -n scripts/pilot-codex-agents.sh
           bash scripts/pilot-codex-agents.sh --check
           bash scripts/test-pilot-codex-agents.sh
+      - name: Validate optional Codespaces agent setup (no AI calls)
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          config = json.loads(Path('.devcontainer/agents/devcontainer.json').read_text())
+          tasks = json.loads(Path('.vscode/tasks.json').read_text())
+          setup = config.get('postCreateCommand', '')
+          assert '@openai/codex@0.167.0' in setup
+          assert 'scripts/check-agent-profiles.py' in setup
+          assert 'codex exec' not in setup and 'codex login' not in setup
+          assert len(tasks['tasks']) == 3
+          commands = [task['command'] for task in tasks['tasks']]
+          assert commands == [
+              'bash scripts/pilot-codex-agents.sh --check',
+              'codex login --device-auth',
+              'bash scripts/pilot-codex-agents.sh --run',
+          ]
+          print('Optional Codespaces config and human-gated pilot tasks validated.')
+          PY
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Test
