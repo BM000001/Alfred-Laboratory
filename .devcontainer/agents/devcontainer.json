@@ -1,7 +1,7 @@
 {
   "name": "Alfred Laboratory - Codex agents (opt-in)",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
-  "postCreateCommand": "npm install --no-audit --no-fund && npm install --global @openai/codex@0.167.0 && python3 scripts/check-agent-profiles.py && bash scripts/pilot-codex-agents.sh --check",
+  "postCreateCommand": "npm install --global @openai/codex@0.167.0 && python3 scripts/check-agent-profiles.py && bash scripts/pilot-codex-agents.sh --check",
   "customizations": {
     "vscode": {
       "settings": {
