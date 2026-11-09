@@ -20,6 +20,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate Codex agent profiles (when included)
+        run: |
+          if [ -d .codex/agents ]; then
+            python3 scripts/check-agent-profiles.py
+          else
+            echo "No Codex agent profiles on this branch; skipping profile validation."
+          fi
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Test
