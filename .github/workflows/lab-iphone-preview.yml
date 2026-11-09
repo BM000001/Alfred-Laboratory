@@ -31,6 +31,7 @@ jobs:
         run: |
           bash -n scripts/pilot-codex-agents.sh
           bash scripts/pilot-codex-agents.sh --check
+          bash scripts/test-pilot-codex-agents.sh
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Test
