@@ -35,6 +35,7 @@ export function Assistant() {
   const [pendingProposal, setPendingProposal] = useState<PendingTaskProposal | null>(null);
   const [error, setError] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const promptRef = useRef<HTMLInputElement>(null);
   const recentTaskIdRef = useRef<string | null>(null);
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
 
@@ -393,7 +394,7 @@ export function Assistant() {
               'Como está meu progresso nos estudos?',
               'O que você lembra sobre mim?',
             ].map((suggestion) => (
-              <button key={suggestion} type="button" onClick={() => setInput(suggestion)} disabled={loading || approving}>
+              <button key={suggestion} type="button" onClick={() => { setInput(suggestion); promptRef.current?.focus(); }} disabled={!historyReady || loading || approving || pendingProposal !== null}>
                 <span aria-hidden="true">↗</span>{suggestion}
               </button>
             ))}
@@ -439,7 +440,7 @@ export function Assistant() {
       {error && <p className="module-error" role="alert">{error}</p>}
       <form className="assistant-composer" onSubmit={submit}>
         <label className="sr-only" htmlFor="assistant-prompt">Mensagem para Alfred</label>
-        <input id="assistant-prompt" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ex.: Quais tarefas estão pendentes?" maxLength={500} disabled={!historyReady || loading || approving || pendingProposal !== null} />
+        <input ref={promptRef} id="assistant-prompt" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ex.: Quais tarefas estão pendentes?" maxLength={500} disabled={!historyReady || loading || approving || pendingProposal !== null} />
         <button type="submit" className="primary-action" disabled={!historyReady || loading || approving || pendingProposal !== null || !input.trim()}>Enviar</button>
       </form>
       <p className="assistant-disclaimer">O modo local consulta somente dados deste dispositivo. Nenhuma mensagem é enviada automaticamente para serviços externos. Para usar outro modelo de IA, utilize a exportação manual, revise o conteúdo e faça o envio por sua própria conta. Alterações em tarefas continuam exigindo confirmação explícita.</p>
