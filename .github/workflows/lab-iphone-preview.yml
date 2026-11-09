@@ -27,6 +27,10 @@ jobs:
           else
             echo "No Codex agent profiles on this branch; skipping profile validation."
           fi
+      - name: Smoke test Codex pilot preflight (no model call)
+        run: |
+          bash -n scripts/pilot-codex-agents.sh
+          bash scripts/pilot-codex-agents.sh --check
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Test
