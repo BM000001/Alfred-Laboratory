@@ -9,7 +9,7 @@ Antes de começar, leia `README.md`, `CLAUDE.md`, `CONTINUIDADE.md` e `docs/AI_W
 - `develop-app` é legada e não deve ser usada até ser reparada e validada.
 - Trate `baseline/alfred-main` como somente leitura.
 - Não faça merge, force-push, exclusão de branch ou publicação manual sem autorização explícita.
-- Preserve as decisões de privacidade, local-first e confirmação descritas em `CLAUDE.md).
+- Preserve as decisões de privacidade, local-first e confirmação descritas em `CLAUDE.md`.
 - Não inclua credenciais, tokens, dados pessoais reais ou chamadas remotas sem necessidade e autorização.
 
 ## Uso de ECC e agentes do Codex
