@@ -27,9 +27,9 @@ Permitir que várias IAs trabalhem em paralelo no Alfred-Laboratory sem colocar 
 
 ## Uso de agentes
 
-- Os papéis em `.codex/agents/` são auxiliares de leitura: exploração, revisão e pesquisa de documentação.
-- O agente principal mantém a responsabilidade pelas decisões e por qualquer edição.
-- Delegue em paralelo apenas perguntas independentes e tarefas de revisão que não escrevam arquivos.
+- A equipe possui oito papéis descritos em [EQUIPE-AGENTES.md](EQUIPE-AGENTES.md). Implementer pode editar e QA pode escrever testes sob atribuição; os demais recebem instruções de leitura.
+- O agente principal coordena as decisões e atribui posse exclusiva da escrita a um agente por vez no checkout.
+- Paralelize perguntas independentes; revise um SHA estável e execute implementação e escrita de testes em sequência.
 - Use as skills ECC pertinentes quando o plugin estiver disponível; não afirme que foram usadas se a sessão não as carregou.
 - Agentes do Codex só atuam durante uma sessão e uma tarefa. Não são serviços contínuos ou execução em segundo plano.
 - Consulte [docs/ECC-SETUP.md](ECC-SETUP.md) para instalação e limites.
