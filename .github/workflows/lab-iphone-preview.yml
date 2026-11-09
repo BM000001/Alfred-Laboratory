@@ -42,6 +42,7 @@ jobs:
           tasks = json.loads(Path('.vscode/tasks.json').read_text())
           setup = config.get('postCreateCommand', '')
           assert '@openai/codex@0.167.0' in setup
+          assert 'npm install --no-audit' not in setup, 'Codespace must stay clean for the pilot'
           assert 'scripts/check-agent-profiles.py' in setup
           assert 'codex exec' not in setup and 'codex login' not in setup
           assert len(tasks['tasks']) == 3
