@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Alfred: 1. Verificar ambiente de agentes (sem IA)",
+      "type": "shell",
+      "command": "bash scripts/pilot-codex-agents.sh --check",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": "test"
+    },
+    {
+      "label": "Alfred: 2. Conectar Codex à conta (ação humana)",
+      "type": "shell",
+      "command": "codex login --device-auth",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": "test"
+    },
+    {
+      "label": "Alfred: 3. Testar explorer + reviewer (somente leitura)",
+      "type": "shell",
+      "command": "bash scripts/pilot-codex-agents.sh --run",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": "test"
+    }
+  ]
+}
