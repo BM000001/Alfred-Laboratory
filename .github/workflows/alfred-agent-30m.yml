@@ -1,0 +1,44 @@
+name: Alfred Laboratory - 30-minute agent trigger (gated)
+
+on:
+  schedule:
+    - cron: '13,43 * * * *'
+  workflow_dispatch:
+
+# This file schedules a trigger; it does not provide an AI model or free inference.
+# Disabled by default: no runner minutes and no provider/API charges.
+permissions:
+  contents: read
+
+concurrency:
+  group: alfred-laboratory-agent-30m
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    if: ${{ vars.ALFRED_LAB_AGENT_30M_APPROVED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Fail closed unless an approved agent executor is installed
+        shell: bash
+        env:
+          GH_REPOSITORY: ${{ github.repository }}
+          GH_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$GH_REPOSITORY" != 'BM000001/Alfred-Laboratory' || "$GH_REF" != 'refs/heads/main' ]]; then
+            echo '::error::Execution outside Alfred-Laboratory/main is forbidden.'
+            exit 1
+          fi
+          if [[ ! -x .github/scripts/alfred-agent-executor.sh ]]; then
+            echo '::error::No approved agent runtime is installed; keep the schedule disabled.'
+            exit 1
+          fi
+      - name: Run approved agent executor
+        shell: bash
+        run: .github/scripts/alfred-agent-executor.sh
