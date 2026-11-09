@@ -1,5 +1,13 @@
 # Continuidade do Alfred
 
+## Marco — piloto executável dos agentes (2026-11-09)
+
+- PR #20: adicionado `scripts/pilot-codex-agents.sh`, para executar em sessão Codex autenticada um piloto **real** e somente leitura com os perfis `explorer` e `reviewer` (máximo de dois auxiliares, timeout 600 s, registros JSONL privados em diretório temporário).
+- Modificado o workflow `.github/workflows/lab-iphone-preview.yml` para verificar sintaxe Bash e preflight do piloto sem iniciar agentes, sem fazer login ou consumir modelo.
+- O CI do commit `db5c1cff4a52284d31302eb759ec28e06b75a414` concluiu com sucesso no run https://github.com/BM000001/Alfred-Laboratory/actions/runs/42672790204 . O script recebeu depois limite de execução e documentação adicional, exigindo nova validação do head final.
+- Nenhum subagente Codex foi iniciado nesta sessão; Codex CLI indisponível. O piloto **não** está operacional 24h, não instala ECC, não altera app e não substitui a automação horária do ChatGPT.
+- Próxima ação: testar o piloto com Codex CLI autenticado em um Codespace confiável, confirmar eventos/threads de subagentes e só depois considerar executor autônomo com autenticação e custos aprovados.
+
 ## Equipe do Laboratório — piloto em 2026-11-09
 
 - Repositório deste marco: BM000001/Alfred-Laboratory. Base ativa: main; develop-app legada.
