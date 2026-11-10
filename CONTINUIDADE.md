@@ -1,5 +1,15 @@
 # Continuidade do Alfred
 
+## Preparação do agendamento de 30 minutos — 2026-11-09 (PR #23)
+
+- Repositório: BM000001/Alfred-Laboratory; branch `ci/prepare-agent-cadence-30m-20261109`, base/destino `main`.
+- Entrega: gatilho `13,43 * * * *` em `.github/workflows/alfred-agent-30m.yml` (commit `d22e5e01c2d1345e397a69a29f66e57caf61002d`); documentação `docs/AGENTES-AGENDAMENTO-30M.md` (commit `3444fa8bf2f0c2663a6717833bc05f8af00b8bd4`). PR: https://github.com/BM000001/Alfred-Laboratory/pull/23 (draft, sem merge).
+- Papel realmente executado: coordenador/implementador em modo manual; `explorer`, `qa`, `reviewer` e demais perfis não foram iniciados como subagentes; nenhum carregamento nativo do ECC.
+- Comandos/verificações: análise local do YAML via `yaml.load(..., Loader=yaml.BaseLoader)`, com asserts para cron, gate de habilitação, `permissions.contents: read` e `persist-credentials: false` — OK; conferência de PRs, workflows e instruções pelo GitHub. Não foi executado um workflow agendado, nem testes/build do app nesta execução.
+- Limite: agendamento está desabilitado por padrão e NÃO executa IA. Falta executor com autenticação, orçamento e permissão revisados; habilitar antes de adicionar `.github/scripts/alfred-agent-executor.sh` resulta em falha explícita. A automação horária do ChatGPT permanece até existir substituição validada.
+- Próxima ação: escolher executor com custo comprovadamente aceitável, implementá-lo/validá-lo em PR independente, verificar GitHub Actions após merge autorizado e só então habilitar a cadência de 30 minutos; preservar todas as restrições de segurança.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
