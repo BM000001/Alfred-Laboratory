@@ -105,3 +105,11 @@
 - Não afirmar testes locais: validação oficial deve ser comprovada no GitHub Actions.
 - Atualizar este documento em cada marco confirmado.
 - Não criar registros fictícios nem incluir segredos ou dados pessoais.
+
+## Marco de correção — PR #32 (2026-11-10)
+- Commit de código: `d598cb5d653b4262c8ce8d47c455f96c1f08e254` no PR https://github.com/BM000001/Alfred-Laboratory/pull/32 (destino `main`).
+- Falha comprovada: workflow `42740359151`, 236 testes aprovados; `npm run build:pages` falhou no TypeScript (TS2307 `node:fs`/`node:path`, TS2580 `process`, TS7006 inferência de parâmetros).
+- Correção restrita a `src/modules/thirdPartyInventory.test.ts`: importação de `package.json` e `THIRD_PARTY.md?raw` via Vite, sem APIs Node no código compilado pelo app; mantém a verificação de dependências de runtime.
+- Papéis aplicados manualmente: explorer (diagnóstico dos logs e tsconfig), implementer (correção), qa/reviewer (revisão estática). Nenhum subagente executado; ECC não carregado nativamente.
+- Comandos: nenhum teste/build local executado; logs do GitHub Actions consultados. Resultado pós-correção e CI ainda não confirmados no momento deste registro.
+- Riscos: confirmar resolução de `?raw` no TypeScript/Vite e testes/build no CI; nenhuma validação Safari. Próxima ação: observar apenas o novo CI do PR #32 e corrigir falha concreta se ocorrer. Sem merge/deploy.
