@@ -68,9 +68,17 @@ export function createAgendaService(
       return appointment;
     },
 
-    async upsertImported(input: CreateAppointmentInput & { importedUid: string; importedStableUid?: string; importedCalendarId?: string; importedCalendarName?: string }): Promise<Appointment> {
+    async upsertImported(input: CreateAppointmentInput & { importedUid: string; importedStableUid?: string; importedCalendarId?: string; importedCalendarName?: string; externalProvider?: 'google'; externalAccountId?: string; externalCalendarId?: string; externalEventId?: string; externalEtag?: string }): Promise<Appointment> {
       const all = await repository.getAll();
       const exactMatch = all.find((item) => item.importedUid === input.importedUid);
+      // Account-scoped external identity lets existing imports migrate safely
+      // when the local UID format changes, without colliding across Google accounts.
+      const externalMatch = input.externalProvider && input.externalAccountId && input.externalCalendarId && input.externalEventId
+        ? all.find((item) => item.externalProvider === input.externalProvider &&
+            item.externalAccountId === input.externalAccountId &&
+            item.externalCalendarId === input.externalCalendarId &&
+            item.externalEventId === input.externalEventId)
+        : undefined;
       const stableMatches = input.importedStableUid
         ? all.filter((item) => item.importedStableUid === input.importedStableUid)
         : [];
@@ -94,7 +102,7 @@ export function createAgendaService(
         : looksLikeMovedEvent
           ? onlyCrossCalendarMatch
           : undefined;
-      const existing = exactMatch ?? stableMatch;
+      const existing = exactMatch ?? externalMatch ?? stableMatch;
       if (existing) {
         const updated: Appointment = {
           ...existing,
@@ -105,6 +113,11 @@ export function createAgendaService(
           ...(input.importedStableUid ? { importedStableUid: input.importedStableUid } : {}),
           importedCalendarId: input.importedCalendarId ?? existing.importedCalendarId,
           importedCalendarName: input.importedCalendarName ?? existing.importedCalendarName,
+          externalProvider: input.externalProvider ?? existing.externalProvider,
+          externalAccountId: input.externalAccountId ?? existing.externalAccountId,
+          externalCalendarId: input.externalCalendarId ?? existing.externalCalendarId,
+          externalEventId: input.externalEventId ?? existing.externalEventId,
+          externalEtag: input.externalEtag ?? existing.externalEtag,
           startsAt: input.startsAt,
           endsAt: input.endsAt,
           ...(input.isAllDay ? { isAllDay: true } : { isAllDay: false }),
@@ -112,6 +125,8 @@ export function createAgendaService(
           ...(input.location?.trim() ? { location: input.location.trim() } : {}),
         };
         if (!input.location?.trim()) delete updated.location;
+        if (input.description?.trim()) updated.description = input.description.trim();
+        else delete updated.description;
         const validationError = validateAppointment(updated);
         if (validationError) throw new Error(validationError);
         await repository.save(updated);
@@ -133,6 +148,11 @@ export function createAgendaService(
         ...(input.importedStableUid ? { importedStableUid: input.importedStableUid } : {}),
         ...(input.importedCalendarId ? { importedCalendarId: input.importedCalendarId } : {}),
         ...(input.importedCalendarName ? { importedCalendarName: input.importedCalendarName } : {}),
+        ...(input.externalProvider ? { externalProvider: input.externalProvider } : {}),
+        ...(input.externalAccountId ? { externalAccountId: input.externalAccountId } : {}),
+        ...(input.externalCalendarId ? { externalCalendarId: input.externalCalendarId } : {}),
+        ...(input.externalEventId ? { externalEventId: input.externalEventId } : {}),
+        ...(input.externalEtag ? { externalEtag: input.externalEtag } : {}),
         ...(input.description?.trim() ? { description: input.description.trim() } : {}),
         ...(input.location?.trim() ? { location: input.location.trim() } : {}),
       };

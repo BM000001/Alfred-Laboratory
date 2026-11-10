@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Alfred — Google Calendar</title>
+    <style>
+      body { font: 16px system-ui, sans-serif; margin: 0; padding: 24px; color: #202124; background: #f8f9fa; }
+      main { max-width: 520px; margin: 8vh auto; padding: 24px; background: white; border: 1px solid #dadce0; border-radius: 16px; }
+      h1 { font-size: 20px; margin: 0 0 12px; }
+      p { line-height: 1.5; }
+      #status { color: #5f6368; }
+      a { color: #1967d2; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Alfred — conexão com Google Calendar</h1>
+      <p id="status">Verificando a autorização da sua conta Google…</p>
+      <p>Esta janela faz a comunicação segura com o Alfred. Mantenha-a aberta enquanto sincroniza a agenda.</p>
+      <p><a id="return" href="https://bm000001.github.io/Alfred/" target="_top">Voltar ao Alfred</a></p>
+    </main>
+    <script>
+      "use strict";
+      const BRIDGE_NONCE = <?!= JSON.stringify(bridgeNonce) ?>;
+      const ALFRED_ORIGIN = <?!= JSON.stringify(alfredOrigin) ?>;
+      const statusNode = document.getElementById("status");
+      const handledRequestIds = new Set();
+      const MAX_REQUESTS_PER_BRIDGE = 4096;
+      // HtmlService runs this page inside a sandboxed iframe. In that case
+      // window.opener belongs to the inner frame and is usually null; the
+      // opener of the top-level Apps Script tab is the Alfred window.
+      let openerWindow = null;
+      try {
+        const topWindow = window.top;
+        openerWindow = topWindow && topWindow !== window
+          ? topWindow.opener
+          : window.opener;
+      } catch (_) {
+        openerWindow = window.opener;
+      }
+
+      function sendToAlfred(message) {
+        if (!openerWindow || openerWindow.closed) {
+          statusNode.textContent = "O Alfred não está mais aberto. Volte ao Alfred e inicie a conexão novamente.";
+          return;
+        }
+        openerWindow.postMessage(message, ALFRED_ORIGIN);
+      }
+
+      window.addEventListener("message", function(event) {
+        if (event.origin !== ALFRED_ORIGIN || event.source !== openerWindow) return;
+        const data = event.data;
+        if (!data || data.channel !== "alfred-google-calendar" || data.nonce !== BRIDGE_NONCE) return;
+        if (data.type !== "rpc" || !data.request || typeof data.request !== "object" || Array.isArray(data.request)) return;
+        if (typeof data.requestId !== "string" || !/^[1-9][0-9]{0,15}$/.test(data.requestId)) return;
+        // A nonce authenticates the bridge session; request IDs prevent a
+        // duplicated/replayed message from executing a write operation twice.
+        if (handledRequestIds.has(data.requestId)) return;
+        if (handledRequestIds.size >= MAX_REQUESTS_PER_BRIDGE) {
+          sendToAlfred({
+            channel: "alfred-google-calendar",
+            type: "rpc-result",
+            nonce: BRIDGE_NONCE,
+            requestId: data.requestId,
+            ok: false,
+            error: "Limite de solicitações desta conexão atingido. Reconecte o Google Calendar."
+          });
+          return;
+        }
+        handledRequestIds.add(data.requestId);
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            sendToAlfred({
+              channel: "alfred-google-calendar",
+              type: "rpc-result",
+              nonce: BRIDGE_NONCE,
+              requestId: data.requestId,
+              ok: true,
+              result: result
+            });
+          })
+          .withFailureHandler(function(error) {
+            sendToAlfred({
+              channel: "alfred-google-calendar",
+              type: "rpc-result",
+              nonce: BRIDGE_NONCE,
+              requestId: data.requestId,
+              ok: false,
+              error: error && error.message ? error.message : "Falha ao executar a operação Google."
+            });
+          })
+          .rpcDispatch(data.request);
+      });
+
+      if (!openerWindow || openerWindow.closed) {
+        statusNode.textContent = "Abra esta janela pelo botão Conectar do Alfred. Não use o endereço diretamente.";
+      } else {
+        statusNode.textContent = "Canal seguro estabelecido. Verificando a conta Google…";
+        sendToAlfred({
+          channel: "alfred-google-calendar",
+          type: "ready",
+          nonce: BRIDGE_NONCE
+        });
+      }
+    </script>
+  </body>
+</html>

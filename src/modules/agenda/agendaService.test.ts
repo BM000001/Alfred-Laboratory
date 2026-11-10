@@ -40,6 +40,110 @@ describe('agendaService', () => {
     })).rejects.toThrow('O horário de término deve ser posterior ao início.');
   });
 
+
+  it('persists Google account identity and ETag on imported events', async () => {
+    const repository = createMemoryRepository<Appointment>();
+    const service = createAgendaService(repository, { createId: () => 'google-event-local' });
+    const first = await service.upsertImported({
+      importedUid: 'google:calendar-1:event-1',
+      importedStableUid: 'google:calendar-1:event-1',
+      importedCalendarId: 'google:calendar-1',
+      importedCalendarName: 'Pessoal',
+      externalProvider: 'google',
+      externalAccountId: 'google-account-123',
+      externalCalendarId: 'calendar-1',
+      externalEventId: 'event-1',
+      externalEtag: 'etag-v1',
+      title: 'Consulta',
+      description: 'Levar documentos',
+      type: 'personal',
+      startsAt: '2026-11-12T10:00:00.000Z',
+      endsAt: '2026-11-12T11:00:00.000Z',
+    });
+    const refreshed = await service.upsertImported({
+      importedUid: 'google:calendar-1:event-1',
+      importedStableUid: 'google:calendar-1:event-1',
+      importedCalendarId: 'google:calendar-1',
+      importedCalendarName: 'Pessoal',
+      externalProvider: 'google',
+      externalAccountId: 'google-account-123',
+      externalCalendarId: 'calendar-1',
+      externalEventId: 'event-1',
+      externalEtag: 'etag-v2',
+      title: 'Consulta atualizada',
+      type: 'personal',
+      startsAt: '2026-11-12T10:30:00.000Z',
+      endsAt: '2026-11-12T11:30:00.000Z',
+    });
+    expect(refreshed.id).toBe(first.id);
+    expect(refreshed).toMatchObject({
+      externalProvider: 'google',
+      externalAccountId: 'google-account-123',
+      externalCalendarId: 'calendar-1',
+      externalEventId: 'event-1',
+      externalEtag: 'etag-v2',
+      title: 'Consulta atualizada',
+    });
+    expect(refreshed.description).toBeUndefined();
+  });
+
+  it('migrates legacy Google imports and isolates identical event IDs across accounts', async () => {
+    const repository = createMemoryRepository<Appointment>();
+    const service = createAgendaService(repository, {
+      createId: (() => { let id = 0; return () => `google-account-${++id}`; })(),
+    });
+    const legacy = await service.upsertImported({
+      importedUid: 'google:calendar-1:event-1',
+      importedStableUid: 'google:calendar-1:event-1',
+      importedCalendarId: 'google:calendar-1',
+      externalProvider: 'google',
+      externalAccountId: 'account-a',
+      externalCalendarId: 'calendar-1',
+      externalEventId: 'event-1',
+      title: 'Consulta',
+      type: 'personal',
+      startsAt: '2026-11-12T10:00:00.000Z',
+      endsAt: '2026-11-12T11:00:00.000Z',
+    });
+
+    const migrated = await service.upsertImported({
+      importedUid: 'google:account-a:calendar-1:event-1',
+      importedStableUid: 'google:account-a:calendar-1:event-1',
+      importedCalendarId: 'google:account-a:calendar-1',
+      externalProvider: 'google',
+      externalAccountId: 'account-a',
+      externalCalendarId: 'calendar-1',
+      externalEventId: 'event-1',
+      title: 'Consulta atualizada',
+      type: 'personal',
+      startsAt: '2026-11-12T10:30:00.000Z',
+      endsAt: '2026-11-12T11:30:00.000Z',
+    });
+
+    const otherAccount = await service.upsertImported({
+      importedUid: 'google:account-b:calendar-1:event-1',
+      importedStableUid: 'google:account-b:calendar-1:event-1',
+      importedCalendarId: 'google:account-b:calendar-1',
+      externalProvider: 'google',
+      externalAccountId: 'account-b',
+      externalCalendarId: 'calendar-1',
+      externalEventId: 'event-1',
+      title: 'Consulta de outra conta',
+      type: 'personal',
+      startsAt: '2026-11-12T10:00:00.000Z',
+      endsAt: '2026-11-12T11:00:00.000Z',
+    });
+
+    expect(migrated.id).toBe(legacy.id);
+    expect(otherAccount.id).not.toBe(legacy.id);
+    expect(await service.list()).toHaveLength(2);
+    expect(migrated).toMatchObject({
+      importedCalendarId: 'google:account-a:calendar-1',
+      externalAccountId: 'account-a',
+      title: 'Consulta atualizada',
+    });
+  });
+
   it('upserts imported calendar events without duplicating them or replacing manual appointments', async () => {
     const repository = createMemoryRepository<Appointment>();
     const service = createAgendaService(repository, { createId: (() => { let id = 0; return () => `event-${++id}`; })() });
