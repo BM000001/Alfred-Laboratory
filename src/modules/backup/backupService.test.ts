@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createBackup, inspectBackup, restoreBackup } from './backupService';
+import { createBackup, inspectBackup, restoreBackup, serializeBackupFile } from './backupService';
 import { focusSessionRepository, memoryRepository } from '../../storage/repositories';
 import type { AssistantMemory } from '../memory/types';
 import type { FocusSession } from '../productivity/types';
+import type { StoredFile } from '../files/types';
 
 const validBackup = {
   format: 'alfred-local-backup',
@@ -12,6 +13,35 @@ const validBackup = {
 };
 
 describe('backupService', () => {
+  it('preserva vínculo de disciplina e extração de texto ao exportar arquivos em Base64', async () => {
+    const file: StoredFile = {
+      id: 'file-backup-metadata-test',
+      name: 'resumo.txt',
+      type: 'text/plain',
+      size: 3,
+      createdAt: '2026-11-02T12:00:00.000Z',
+      disciplineId: 'matematica',
+      extraction: {
+        format: 'txt',
+        text: 'ABC',
+        characterCount: 3,
+        wordCount: 1,
+        extractedAt: '2026-11-02T12:01:00.000Z',
+      },
+      blob: { arrayBuffer: async () => new Uint8Array([65, 66, 67]).buffer } as Blob,
+    };
+    const exported = await serializeBackupFile(file);
+    expect(exported).toMatchObject({
+      id: file.id,
+      disciplineId: file.disciplineId,
+      extraction: file.extraction,
+      contentBase64: 'QUJD',
+    });
+    expect(exported).not.toHaveProperty('blob');
+    const backup = { ...validBackup, data: { ...validBackup.data, files: [exported] } };
+    expect(inspectBackup(JSON.stringify(backup)).counts.files).toBe(1);
+  });
+
   it('inspeciona um backup válido e contabiliza os dados', () => {
     const result = inspectBackup(JSON.stringify(validBackup));
     expect(result.createdAt).toBe(validBackup.createdAt);

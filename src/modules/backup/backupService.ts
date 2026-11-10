@@ -53,6 +53,12 @@ function assertEntities(value: unknown, label: string): asserts value is Array<{
   }
 }
 
+/** Preserve optional file metadata when serializing the blob for a local backup. */
+export async function serializeBackupFile(file: StoredFile): Promise<BackupPayload['data']['files'][number]> {
+  const { blob, ...metadata } = file;
+  return { ...metadata, contentBase64: toBase64(new Uint8Array(await blob.arrayBuffer())) };
+}
+
 export async function createBackup(): Promise<string> {
   const database = await openAlfredDatabase();
   try {
@@ -68,10 +74,7 @@ export async function createBackup(): Promise<string> {
       request.onerror = () => reject(request.error ?? new Error('Falha ao ler os dados locais.'));
     }));
     const [tasks, projects, appointments, disciplines, studyTopics, files, focusSessions, , memories] = await Promise.all(requests);
-    const filePayload = await Promise.all((files as StoredFile[]).map(async (file) => ({
-      id: file.id, name: file.name, type: file.type, size: file.size, createdAt: file.createdAt,
-      contentBase64: toBase64(new Uint8Array(await file.blob.arrayBuffer())),
-    })));
+    const filePayload = await Promise.all((files as StoredFile[]).map(serializeBackupFile));
     const payload: BackupPayload = {
       format: BACKUP_FORMAT, version: BACKUP_VERSION, createdAt: new Date().toISOString(),
       data: { tasks: tasks as Task[], projects: projects as Project[], appointments: appointments as Appointment[],

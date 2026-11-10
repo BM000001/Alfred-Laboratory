@@ -1,5 +1,14 @@
 # Continuidade do Alfred
 
+## Marco — preservação de metadados dos arquivos no backup (2026-11-09)
+
+- PR #30: https://github.com/BM000001/Alfred-Laboratory/pull/30 — branch `fix/backup-file-metadata-20261109`, base `main`, sem merge.
+- Código: commit `7f12ed48882d3856dee88d2e9c5737426be67d44` em `src/modules/backup/backupService.ts`; teste: commit `56be1e5825b03edea6835c1891477dbd8a983a42` em `src/modules/backup/backupService.test.ts`.
+- Corrigida perda de `disciplineId` e `extraction` durante exportação de arquivos; o backup preserva metadados opcionais e serializa o Blob em Base64. Teste unitário cobre o contrato com dados fictícios.
+- Papéis aplicados manualmente: explorer, implementer, QA, reviewer e security-reviewer; nenhum subagente real e nenhum carregamento nativo ECC.
+- Verificações reais: inspeção de `createBackup`, `inspectBackup`, `restoreBackup`, tipos e teste; consulta de arquivos alterados dos PRs #20–#29; comparação `main...fix/backup-file-metadata-20261109` confirmou somente os dois arquivos de código/teste. `npm test` e `npm run build:pages` não executados: sem checkout/dependências e acesso GitHub por rede no contêiner. CI do PR ainda não confirmado.
+- Riscos: limite de importação de 100 MB e amplificação por Base64 continuam sem alteração; Safari real não testado. Próxima ação: CI e revisão humana antes de merge; não há deploy.
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
