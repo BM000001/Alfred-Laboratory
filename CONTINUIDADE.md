@@ -1,5 +1,15 @@
 # Continuidade do Alfred
 
+## Marco — teste de falha de leitura no assistente (2026-11-09)
+
+- PR #25: https://github.com/BM000001/Alfred-Laboratory/pull/25 — branch `test/assistant-idb-recovery-20261109` a partir de `main`; não integrado.
+- Commit da implementação: `cf7010d1dc9204e97c82f06b7ef464a20859718a`. Arquivo: `src/modules/Assistant.test.tsx`.
+- Escopo autorizado: cobertura de erro de IndexedDB prevista em Próximas etapas prioritárias (testes da interface conversacional). O teste simula `taskRepository.getAll()` falhando uma vez, verifica alerta e ausência de proposta de escrita, e depois reenvia a consulta para confirmar recuperação e preservação da tarefa.
+- Papéis realmente aplicados: exploração/implementação/revisão pelo coordenador em modo manual. Nenhum subagente iniciado, nenhum perfil Codex/ECC carregado nativamente.
+- Verificação realizada: inspeção de `Assistant.tsx`, testes existentes e contratos; comparação com arquivos dos PRs #20–#24; revisão do diff do arquivo de teste. Comandos `npm test` e `npm run build:pages`: **não executados localmente** (sem acesso à rede Github no contêiner). CI GitHub Actions deverá validar o SHA final; não presumir aprovação.
+- Próxima ação: analisar checks do PR #25 e corrigir falhas concretas caso apareçam; nunca fazer merge/deploy automático.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
