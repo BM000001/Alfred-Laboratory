@@ -25,7 +25,7 @@ test("routes a non-draft pull request to review specialists", () => {
     pull_request: {
       number: 42,
       title: "Improve navigation",
-      body: "Simplify the menu",
+      body: "private issue detail that must not be copied",
       draft: false,
       html_url: "https://github.com/BM000001/Alfred-Laboratory/pull/42",
       head: { sha: "abc123" }
@@ -36,18 +36,19 @@ test("routes a non-draft pull request to review specialists", () => {
   assert.equal(result.task.permissions, "read-only");
   assert.equal(result.task.requires_human_approval, true);
   assert.equal(result.task.auto_merge, false);
+  assert.ok(!JSON.stringify(result).includes("private issue detail"));
 });
 
 test("sanitizes untrusted pull request titles before summaries", () => {
   const result = classifyEvent("pull_request", {
     action: "opened",
     pull_request: {
-      number: 46, title: "Bad **title**\\n<script>alert(1)</script>", draft: false,
+      number: 46, title: "Bad **title**\n<script>alert(1)</script>", draft: false,
       head: { sha: "safe-title-sha" }
     }
   }, repo);
   assert.ok(!result.task.title.includes("<script>"));
-  assert.ok(!result.task.title.includes("\\n"));
+  assert.ok(!result.task.title.includes("\n"));
 });
 
 test("adds security review when PR text indicates a security-sensitive change", () => {
