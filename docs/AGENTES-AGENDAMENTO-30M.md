@@ -1,27 +1,38 @@
-# Preparação do gatilho GitHub Actions a cada 30 minutos
+# Gatilhos de agentes do Alfred Laboratory
 
 ## Estado real
 
-Workflow: `.github/workflows/alfred-agent-30m.yml`.
-Agenda: `13,43 * * * *` (UTC), a cada 30 minutos. O GitHub pode atrasar ou omitir execuções sob carga. O agendamento só opera depois que este workflow estiver na branch padrão `main` (mediante merge autorizado).
+Workflow: .github/workflows/alfred-agent-30m.yml.
 
-**Isto não é, ainda, uma equipe de agentes em operação.** O workflow é um gatilho de integração intencionalmente desabilitado: a condição `vars.ALFRED_LAB_AGENT_30M_APPROVED == 'true'` não é atendida por padrão. Isso evita consumo acidental de API e rotinas que não possam produzir trabalho autorizado.
+O mesmo workflow recebe dois tipos de ativação:
 
-## Dependência que impede a execução autônoma
+- **Programada/manual:** cron 13,43 * * * * (UTC) e workflow_dispatch, protegidos por ALFRED_LAB_AGENT_30M_APPROVED.
+- **Orientada a eventos:** pull_request_target em PRs para develop-app, issues e conclusão do workflow Validate Alfred, protegidos por ALFRED_LAB_EVENT_ROUTER_APPROVED.
 
-Ainda não existe `.github/scripts/alfred-agent-executor.sh` neste PR nem runtime de IA aprovado com autenticação e limites de custo. Mesmo com a variável ativada, o workflow falha explicitamente antes de alegar execução de agentes. Os perfis em `.codex/agents` (PR #20) descrevem papéis; não instalam nem autenticam um executor. A automação do ChatGPT não é disparada automaticamente por um cron do GitHub Actions. A assinatura ChatGPT Plus não constitui, por si, uma chave de API gratuita para CI.
+Os dois gates são independentes e desabilitados por padrão. O agendamento só opera quando o workflow está na branch padrão main. O workflow pode ser testado manualmente, mas a execução manual também exige a branch main e o gate programado.
 
-Antes de habilitar, escolher e validar um mecanismo de IA cujo custo e limites sejam aceitos, implementá-lo em PR separado com testes e limites de permissão, e adicionar o script executável acima. Não guardar tokens em código ou arquivos do repositório. Se exigir uma chave/API paga, obter aprovação explícita do custo antes de configurar secrets ou habilitar a variável.
+## O que acontece quando um gate é habilitado
 
-## Contrato exigido do futuro executor
+O workflow faz checkout exclusivamente da branch confiável main, executa os testes do roteador e gera um envelope JSON normalizado. O envelope é armazenado como artefato por sete dias para inspeção.
 
-- Repositório exclusivo `BM000001/Alfred-Laboratory`; base/destino `main`; nunca `develop-app` ou `baseline/alfred-main`.
-- Consultar PRs, CI, `AGENTS.md`, `CONTINUIDADE.md` e tarefas autorizadas, sem duplicações ou relatórios repetitivos.
-- No máximo uma tarefa pequena por rodada; no máximo três subagentes, um escritor por checkout e nenhuma redelegação. Não afirmar uso de ECC sem evidência de carregamento e execução.
-- Criar branch específica, validar testes e build, revisar diff e abrir PR. Não fazer merge, deploy manual, mudanças no Alfred original, exclusões ou force-push.
-- Chaves e permissões devem ficar isoladas. O gatilho atual tem `contents: read` e checkout sem credenciais persistentes; ampliar permissões somente após revisão de segurança.
-- Sem tarefa autorizada ou sem executor apto: não fabricar trabalho ou relatórios. Logs devem distinguir pré-validação, execução real, CI, testes no dispositivo e integração.
+O evento pull_request_target é usado somente para metadados. O workflow nunca faz checkout nem executa código do head de um pull request. O roteador não copia corpos de issues/PRs, comentários ou arquivos.
 
-## Próxima ação
+## Limite importante
 
-Revisar o PR de agendamento. Não habilitar `ALFRED_LAB_AGENT_30M_APPROVED` ainda. Após selecionar um executor gratuito verificável (ou aprovar custos explícitos), criar um PR de integração do runtime; validar manualmente via `workflow_dispatch` e revisar logs e permissões. **Somente depois** ativar a frequência de 30 minutos e avaliar se a automação horária do ChatGPT deve ser desativada, evitando sobreposição.
+**Isto ainda não executa modelos de IA nem agentes Codex.** É a infraestrutura segura de entrada e normalização de eventos. O artefato JSON é uma fila temporária de inspeção, não uma fila durável nem uma delegação multiagente.
+
+Não existe .github/scripts/alfred-agent-executor.sh nem runtime de IA autenticado nesta etapa. Os perfis em .codex/agents são instruções de papéis, não iniciam agentes por conta própria. A assinatura ChatGPT Plus não fornece automaticamente uma chave de API gratuita para GitHub Actions.
+
+## Segurança e custo
+
+- Repositório exclusivo BM000001/Alfred-Laboratory.
+- Permissões do workflow limitadas a contents: read.
+- Checkout sem credenciais persistentes.
+- Concorrência impede execuções simultâneas do mesmo grupo.
+- Nenhuma API key, secret de provedor ou cobrança é configurada.
+- Nenhuma escrita no repositório, criação de PR, merge, deploy ou ação no Alfred original.
+- Futuras escritas exigirão proposta e aprovação humana explícita.
+
+## Próxima etapa
+
+Após validar os artefatos, escolher um runtime de IA e aprovar provedor, custo máximo por execução e armazenamento de credenciais. Só então implementar fila persistente, deduplicação, executor em checkout descartável e piloto somente leitura com Explorer + Reviewer. Não habilitar os gates antes da revisão de segurança e do custo.
