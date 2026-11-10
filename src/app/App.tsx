@@ -100,7 +100,7 @@ function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="/Alfred/" aria-label="Alfred, início" onClick={(event) => { event.preventDefault(); navigate('inicio'); }}>
+        <a className="brand" href={import.meta.env.BASE_URL} aria-label="Alfred, início" onClick={(event) => { event.preventDefault(); navigate('inicio'); }}>
           <span className="brand-mark" aria-hidden="true"><Icon name="sparkles" /></span>
           <span>Alfred<span className="brand-period">.</span></span>
         </a>
