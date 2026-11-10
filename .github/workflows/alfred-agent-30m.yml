@@ -1,44 +1,69 @@
-name: Alfred Laboratory - 30-minute agent trigger (gated)
+name: Alfred Laboratory - event and scheduled agent router (gated)
 
 on:
   schedule:
     - cron: '13,43 * * * *'
   workflow_dispatch:
+  pull_request_target:
+    types: [opened, synchronize, reopened, closed, ready_for_review, converted_to_draft]
+    branches: [develop-app]
+  issues:
+    types: [opened, reopened, labeled, unlabeled, closed]
+  workflow_run:
+    workflows: ["Validate Alfred"]
+    types: [completed]
+    branches: [develop-app]
 
-# This file schedules a trigger; it does not provide an AI model or free inference.
-# Disabled by default: no runner minutes and no provider/API charges.
 permissions:
   contents: read
 
 concurrency:
-  group: alfred-laboratory-agent-30m
+  group: alfred-laboratory-agent-orchestrator
   cancel-in-progress: false
 
 jobs:
-  agent:
-    if: ${{ vars.ALFRED_LAB_AGENT_30M_APPROVED == 'true' }}
+  route-event:
+    # Both gates are opt-in. Schedule/manual runs and repository events can be enabled independently.
+    if: >-
+      (
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+        github.ref == 'refs/heads/main' &&
+        vars.ALFRED_LAB_AGENT_30M_APPROVED == 'true'
+      ) ||
+      (
+        (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') &&
+        vars.ALFRED_LAB_EVENT_ROUTER_APPROVED == 'true'
+      )
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      # pull_request_target is metadata-only: always check out trusted main, never the PR head.
+      - name: Check out trusted router
+        uses: actions/checkout@v4
         with:
           ref: main
           persist-credentials: false
-      - name: Fail closed unless an approved agent executor is installed
+
+      - name: Validate event-router contract
+        run: node .github/scripts/test-agent-event-router.mjs
+
+      - name: Build normalized event envelope
         shell: bash
         env:
-          GH_REPOSITORY: ${{ github.repository }}
-          GH_REF: ${{ github.ref }}
-        run: |
-          set -euo pipefail
-          if [[ "$GH_REPOSITORY" != 'BM000001/Alfred-Laboratory' || "$GH_REF" != 'refs/heads/main' ]]; then
-            echo '::error::Execution outside Alfred-Laboratory/main is forbidden.'
-            exit 1
-          fi
-          if [[ ! -x .github/scripts/alfred-agent-executor.sh ]]; then
-            echo '::error::No approved agent runtime is installed; keep the schedule disabled.'
-            exit 1
-          fi
-      - name: Run approved agent executor
-        shell: bash
-        run: .github/scripts/alfred-agent-executor.sh
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          ALFRED_EVENT_OUTPUT: ${{ runner.temp }}/alfred-agent-event.json
+        run: node .github/scripts/agent-event-router.mjs
+
+      - name: Store event envelope for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: alfred-agent-event-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/alfred-agent-event.json
+          if-no-files-found: error
+          retention-days: 7
