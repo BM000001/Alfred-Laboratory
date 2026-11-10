@@ -1,13 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import pkg from '../../package.json';
+import inventory from '../../THIRD_PARTY.md?raw';
 import { describe, expect, it } from 'vitest';
 
 describe('Inventário de dependências de runtime', () => {
   it('lista em THIRD_PARTY.md todas as dependências diretas do navegador', () => {
-    const pkg = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as {
-      dependencies?: Record<string, string>;
-    };
-    const inventory = readFileSync(resolve(process.cwd(), 'THIRD_PARTY.md'), 'utf8');
     const documented = new Set(
       inventory.split('\n')
         .filter((line) => line.startsWith('|'))
