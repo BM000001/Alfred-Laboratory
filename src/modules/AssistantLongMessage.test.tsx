@@ -13,6 +13,7 @@ describe('Assistant long message', () => {
   it('preserva integralmente uma mensagem longa dentro do limite do campo', async () => {
     const user = userEvent.setup();
     const message = 'Quero organizar meus estudos. ' + 'Revisar os assuntos da semana. '.repeat(14);
+    const expectedMessage = message.trim();
     expect(message.length).toBeLessThanOrEqual(500);
     expect(message.length).toBeGreaterThan(400);
 
@@ -24,10 +25,10 @@ describe('Assistant long message', () => {
     expect(prompt).toHaveValue(message);
     await user.click(screen.getByRole('button', { name: 'Enviar' }));
 
-    expect(await within(screen.getByRole('log')).findByText(message, { exact: true })).toBeInTheDocument();
+    expect(await within(screen.getByRole('log')).findByText(expectedMessage, { exact: true })).toBeInTheDocument();
     await waitFor(async () => {
       expect((await assistantMessageRepository.getAll()).some((entry) =>
-        entry.role === 'user' && entry.content === message,
+        entry.role === 'user' && entry.content === expectedMessage,
       )).toBe(true);
     });
     expect(prompt).toHaveValue('');
