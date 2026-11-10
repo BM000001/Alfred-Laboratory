@@ -1,5 +1,14 @@
 # Continuidade do Alfred
 
+## Marco: teste do estado de carregamento do assistente — 2026-11-09
+
+- Escopo autorizado: item 3 de “Próximas etapas prioritárias” (estado de carregamento da interface conversacional). Branch `test/assistant-loading-ui-20261109`, base/destino `main`; PR a abrir contra `main`.
+- Commit funcional `43a6f19d2b16182b04be94999a7aecf958f47544`; arquivo novo `src/modules/AssistantLoading.test.tsx`. Verifica status acessível de consulta, bloqueio de envio enquanto IndexedDB aguarda, ausência de proposta de escrita e reativação após leitura. Não altera código de produção.
+- Papéis: instruções de `implementer`, `qa` e `reviewer` lidas e aplicadas manualmente pelo coordenador; nenhum subagente real iniciado e nenhum perfil ECC carregado nativamente.
+- Verificações: inspeção do componente e testes existentes, revisão do diff e conferência de arquivos dos PRs #20–#25 (nenhum edita este arquivo). `npm test` / `npm run build:pages`: não executados localmente; GitHub Actions deve validar o commit final.
+- Riscos: teste assíncrono de interface depende de ambiente jsdom; Safari real não testado. Próxima ação: conferir CI e corrigir falha reproduzível se ocorrer; sem merge/deploy.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
