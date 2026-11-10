@@ -1,5 +1,16 @@
 # Continuidade do Alfred
 
+## Marco — inventário de dependências de runtime (2026-11-09)
+
+- Escopo autorizado: `CONTINUIDADE.md` / próximas etapas prioritárias #7 e `docs/ROADMAP.md` / etapa 7, revisão de licenças de dependências e assets.
+- Branch `test/third-party-runtime-inventory-20261109`, criada a partir de `main` no SHA `df723c16a588dc74a46bfe5f377d3ff5c7f6c1ce`; PR contra `main` a abrir, sem merge.
+- Implementação: teste `src/modules/thirdPartyInventory.test.ts` no commit `02d4847e18e8931bfe6039b220ebb6f211c4fba7`, que detecta dependências diretas de runtime omitidas em `THIRD_PARTY.md`; inventário corrigido em `THIRD_PARTY.md` no commit `d2cf4b4a599e605167e68a6b6657f052807e213a`.
+- Papéis: exploração, QA, revisão e análise de segurança/licenças aplicados manualmente pelo coordenador; nenhum subagente nem carregamento nativo de ECC.
+- Validação real: inspeção de `package.json`, `THIRD_PARTY.md`, PRs e arquivos alterados; `npm test` e `npm run build:pages` **não executados localmente**. CI a verificar no SHA final; Safari não testado.
+- Limites: a cobertura do inventário não comprova conformidade de licenças. Licenças e avisos de assets OCR/WebAssembly e dependências transitivas permanecem pendentes de verificação. Sem mudanças de código de produção.
+- Próxima ação: conferir o CI do PR e verificar licenças e avisos efetivos antes da distribuição.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
@@ -94,3 +105,11 @@
 - Não afirmar testes locais: validação oficial deve ser comprovada no GitHub Actions.
 - Atualizar este documento em cada marco confirmado.
 - Não criar registros fictícios nem incluir segredos ou dados pessoais.
+
+## Marco de correção — PR #32 (2026-11-10)
+- Commit de código: `d598cb5d653b4262c8ce8d47c455f96c1f08e254` no PR https://github.com/BM000001/Alfred-Laboratory/pull/32 (destino `main`).
+- Falha comprovada: workflow `42740359151`, 236 testes aprovados; `npm run build:pages` falhou no TypeScript (TS2307 `node:fs`/`node:path`, TS2580 `process`, TS7006 inferência de parâmetros).
+- Correção restrita a `src/modules/thirdPartyInventory.test.ts`: importação de `package.json` e `THIRD_PARTY.md?raw` via Vite, sem APIs Node no código compilado pelo app; mantém a verificação de dependências de runtime.
+- Papéis aplicados manualmente: explorer (diagnóstico dos logs e tsconfig), implementer (correção), qa/reviewer (revisão estática). Nenhum subagente executado; ECC não carregado nativamente.
+- Comandos: nenhum teste/build local executado; logs do GitHub Actions consultados. Resultado pós-correção e CI ainda não confirmados no momento deste registro.
+- Riscos: confirmar resolução de `?raw` no TypeScript/Vite e testes/build no CI; nenhuma validação Safari. Próxima ação: observar apenas o novo CI do PR #32 e corrigir falha concreta se ocorrer. Sem merge/deploy.
