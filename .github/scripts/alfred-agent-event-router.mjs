@@ -19,13 +19,32 @@ function ignored(reason, eventName) {
   return { schema_version: 1, ignored: true, reason, source_event: eventName };
 }
 
+function safeTitle(value, fallback) {
+  const title = String(value ?? fallback).replace(/[\r\n\t]+/g, " ").replace(/[*_`<>]/g, "").trim();
+  return (title || fallback).slice(0, 180);
+}
+
 export function classifyEvent(eventName, payload, repository = ALLOWED_REPOSITORY) {
   if (repository !== ALLOWED_REPOSITORY) {
     throw new Error(`Refusing to route events from unauthorized repository: ${repository}`);
   }
 
   let task;
-  if (eventName === "pull_request") {
+  if (eventName === "schedule" || eventName === "workflow_dispatch") {
+    const runId = String(payload._alfred_run_id ?? "manual-or-unknown");
+    task = {
+      event_kind: eventName === "schedule" ? "scheduled_repository_review" : "manual_repository_review",
+      title: eventName === "schedule" ? "Scheduled Alfred Laboratory health review" : "Manual Alfred Laboratory health review",
+      source_url: null,
+      source_number: null,
+      source_revision: null,
+      recommended_agents: ["explorer", "reviewer"],
+      rationale: eventName === "schedule"
+        ? "A scheduled repository health review was requested."
+        : "A human manually requested a repository health review."
+    };
+    task.dedupe_key = stableId([repository, eventName, runId]);
+  } else if (eventName === "pull_request") {
     const pr = payload.pull_request ?? {};
     if (!PR_ACTIONS.has(payload.action)) return ignored("pull_request_action_not_selected", eventName);
     if (pr.draft) return ignored("draft_pull_request", eventName);
@@ -33,7 +52,7 @@ export function classifyEvent(eventName, payload, repository = ALLOWED_REPOSITOR
     const headSha = pr.head?.sha ?? "unknown";
     task = {
       event_kind: "pull_request_review",
-      title: `Review pull request #${number}: ${pr.title ?? "untitled"}`,
+      title: safeTitle(`Review pull request #${number}: ${pr.title ?? "untitled"}`, "Review pull request"),
       source_url: pr.html_url ?? null,
       source_number: number,
       source_revision: headSha,
@@ -52,7 +71,7 @@ export function classifyEvent(eventName, payload, repository = ALLOWED_REPOSITOR
     }
     task = {
       event_kind: "ci_failure_investigation",
-      title: `Investigate failed workflow: ${run.name ?? "GitHub Actions"}`,
+      title: safeTitle(`Investigate failed workflow: ${run.name ?? "GitHub Actions"}`, "Investigate failed workflow"),
       source_url: run.html_url ?? null,
       source_number: run.id ?? null,
       source_revision: run.head_sha ?? null,
@@ -68,7 +87,7 @@ export function classifyEvent(eventName, payload, repository = ALLOWED_REPOSITOR
     const number = issue.number ?? payload.number ?? "unknown";
     task = {
       event_kind: "issue_triage",
-      title: `Triage issue #${number}: ${issue.title ?? "untitled"}`,
+      title: safeTitle(`Triage issue #${number}: ${issue.title ?? "untitled"}`, "Triage issue"),
       source_url: issue.html_url ?? null,
       source_number: number,
       source_revision: null,
@@ -115,9 +134,10 @@ function parseArgs(argv) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const payload = JSON.parse(await readFile(args.eventPath, "utf8"));
+  payload._alfred_run_id = process.env.GITHUB_RUN_ID ?? "manual-or-unknown";
   const repository = process.env.GITHUB_REPOSITORY ?? payload.repository?.full_name ?? "";
   const result = classifyEvent(args.eventName, payload, repository);
-  await writeFile(args.output, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
+  await writeFile(args.output, JSON.stringify(result, null, 2) + "\n", { mode: 0o600 });
 
   if (process.env.GITHUB_OUTPUT) {
     await appendFile(process.env.GITHUB_OUTPUT, `has_task=${result.ignored ? "false" : "true"}\n`);
@@ -128,7 +148,7 @@ async function main() {
       : [
           "## Alfred event router",
           "",
-          `- **Task:** ${result.task.title}`,
+          `- **Task:** ${safeTitle(result.task.title, "Agent task")}`,
           `- **Type:** ${result.task.event_kind}`,
           `- **Agents suggested:** ${result.task.recommended_agents.join(", ")}`,
           "- **Mode:** queued proposal (no AI execution)",
@@ -140,7 +160,7 @@ async function main() {
         ].join("\n") + "\n";
     await appendFile(process.env.GITHUB_STEP_SUMMARY, summary);
   }
-  process.stdout.write(`${JSON.stringify({ ignored: result.ignored, task_id: result.task_id ?? null })}\n`);
+  process.stdout.write(JSON.stringify({ ignored: result.ignored, task_id: result.task_id ?? null }) + "\n");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
