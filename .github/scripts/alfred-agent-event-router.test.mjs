@@ -4,6 +4,21 @@ import { classifyEvent } from "./alfred-agent-event-router.mjs";
 
 const repo = "BM000001/Alfred-Laboratory";
 
+test("routes a scheduled repository review with a unique run ID", () => {
+  const first = classifyEvent("schedule", { _alfred_run_id: "100" }, repo);
+  const next = classifyEvent("schedule", { _alfred_run_id: "101" }, repo);
+  assert.equal(first.task.event_kind, "scheduled_repository_review");
+  assert.deepEqual(first.task.recommended_agents, ["explorer", "reviewer"]);
+  assert.notEqual(first.task_id, next.task_id);
+  assert.equal(first.task.permissions, "read-only");
+});
+
+test("routes a manually requested repository review", () => {
+  const result = classifyEvent("workflow_dispatch", { _alfred_run_id: "manual-1" }, repo);
+  assert.equal(result.task.event_kind, "manual_repository_review");
+  assert.equal(result.task.requires_human_approval, true);
+});
+
 test("routes a non-draft pull request to review specialists", () => {
   const result = classifyEvent("pull_request", {
     action: "opened",
@@ -21,6 +36,18 @@ test("routes a non-draft pull request to review specialists", () => {
   assert.equal(result.task.permissions, "read-only");
   assert.equal(result.task.requires_human_approval, true);
   assert.equal(result.task.auto_merge, false);
+});
+
+test("sanitizes untrusted pull request titles before summaries", () => {
+  const result = classifyEvent("pull_request", {
+    action: "opened",
+    pull_request: {
+      number: 46, title: "Bad **title**\\n<script>alert(1)</script>", draft: false,
+      head: { sha: "safe-title-sha" }
+    }
+  }, repo);
+  assert.ok(!result.task.title.includes("<script>"));
+  assert.ok(!result.task.title.includes("\\n"));
 });
 
 test("adds security review when PR text indicates a security-sensitive change", () => {
@@ -46,7 +73,7 @@ test("routes failed workflow completion to QA and investigation", () => {
   const result = classifyEvent("workflow_run", {
     action: "completed",
     workflow_run: {
-      id: 9001, name: "Validate Alfred", conclusion: "failure",
+      id: 9001, name: "Laboratory iPhone homologation build", conclusion: "failure",
       head_sha: "sha9001", html_url: "https://github.com/example/run/9001"
     }
   }, repo);
