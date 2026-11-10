@@ -43,12 +43,12 @@ test("sanitizes untrusted pull request titles before summaries", () => {
   const result = classifyEvent("pull_request", {
     action: "opened",
     pull_request: {
-      number: 46, title: "Bad **title**\n<script>alert(1)</script>", draft: false,
+      number: 46, title: "Bad **title**" + String.fromCharCode(10) + "<script>alert(1)</script>", draft: false,
       head: { sha: "safe-title-sha" }
     }
   }, repo);
   assert.ok(!result.task.title.includes("<script>"));
-  assert.ok(!result.task.title.includes("\n"));
+  assert.ok(!result.task.title.includes(String.fromCharCode(10)));
 });
 
 test("adds security review when PR text indicates a security-sensitive change", () => {
