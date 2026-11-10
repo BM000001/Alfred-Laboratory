@@ -103,3 +103,10 @@
 - Não afirmar testes locais: validação oficial deve ser comprovada no GitHub Actions.
 - Atualizar este documento em cada marco confirmado.
 - Não criar registros fictícios nem incluir segredos ou dados pessoais.
+
+## Marco — PR #29: correção do teste de mensagem longa (2026-11-10)
+- Correção real: commit `3b28295dff1ffc134d4c2240779bd6e6c8130339` em `src/modules/AssistantLongMessage.test.tsx`; o teste agora compara o texto exibido e persistido com `message.trim()`, coerente com `submit()` em `src/modules/Assistant.tsx`.
+- Evidência: CI anterior, workflow `42681067195`, job `129375406285`, falhou no passo `Test` porque a mensagem de entrada terminava com espaço e o componente remove espaços nas extremidades. Log confirmou que a mensagem estava visível, sem o espaço final.
+- Papéis: explorer, implementer, QA e reviewer aplicados manualmente; nenhum subagente executado nem carregamento nativo ECC.
+- Comandos/validação: consulta aos logs do job e inspeção dos arquivos pelo conector GitHub; testes e build pós-correção ainda não executados nesta sessão. Diff limitado ao teste e este marco.
+- PR: https://github.com/BM000001/Alfred-Laboratory/pull/29 (base `main`). Risco: regressões de suíte não verificadas até novo CI. Próxima ação: conferir o CI do novo SHA e corrigir apenas falhas concretas. Sem merge/deploy.
