@@ -1,0 +1,33 @@
+name: Google Calendar bridge (laboratorio)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps-script/google-calendar/**'
+      - 'src/modules/agenda/googleCalendarApi.ts'
+      - 'scripts/validate-apps-script.mjs'
+      - 'package.json'
+      - '.github/workflows/google-calendar-lab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test application and Google Calendar bridge
+        run: npm test
+      - name: Build application
+        run: npm run build
