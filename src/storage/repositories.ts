@@ -1,5 +1,6 @@
 import type { Project } from '../modules/projects/types';
 import type { Appointment } from '../modules/agenda/types';
+import type { CalendarSyncState, PendingGoogleCalendarCreate } from '../modules/agenda/googleCalendarTypes';
 import type { Task } from '../modules/tasks/types';
 import type { Discipline, StudyTopic } from '../modules/studies/types';
 import type { StudyFlashcard } from '../modules/studies/flashcardTypes';
@@ -51,6 +52,8 @@ function createRepository<T extends { id: string }>(storeName: string): EntityRe
 export const taskRepository = createRepository<Task>(STORE_NAMES.tasks);
 export const projectRepository = createRepository<Project>(STORE_NAMES.projects);
 export const appointmentRepository = createRepository<Appointment>(STORE_NAMES.appointments);
+export const calendarSyncRepository = createRepository<CalendarSyncState>(STORE_NAMES.calendarSyncStates);
+export const pendingGoogleCalendarCreateRepository = createRepository<PendingGoogleCalendarCreate>(STORE_NAMES.pendingGoogleCalendarOperations);
 export const disciplineRepository = createRepository<Discipline>(STORE_NAMES.disciplines);
 export const studyTopicRepository = createRepository<StudyTopic>(STORE_NAMES.studyTopics);
 export const studyFlashcardRepository = createRepository<StudyFlashcard>(STORE_NAMES.studyFlashcards);

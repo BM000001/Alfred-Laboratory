@@ -1,7 +1,7 @@
 import { getAlfredDatabaseName } from './namespace';
 
 export const ALFRED_DATABASE_NAME = getAlfredDatabaseName(import.meta.env.BASE_URL);
-export const ALFRED_DATABASE_VERSION = 10;
+export const ALFRED_DATABASE_VERSION = 12;
 export const STORE_NAMES = {
   tasks: 'tasks',
   projects: 'projects',
@@ -17,6 +17,8 @@ export const STORE_NAMES = {
   memories: 'memories',
   egressAudit: 'egressAudit',
   egressSettings: 'egressSettings',
+  calendarSyncStates: 'calendarSyncStates',
+  pendingGoogleCalendarOperations: 'pendingGoogleCalendarOperations',
 } as const;
 
 export function openAlfredDatabase(factory: IDBFactory = indexedDB): Promise<IDBDatabase> {
