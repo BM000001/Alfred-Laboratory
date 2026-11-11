@@ -23,8 +23,9 @@ describe('App', () => {
   it('permite navegar entre as áreas principais', () => {
     render(<App />);
 
+    fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
-    expect(screen.getByRole('heading', { name: 'Calendário' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Organização' })).toBeInTheDocument();
     expect(screen.getByText(/compromissos, eventos e prazos/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^estudos$/i }));
@@ -34,6 +35,7 @@ describe('App', () => {
   it('abre a Agenda funcional e permite iniciar um novo compromisso', async () => {
     render(<App />);
 
+    fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
 
     expect(await screen.findByText('CALENDÁRIO CENTRAL')).toBeInTheDocument();
@@ -47,6 +49,7 @@ describe('App', () => {
   it('abre a área funcional de tarefas', async () => {
     render(<App />);
 
+    fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^tarefas$/i }));
 
     expect(await screen.findByRole('heading', { name: 'O que precisa ser feito?' })).toBeInTheDocument();
@@ -111,6 +114,7 @@ describe('App', () => {
 
   it('impede envio da Agenda com data inválida sem lançar erro', async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
     fireEvent.click(await screen.findByRole('button', { name: /novo compromisso/i }));
 
@@ -122,6 +126,7 @@ describe('App', () => {
 
   it('permite editar um compromisso existente sem criar um segundo registro', async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
     fireEvent.click(await screen.findByRole('button', { name: /novo compromisso/i }));
 
@@ -144,9 +149,12 @@ describe('App', () => {
 
   it('abre a biblioteca de arquivos', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^arquivos$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^estudos$/i }));
+    fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Disciplina da biblioteca' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Materiais' }));
     expect(await screen.findByText('Sua biblioteca está vazia.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /arquivos/i })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Materiais' })).toHaveAttribute('aria-current', 'page');
   });
   it('abre as configurações de backup e restauração', async () => {
     render(<App />);

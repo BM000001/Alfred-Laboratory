@@ -70,6 +70,10 @@ export async function createBackup(): Promise<string> {
     const [tasks, projects, appointments, disciplines, studyTopics, files, focusSessions, , memories] = await Promise.all(requests);
     const filePayload = await Promise.all((files as StoredFile[]).map(async (file) => ({
       id: file.id, name: file.name, type: file.type, size: file.size, createdAt: file.createdAt,
+      ...(file.projectId ? { projectId: file.projectId } : {}),
+      ...(file.disciplineId ? { disciplineId: file.disciplineId } : {}),
+      ...(file.kind ? { kind: file.kind, noteText: file.noteText, updatedAt: file.updatedAt } : {}),
+      ...(file.extraction ? { extraction: file.extraction } : {}),
       contentBase64: toBase64(new Uint8Array(await file.blob.arrayBuffer())),
     })));
     const payload: BackupPayload = {
@@ -103,6 +107,10 @@ export function inspectBackup(raw: string): { createdAt: string; counts: Record<
       || typeof file.createdAt !== 'string') {
       throw new Error('O backup contém arquivos inválidos.');
     }
+    for (const field of ['projectId', 'disciplineId', 'noteText', 'updatedAt']) {
+      if (file[field] !== undefined && typeof file[field] !== 'string') throw new Error('Metadados de arquivo inválidos.');
+    }
+    if (file.kind !== undefined && file.kind !== 'note') throw new Error('Tipo de anotação inválido.');
     let bytes: Uint8Array;
     try { bytes = fromBase64(file.contentBase64); } catch {
       throw new Error('O backup contém arquivos com conteúdo Base64 inválido.');

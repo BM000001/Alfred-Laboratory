@@ -1,43 +1,40 @@
+import mascotImage from '../assets/alfred.png';
 import { useEffect, useState, type ReactNode } from 'react';
 import { PersonalOrganization } from '../modules/PersonalOrganization';
 import { Agenda } from '../modules/Agenda';
 import { Overview } from '../modules/Overview';
 import { Studies } from '../modules/Studies';
-import { Files } from '../modules/Files';
 import { BackupSettings } from '../modules/BackupSettings';
 import { Productivity } from '../modules/Productivity';
+import { ProjectWorkspace } from '../modules/ProjectWorkspace';
 import { Assistant } from '../modules/Assistant';
 
-type SectionId = 'inicio' | 'assistente' | 'tarefas' | 'estudos' | 'agenda' | 'projetos' | 'arquivos' | 'produtividade' | 'configuracoes';
+type SectionId = 'inicio' | 'assistente' | 'tarefas' | 'estudos' | 'agenda' | 'projetos' | 'arquivos' | 'produtividade' | 'configuracoes' | 'organizacao';
 type IconName = 'home' | 'sparkles' | 'check' | 'book' | 'calendar' | 'layers' | 'folder' | 'chart' | 'settings' | 'more';
 
 const sections: { id: SectionId; label: string; icon: IconName }[] = [
-  { id: 'inicio', label: 'Início', icon: 'home' },
-  { id: 'assistente', label: 'Alfred', icon: 'sparkles' },
-  { id: 'tarefas', label: 'Tarefas', icon: 'check' },
-  { id: 'projetos', label: 'Projetos', icon: 'layers' },
-  { id: 'agenda', label: 'Calendário', icon: 'calendar' },
+  { id: 'inicio', label: 'Hoje', icon: 'home' },
+  { id: 'organizacao', label: 'Organização', icon: 'calendar' },
   { id: 'estudos', label: 'Estudos', icon: 'book' },
-  { id: 'arquivos', label: 'Arquivos', icon: 'folder' },
-  { id: 'produtividade', label: 'Produtividade', icon: 'chart' },
+  { id: 'projetos', label: 'Projetos', icon: 'layers' },
+  { id: 'assistente', label: 'Alfred', icon: 'sparkles' },
   { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
 ];
 
-const mobilePrimary: SectionId[] = ['inicio', 'assistente', 'tarefas', 'agenda'];
-const mobileMore: SectionId[] = ['projetos', 'estudos', 'arquivos', 'produtividade', 'configuracoes'];
+const mobilePrimary: SectionId[] = ['inicio', 'organizacao', 'assistente', 'projetos'];
+const mobileMore: SectionId[] = ['estudos', 'configuracoes'];
 
 const groups: { label: string; ids: SectionId[] }[] = [
-  { label: 'PRINCIPAL', ids: ['inicio', 'assistente'] },
-  { label: 'ORGANIZAÇÃO', ids: ['tarefas', 'projetos', 'agenda'] },
-  { label: 'CONHECIMENTO', ids: ['estudos', 'arquivos'] },
+  { label: 'SEU ESPAÇO', ids: ['inicio', 'organizacao', 'estudos', 'projetos', 'assistente'] },
 ];
 
 const sectionDetails: Record<SectionId, { title: string; description: string }> = {
-  inicio: { title: 'Seu dia, sob controle.', description: 'Um espaço claro para entender o que está acontecendo e decidir o próximo passo.' },
+  inicio: { title: 'Seu dia, preparado.', description: 'Seu espaço está pronto. Vamos organizar o que realmente importa hoje.' },
   assistente: { title: 'À sua disposição.', description: 'Converse com Alfred e consulte suas informações.' },
   tarefas: { title: 'Tarefas', description: 'Transforme suas prioridades em próximos passos claros.' },
   estudos: { title: 'Estudos', description: 'Disciplinas, conteúdos, cronogramas e avaliações ficarão organizados aqui.' },
   agenda: { title: 'Calendário', description: 'Compromissos, eventos e prazos em uma visão única.' },
+  organizacao: { title: 'Organização', description: 'Compromissos, eventos e prazos no calendário. Tarefas e foco em seus próprios espaços.' },
   projetos: { title: 'Projetos', description: 'Acompanhe objetivos, etapas e entregas importantes.' },
   arquivos: { title: 'Arquivos', description: 'Seus documentos e materiais, organizados e fáceis de encontrar.' },
   produtividade: { title: 'Produtividade', description: 'Hábitos, foco, pausas e revisões no seu ritmo.' },
@@ -63,6 +60,10 @@ function Icon({ name }: { name: IconName }) {
 
 function App() {
   const [activeSection, setActiveSection] = useState<SectionId>('inicio');
+  const [organizationTab, setOrganizationTab] = useState('agenda');
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem('alfred-appearance') === 'technical' ? 'technical' : 'daily'; } catch { return 'daily'; } });
+  const [themeError, setThemeError] = useState('');
+  useEffect(() => { document.documentElement.dataset.appearance = theme; }, [theme]);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   useEffect(() => {
@@ -79,10 +80,15 @@ function App() {
   const activeItem = sections.find((item) => item.id === activeSection)!;
 
   const navigate = (id: SectionId) => {
-    setActiveSection(id);
+    if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
+    if (['tarefas', 'agenda', 'produtividade'].includes(id)) { setOrganizationTab(id); setActiveSection('organizacao'); }
+    else if (id === 'arquivos') setActiveSection('estudos');
+    else setActiveSection(id);
     setMobileMoreOpen(false);
   };
 
+  const appearance = <div className="appearance-picker" role="group" aria-label="Aparência"><span>Aparência</span>{[['daily', 'Cotidiano'], ['technical', 'Técnico']].map(([value, label]) => <button key={value} type="button" aria-pressed={theme === value} onClick={() => { setTheme(value); try { localStorage.setItem('alfred-appearance', value); setThemeError(''); } catch { setThemeError('A aparência foi aplicada, mas não pôde ser salva.'); } }}>{label}</button>)}{themeError && <small role="status">{themeError}</small>}</div>;
+  const mascot = <button className="mascot-companion" type="button" aria-label="Conversar com Alfred" onClick={() => navigate('assistente')}><img src={mascotImage} alt="" /><span>À sua disposição <span aria-hidden="true">↗</span></span></button>;
   const renderNavItem = (section: (typeof sections)[number], compact = false) => (
     <button
       className={`nav-item ${activeSection === section.id ? 'active' : ''} ${compact ? 'mobile-nav-item' : ''}`}
@@ -120,7 +126,7 @@ function App() {
               </div>
             ))}
             <div className="nav-bottom">
-              {renderNavItem(sections.find((item) => item.id === 'produtividade')!)}
+
               {renderNavItem(sections.find((item) => item.id === 'configuracoes')!)}
             </div>
             <div className="sidebar-note"><span className="sidebar-note-mark"><Icon name="sparkles" /></span><span><strong>Alfred</strong><small>Discreto. Atento. Ao seu lado.</small></span></div>
@@ -133,24 +139,23 @@ function App() {
             <p className="eyebrow">{activeSection === 'inicio' ? 'SEU DIA, SOB CONTROLE' : 'ALFRED · ESPAÇO PESSOAL'}</p>
             <h1 id="welcome-title">{activeSection === 'inicio' ? greeting : activeDetails.title}</h1>
             <p className="welcome-copy">{activeSection === 'inicio' ? 'Seu espaço está pronto. Vamos organizar o que realmente importa hoje.' : activeDetails.description}</p>
+            {activeSection === 'inicio' && mascot}
           </section>
+          {(activeSection === 'inicio' || activeSection === 'configuracoes') && appearance}
+          {activeSection === 'assistente' && <div className="assistant-introduction">{mascot}<p>Seu assistente está aqui. As alterações propostas por Alfred continuam dependendo da sua confirmação.</p></div>}
 
           {activeSection === 'inicio' ? (
             <Overview onNavigate={navigate} />
           ) : activeSection === 'assistente' ? (
             <Assistant />
-          ) : activeSection === 'agenda' ? (
-            <Agenda />
+          ) : activeSection === 'organizacao' ? (
+            <><nav className="workspace-tabs" aria-label="Organização">{[['agenda', 'Calendário'], ['tarefas', 'Tarefas'], ['produtividade', 'Foco']].map(([key, label]) => <button key={key} type="button" aria-current={organizationTab === key ? 'page' : undefined} onClick={() => setOrganizationTab(key)}>{label}</button>)}</nav>{organizationTab === 'agenda' ? <Agenda /> : organizationTab === 'tarefas' ? <PersonalOrganization section="tarefas" /> : <Productivity />}</>
           ) : activeSection === 'estudos' ? (
             <Studies />
-          ) : activeSection === 'arquivos' ? (
-            <Files />
           ) : activeSection === 'configuracoes' ? (
             <BackupSettings />
-          ) : activeSection === 'produtividade' ? (
-            <Productivity />
-          ) : activeSection === 'tarefas' || activeSection === 'projetos' ? (
-            <PersonalOrganization section={activeSection} />
+          ) : activeSection === 'projetos' ? (
+            <ProjectWorkspace />
           ) : null}
         </section>
       </div>

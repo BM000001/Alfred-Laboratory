@@ -7,14 +7,16 @@ export function createFileService(repository: EntityRepository<StoredFile>, crea
   return {
     async list(): Promise<FileSummary[]> {
       const files = await repository.getAll();
-      return files.map(({ id, name, type, size, createdAt, disciplineId, extraction }) => ({
+      return files.map(({ id, name, type, size, createdAt, disciplineId, projectId, kind, extraction }) => ({
         id, name, type, size, createdAt,
         ...(disciplineId ? { disciplineId } : {}),
+        ...(projectId ? { projectId } : {}),
+        ...(kind ? { kind } : {}),
         hasExtractedText: Boolean(extraction),
         ...(extraction ? { extractedAt: extraction.extractedAt } : {}),
       })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
-    async add(file: File, disciplineId?: string): Promise<FileSummary> {
+    async add(file: File, disciplineId?: string, projectId?: string): Promise<FileSummary> {
       const name = file.name.trim();
       if (!name) throw new Error('Escolha um arquivo válido.');
       if (file.size <= 0) throw new Error('O arquivo está vazio.');
@@ -22,12 +24,13 @@ export function createFileService(repository: EntityRepository<StoredFile>, crea
       const stored: StoredFile = {
         id: createId(), name, type: file.type || 'application/octet-stream',
         size: file.size, createdAt: now().toISOString(),
-        ...(disciplineId ? { disciplineId } : {}), blob: file,
+        ...(disciplineId ? { disciplineId } : {}), ...(projectId ? { projectId } : {}), blob: file,
       };
       await repository.save(stored);
       return {
         id: stored.id, name: stored.name, type: stored.type, size: stored.size,
         createdAt: stored.createdAt, ...(stored.disciplineId ? { disciplineId: stored.disciplineId } : {}),
+        ...(projectId ? { projectId } : {}),
         hasExtractedText: false,
       };
     },

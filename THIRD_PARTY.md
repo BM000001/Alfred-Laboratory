@@ -15,3 +15,7 @@ Dependências diretas de runtime incluídas no Alfred-Laboratory. Licenças cons
 PDFs, DOCX, PPTX e texto são processados no navegador. A extração, a geração local de recursos e os materiais não são enviados a provedores externos. O OCR utiliza assets locais do próprio Alfred e só começa mediante ação explícita na área Arquivos.
 
 O pacote `@tesseract.js-data/por` e os núcleos WebAssembly representam download significativo quando o OCR é utilizado; não são necessários para ler DOCX/PPTX nem entram no fluxo inicial de geração de recursos.
+
+## Identidade visual
+- Mascote dourado: arte aprovada pelo proprietário e hospedada localmente em `src/assets/alfred.png`.
+- Fontes Noto: arquivos e licença original estão em `src/assets/fonts/`; nenhuma fonte é carregada de um serviço externo.

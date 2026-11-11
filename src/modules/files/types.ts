@@ -25,6 +25,10 @@ export interface StoredFile {
   createdAt: string;
   /** Optional to preserve compatibility with files saved before discipline linking. */
   disciplineId?: string;
+  projectId?: string;
+  kind?: 'note';
+  noteText?: string;
+  updatedAt?: string;
   /** Extracted content is stored locally alongside the original blob. */
   extraction?: StoredTextExtraction;
   blob: Blob;
@@ -36,6 +40,10 @@ export interface FileSummary {
   size: number;
   createdAt: string;
   disciplineId?: string;
+  projectId?: string;
+  kind?: 'note';
+  noteText?: string;
+  updatedAt?: string;
   hasExtractedText: boolean;
   extractedAt?: string;
 }

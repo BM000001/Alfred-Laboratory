@@ -1,3 +1,4 @@
+import { CalendarGrid, type CalendarView } from './agenda/CalendarGrid';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { Appointment, AppointmentType } from './agenda/types';
 import { classifyImportedAppointment, findAppointmentConflicts, sortAppointmentsByStart } from './agenda/agendaRules';
@@ -12,7 +13,7 @@ import { GoogleCalendarPanel } from './GoogleCalendarPanel';
 import { connectAppleCalendar, isNativeAppleCalendarAvailable, syncAppleCalendar, type NativeCalendarInfo } from './agenda/nativeCalendarBridge';
 
 const agenda = createAgendaService(appointmentRepository);
-type ViewMode = 'day' | 'week' | 'month';
+type ViewMode = CalendarView;
 
 function localDateTime(date: Date): string {
   const offset = date.getTimezoneOffset();
@@ -245,6 +246,7 @@ export function Agenda() {
   const range = useMemo(() => {
     const selected = new Date(`${selectedDate}T12:00:00`);
     const start = startOfDay(selected);
+    if (view === 'year') return { start: new Date(selected.getFullYear(), 0, 1), end: new Date(selected.getFullYear() + 1, 0, 1) };
     if (view === 'day') return { start, end: new Date(start.getTime() + 86400000) };
     if (view === 'week') {
       start.setDate(start.getDate() - start.getDay());
@@ -258,7 +260,7 @@ export function Agenda() {
 
   const visibleItems = useMemo(() => items.filter((item) => {
     const date = new Date(item.startsAt);
-    return date >= range.start && date < range.end && item.status !== 'cancelled';
+    return new Date(item.endsAt) > range.start && date < range.end && item.status !== 'cancelled';
   }), [items, range]);
 
   const calendarDays = useMemo(() => {
@@ -275,6 +277,7 @@ export function Agenda() {
     const next = new Date(`${selectedDate}T12:00:00`);
     if (view === 'day') next.setDate(next.getDate() + amount);
     else if (view === 'week') next.setDate(next.getDate() + amount * 7);
+    else if (view === 'year') next.setFullYear(next.getFullYear() + amount);
     else next.setMonth(next.getMonth() + amount);
     setSelectedDate(dateKey(next));
   }
@@ -352,7 +355,7 @@ export function Agenda() {
   }
 
   const selectedLabel = new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR', {
-    month: 'long',
+    ...(view !== 'year' ? { month: 'long' as const } : {}),
     year: 'numeric',
     ...(view === 'day' ? { day: 'numeric' as const } : {}),
   });
@@ -369,7 +372,7 @@ export function Agenda() {
         </button>
       </div>
 
-      <section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
+      <details className="calendar-integrations"><summary>Importar e conectar calendários</summary><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
         <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM APPLE</span><h3 id="apple-calendar-title">Conectar Calendário Apple</h3></div><span className={appleAvailable ? 'apple-calendar-indicator' : 'apple-calendar-unavailable'}><span /> {appleAvailable ? 'Disponível neste dispositivo' : 'Aguardando app iOS'}</span></div>
         {appleAvailable ? <>
           <p>Conecte o calendário do iPhone para trazer seus próximos 90 dias de eventos. A sincronização é somente leitura e não altera seus compromissos manuais. Eventos ausentes só são arquivados quando o iPhone confirma que a leitura foi completa.</p>
@@ -397,17 +400,20 @@ export function Agenda() {
       </section>
       <GoogleCalendarPanel appointments={items} onChanged={refresh} />
       <ICalendarImport existing={items} onImported={refresh} />
+      </details>
 
       <div className="agenda-controls">
         <div className="agenda-date-navigation"><button type="button" className="text-action" aria-label="Período anterior" onClick={() => moveCalendar(-1)}>‹</button><button type="button" className="text-action" onClick={() => setSelectedDate(dateKey(new Date()))}>Hoje</button><button type="button" className="text-action" aria-label="Próximo período" onClick={() => moveCalendar(1)}>›</button><label className="agenda-date-label">Data<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label></div>
         <div className="agenda-view-switch" aria-label="Visualização da agenda">
-          <button type="button" className={view === 'day' ? 'selected' : ''} onClick={() => setView('day')}>Dia</button>
-          <button type="button" className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>Semana</button>
-          <button type="button" className={view === 'month' ? 'selected' : ''} onClick={() => setView('month')}>Mês</button>
+          <button type="button" aria-pressed={view === 'day'} className={view === 'day' ? 'selected' : ''} onClick={() => setView('day')}>Dia</button>
+          <button type="button" aria-pressed={view === 'week'} className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>Semana</button>
+          <button type="button" aria-pressed={view === 'month'} className={view === 'month' ? 'selected' : ''} onClick={() => setView('month')}>Mês</button>
+          <button type="button" aria-pressed={view === 'year'} className={view === 'year' ? 'selected' : ''} onClick={() => setView('year')}>Ano</button>
         </div>
       </div>
 
-      {view !== 'day' && <div className={`calendar-grid calendar-${view}`} role="grid" aria-label={`Calendário ${view === 'week' ? 'semanal' : 'mensal'}`}>
+      {view === 'year' && <CalendarGrid date={selectedDate} view="year" items={items} onDate={(date, nextView) => { setSelectedDate(date); setView(nextView); }} onEvent={editAppointment} />}
+      {view !== 'day' && view !== 'year' && <div className={`calendar-grid calendar-${view}`} role="grid" aria-label={`Calendário ${view === 'week' ? 'semanal' : 'mensal'}`}>
         {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((weekday) => <div className="calendar-weekday" role="columnheader" key={weekday}>{weekday}</div>)}
         {calendarDays.map((day) => {
           const key = dateKey(day);
