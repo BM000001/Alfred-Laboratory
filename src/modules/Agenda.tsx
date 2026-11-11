@@ -3,6 +3,9 @@ import type { Appointment, AppointmentType } from './agenda/types';
 import { classifyImportedAppointment, findAppointmentConflicts, sortAppointmentsByStart } from './agenda/agendaRules';
 import { createAgendaService } from './agenda/agendaService';
 import { appointmentRepository } from '../storage/repositories';
+import { taskRepository, projectRepository } from '../storage/repositories';
+import type { Task } from './tasks/types';
+import type { Project } from './projects/types';
 import { getAlfredLocalStorageKey } from '../storage/namespace';
 import { ICalendarImport } from './ICalendarImport';
 import { GoogleCalendarPanel } from './GoogleCalendarPanel';
@@ -34,6 +37,8 @@ function typeLabel(type: AppointmentType): string {
 
 export function Agenda() {
   const [items, setItems] = useState<Appointment[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedDate, setSelectedDate] = useState(dateKey(new Date()));
   const [view, setView] = useState<ViewMode>('week');
   const [title, setTitle] = useState('');
@@ -42,6 +47,8 @@ export function Agenda() {
   const [endsAt, setEndsAt] = useState(() => localDateTime(new Date(Date.now() + 2 * 60 * 60_000)));
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [isAllDay, setIsAllDay] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,14 +168,16 @@ export function Agenda() {
   }
 
   async function refresh() {
-    const loaded = await agenda.list();
+    const [loaded, loadedTasks, loadedProjects] = await Promise.all([agenda.list(), taskRepository.getAll(), projectRepository.getAll()]);
     setItems(sortAppointmentsByStart(loaded));
+    setTasks(loadedTasks);
+    setProjects(loadedProjects.filter((project) => project.status === 'active'));
   }
 
   useEffect(() => {
     let active = true;
-    agenda.list().then((loaded) => {
-      if (active) setItems(sortAppointmentsByStart(loaded));
+    Promise.all([agenda.list(), taskRepository.getAll(), projectRepository.getAll()]).then(([loaded, loadedTasks, loadedProjects]) => {
+      if (active) { setItems(sortAppointmentsByStart(loaded)); setTasks(loadedTasks); setProjects(loadedProjects.filter((project) => project.status === 'active')); }
     }).catch(() => {
       if (active) setError('Não foi possível carregar a Agenda. Verifique o armazenamento local do navegador.');
     }).finally(() => {
@@ -245,6 +254,24 @@ export function Agenda() {
     return date >= range.start && date < range.end && item.status !== 'cancelled';
   }), [items, range]);
 
+  const calendarDays = useMemo(() => {
+    const selected = new Date(`${selectedDate}T12:00:00`);
+    const first = view === 'month' ? new Date(selected.getFullYear(), selected.getMonth(), 1) : new Date(selected);
+    if (view === 'month') first.setDate(first.getDate() - first.getDay());
+    else { first.setDate(first.getDate() - first.getDay()); }
+    return Array.from({ length: view === 'month' ? 42 : 7 }, (_, index) => {
+      const day = new Date(first); day.setDate(first.getDate() + index); return day;
+    });
+  }, [selectedDate, view]);
+
+  function moveCalendar(amount: number) {
+    const next = new Date(`${selectedDate}T12:00:00`);
+    if (view === 'day') next.setDate(next.getDate() + amount);
+    else if (view === 'week') next.setDate(next.getDate() + amount * 7);
+    else next.setMonth(next.getMonth() + amount);
+    setSelectedDate(dateKey(next));
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
@@ -267,7 +294,7 @@ export function Agenda() {
       return;
     }
     try {
-      const input = { title, type, startsAt: start.toISOString(), endsAt: end.toISOString(), location: location.trim(), description: description.trim() };
+      const input = { title, type, startsAt: start.toISOString(), endsAt: end.toISOString(), location: location.trim(), description: description.trim(), isAllDay, ...(projectId ? { projectId } : {}) };
       if (editingId) await agenda.update(editingId, input);
       else await agenda.create(input);
       resetForm();
@@ -284,6 +311,8 @@ export function Agenda() {
     setEndsAt(localDateTime(new Date(Date.now() + 2 * 60 * 60_000)));
     setLocation('');
     setDescription('');
+    setProjectId('');
+    setIsAllDay(false);
     setEditingId(null);
     setShowForm(false);
     setConflicts([]);
@@ -298,6 +327,8 @@ export function Agenda() {
     setEndsAt(localDateTime(new Date(item.endsAt)));
     setLocation(item.location ?? '');
     setDescription(item.description ?? '');
+    setProjectId(item.projectId ?? '');
+    setIsAllDay(Boolean(item.isAllDay));
     setConflicts([]);
     setError('');
     setShowForm(true);
@@ -323,7 +354,7 @@ export function Agenda() {
     <section className="agenda-module">
       <div className="agenda-toolbar">
         <div>
-          <span className="card-label">SEUS COMPROMISSOS</span>
+          <span className="card-label">CALENDÁRIO CENTRAL</span>
           <h2>{selectedLabel}</h2>
         </div>
         <button className="primary-action" type="button" onClick={() => { if (showForm) resetForm(); else { setEditingId(null); setShowForm(true); setError(''); setConflicts([]); } }}>
@@ -361,7 +392,7 @@ export function Agenda() {
       <ICalendarImport existing={items} onImported={refresh} />
 
       <div className="agenda-controls">
-        <label className="agenda-date-label">Data de referência<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label>
+        <div className="agenda-date-navigation"><button type="button" className="text-action" aria-label="Período anterior" onClick={() => moveCalendar(-1)}>‹</button><button type="button" className="text-action" onClick={() => setSelectedDate(dateKey(new Date()))}>Hoje</button><button type="button" className="text-action" aria-label="Próximo período" onClick={() => moveCalendar(1)}>›</button><label className="agenda-date-label">Data<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label></div>
         <div className="agenda-view-switch" aria-label="Visualização da agenda">
           <button type="button" className={view === 'day' ? 'selected' : ''} onClick={() => setView('day')}>Dia</button>
           <button type="button" className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>Semana</button>
@@ -369,17 +400,33 @@ export function Agenda() {
         </div>
       </div>
 
+      {view !== 'day' && <div className={`calendar-grid calendar-${view}`} role="grid" aria-label={`Calendário ${view === 'week' ? 'semanal' : 'mensal'}`}>
+        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((weekday) => <div className="calendar-weekday" role="columnheader" key={weekday}>{weekday}</div>)}
+        {calendarDays.map((day) => {
+          const key = dateKey(day);
+          const dayEvents = items.filter((item) => item.status !== 'cancelled' && dateKey(new Date(item.startsAt)) === key);
+          const deadlines = tasks.filter((task) => task.status !== 'completed' && task.dueDate?.slice(0, 10) === key);
+          return <button type="button" role="gridcell" aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayEvents.length + deadlines.length} itens`} className={`calendar-day ${view === 'month' && day.getMonth() !== new Date(`${selectedDate}T12:00:00`).getMonth() ? 'outside-month' : ''} ${key === dateKey(new Date()) ? 'is-today' : ''} ${key === selectedDate ? 'is-selected' : ''}`} key={key} onClick={() => { setSelectedDate(key); setView('day'); }}>
+            <span className="calendar-day-number">{day.getDate()}</span>
+            <span className="calendar-day-events">{dayEvents.slice(0, view === 'month' ? 2 : 5).map((item) => <span key={item.id} className={`calendar-event type-${item.type}`} title={item.title}>{item.isAllDay ? 'Dia inteiro · ' : `${formatTime(item.startsAt)} · `}{item.title}</span>)}{deadlines.slice(0, 2).map((task) => <span key={`task-${task.id}`} className="calendar-event task-event" title={task.title}>Prazo · {task.title}</span>)}</span>
+          </button>;
+        })}
+      </div>}
+
       {showForm && (
         <form className="entry-panel agenda-form" onSubmit={handleSubmit}>
           <span className="card-label">{editingId ? 'EDITAR COMPROMISSO' : 'NOVO COMPROMISSO'}</span>
           <h2>{editingId ? 'Atualize seus dados.' : 'O que está marcado?'}</h2>
           <label className="field-label" htmlFor="appointment-title">Título</label>
           <input id="appointment-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="Ex.: Aula de programação" required />
+          <label className="agenda-all-day"><input type="checkbox" checked={isAllDay} onChange={(event) => setIsAllDay(event.target.checked)} /> Evento de dia inteiro</label>
           <div className="form-grid agenda-form-grid">
             <div><label className="field-label" htmlFor="appointment-type">Tipo</label><select id="appointment-type" value={type} onChange={(event) => setType(event.target.value as AppointmentType)}><option value="class">Aula</option><option value="exam">Prova</option><option value="deadline">Prazo</option><option value="personal">Pessoal</option><option value="other">Outro</option></select></div>
             <div><label className="field-label" htmlFor="appointment-start">Início</label><input id="appointment-start" type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></div>
             <div><label className="field-label" htmlFor="appointment-end">Término</label><input id="appointment-end" type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} required /></div>
           </div>
+          <label className="field-label" htmlFor="appointment-project">Projeto <span className="optional-label">· opcional</span></label>
+          <select id="appointment-project" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Sem projeto vinculado</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
           <label className="field-label" htmlFor="appointment-location">Local <span className="optional-label">· opcional</span></label>
           <input id="appointment-location" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Sala, endereço ou link" />
           <label className="field-label" htmlFor="appointment-description">Observações <span className="optional-label">· opcional</span></label>
