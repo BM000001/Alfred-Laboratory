@@ -551,3 +551,51 @@ html #root .sidebar .nav-item.active{color:#29271f}
 @media(max-width:700px){
   html #root .mobile-tabbar .nav-item.active{color:#29271f}
 }
+
+/* Final pass for small blue accents inside the assistant conversation. */
+html #root .main-content .assistant-module .assistant-heading::after{
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--gold) 55%,transparent),transparent);
+}
+html #root .main-content .assistant-module .assistant-conversation{
+  scrollbar-color:var(--accent) transparent;
+}
+html #root .main-content .assistant-module .assistant-message.from-user p{
+  color:var(--ink);
+  border-color:#b89a62;
+  background:color-mix(in srgb,var(--gold) 26%,var(--sheet));
+}
+html #root .main-content .assistant-module :is(.assistant-loading,.assistant-suggestion-list button span){
+  color:var(--accent);
+}
+html #root .main-content .assistant-module .assistant-suggestions-label{color:var(--accent)}
+html #root .main-content .assistant-module .assistant-proposal-record{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-proposal-record :is(span,strong){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-memory-toggle{color:var(--ink)}
+html #root .main-content .assistant-module .assistant-memory-toggle :is(strong,small){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-memory-toggle>span:last-child{color:var(--accent)}
+html #root .main-content .assistant-module .assistant-memory-content{border-color:var(--line)}
+html #root .main-content .assistant-module .assistant-memory-content :is(p,label,small){color:var(--quiet)}
+html #root .main-content .assistant-module .assistant-memory-list li{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-memory-list li :is(span,strong,p){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-memory-actions button{
+  color:var(--accent);
+  border-color:var(--line);
+  background:var(--sheet);
+}
+html #root .main-content .assistant-module .assistant-export-record{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-export-record :is(label,strong,span,p){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-export-panel :is(header .card-label,header h3,.assistant-export-group>strong,.assistant-export-preview>strong,.assistant-export-instruction>strong){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-export-panel :is(.assistant-export-group>p,.assistant-export-panel>p,.assistant-export-record label){color:var(--quiet)}
+html #root .main-content .assistant-module .assistant-export-panel input{accent-color:var(--accent)}
