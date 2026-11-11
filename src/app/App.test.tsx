@@ -7,10 +7,17 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByRole('link', { name: /alfred, início/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /alfred, início/i }).querySelector('img')).toHaveAttribute('src', expect.stringContaining('brand/alfred-mark.svg'));
     expect(screen.getByRole('heading', { name: /bom dia\.|boa tarde\.|boa noite\./i })).toBeInTheDocument();
     expect(await screen.findByText('PENDENTES')).toBeInTheDocument();
     expect(await screen.findByText('EM ATRASO')).toBeInTheDocument();
     expect(await screen.findByText('COMPROMISSOS HOJE')).toBeInTheDocument();
+  });
+
+  it('exibe o mascote do designer no Assistente com estado acessível', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /^alfred$/i }));
+    expect(screen.getByRole('img', { name: 'Alfred: Disponível' })).toBeInTheDocument();
   });
 
   it('permite navegar entre as áreas principais', () => {
