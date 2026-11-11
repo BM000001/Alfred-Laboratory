@@ -189,3 +189,20 @@ html #root .main-content .study-question-difficulty{background:color-mix(in srgb
 html #root .main-content :is(.study-quiz-options label>span,.study-flashcard-list article span,.study-material-import-preview article>span){color:var(--accent)}
 html #root .main-content :is(.study-question-header p,.study-question-list-heading span,.study-material-importer>div:first-child>p,.study-material-import-empty,.study-performance-topic-header span){color:var(--quiet)}
 html #root .main-content :is(.study-quiz-progress,.study-question-difficulty,.study-flashcards-count){border-color:var(--line)}
+/* Keep the same warm identity in technical mode and on mobile. */
+html #root .main-content :is(.eyebrow,.card-label,.dashboard-panel-heading .card-label,.dashboard-stat .card-label,.dashboard-focus-strip .card-label){color:var(--accent)}
+html #root .main-content :is(.dashboard-stat .stat-icon,.weather-symbol,.mobile-context-icon){color:var(--accent);background:color-mix(in srgb,var(--gold) 18%,var(--sheet));border-color:var(--line)}
+html #root .main-content .dashboard-stat{background:var(--sheet);border-color:var(--line);box-shadow:none}
+html #root .main-content .dashboard-stat:hover{border-color:var(--accent);background:var(--sheet)}
+html #root .main-content .focus-card,
+html #root .main-content .focus-side-card,
+html #root .main-content .productivity-module .focus-card{color:var(--ink);background:var(--sheet);border-color:var(--line);box-shadow:none}
+html #root .main-content .focus-mode-switch,
+html #root .main-content .agenda-view-switch{background:var(--paper);border-color:var(--line)}
+html #root .main-content :is(.focus-mode-switch button,.agenda-view-switch button){color:var(--quiet)}
+html #root .main-content :is(.focus-mode-switch button.selected,.agenda-view-switch button.selected){color:#29271f;background:var(--gold);box-shadow:none}
+html #root .main-content .dashboard-focus-strip{background:var(--sheet);border-color:var(--line)}
+html #root .main-content .dashboard-focus-strip :is(strong,span){color:var(--ink)}
+html #root .main-content .nav-icon{color:currentColor}
+html #root .main-content .nav-item.active .nav-icon{color:#29271f}
+html #root .mobile-tabbar .nav-item.active .nav-icon{color:#29271f}
