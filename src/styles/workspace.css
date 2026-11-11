@@ -241,3 +241,27 @@ html #root .main-content .agenda-module .agenda-view-switch button.selected{
   box-shadow:none;
 }
 html #root .main-content .agenda-module .calendar-cell.is-today{box-shadow:inset 0 3px var(--accent)}
+
+/* Keep navigation icons and the compact Alfred note in the golden palette. */
+html #root .sidebar .nav-item .nav-icon,
+html #root .mobile-tabbar .nav-item .nav-icon{color:currentColor}
+html #root .sidebar .nav-item.active .nav-icon,
+html #root .mobile-tabbar .nav-item.active .nav-icon{color:#29271f;filter:none}
+html #root .sidebar-note{
+  color:var(--gold);
+  border-color:#46513f;
+  background:#202820;
+}
+html #root .sidebar-note-mark{
+  color:var(--gold);
+  border-color:#46513f;
+  background:color-mix(in srgb,var(--gold) 18%,#202820);
+}
+html #root .sidebar-note strong{color:var(--ink)}
+html #root .sidebar-note small{color:#b0b8a5}
+html #root .mobile-tabbar .nav-item.active{
+  color:#29271f;
+  border-color:#b89a62;
+  background:var(--gold);
+  box-shadow:none;
+}
