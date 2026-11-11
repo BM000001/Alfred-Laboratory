@@ -108,3 +108,77 @@ html .main-content .study-topic p{white-space:pre-wrap}
 html .main-content .module-error{color:#ffb9b9}
 html .main-content :is(.assistant-message p,.assistant-message.from-user p,.assistant-proposal,.assistant-capabilities span,.assistant-suggestion-list button,.assistant-memory-content,.assistant-export-record,.study-quiz-filters,.apple-calendar-picker){background:var(--paper);color:var(--ink);border-color:var(--line)}
 html .main-content .assistant-message p{font-size:13px}
+
+/* Reapply the golden palette to legacy controls and study widgets. The
+   original module stylesheet has later, more specific dark theme selectors. */
+html #root .main-content .entry-panel,
+html #root .main-content .backup-settings .entry-panel,
+html #root .main-content .study-content,
+html #root .main-content .discipline-list,
+html #root .main-content .study-flashcards,
+html #root .main-content .study-question-bank,
+html #root .main-content .study-material-importer,
+html #root .main-content .study-performance,
+html #root .main-content .apple-calendar-panel{
+  color:var(--ink);
+  background:var(--sheet);
+  border-color:var(--line);
+  box-shadow:none;
+}
+html #root .main-content .entry-panel :is(h2,h3,h4,legend),
+html #root .main-content .study-content :is(h2,h3,h4,strong),
+html #root .main-content .discipline-list :is(h2,h3,h4,strong),
+html #root .main-content .study-flashcards :is(h3,h4,strong,label,legend,summary),
+html #root .main-content .study-question-bank :is(h3,h4,strong,label,legend,summary),
+html #root .main-content .study-material-importer :is(h3,h4,strong,label,legend),
+html #root .main-content .study-performance :is(h3,h4,strong,label){color:var(--ink)}
+html #root .main-content :is(.field-label,.entry-panel label,.study-content p,.study-content small,.discipline-list p,.discipline-list small,.study-flashcards p,.study-flashcards small,.study-question-bank p,.study-question-bank small,.study-material-importer p,.study-material-importer small,.study-performance p,.study-performance small){color:var(--quiet)}
+html #root .main-content :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea){
+  color:var(--ink);
+  background:var(--sheet);
+  border-color:var(--line);
+  box-shadow:none;
+  caret-color:var(--accent);
+}
+html #root .main-content :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea)::placeholder{color:var(--quiet);opacity:.8}
+html #root .main-content :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea):focus{border-color:var(--accent);background:var(--sheet);box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 42%,transparent);outline:0}
+html #root .main-content :is(input[type=checkbox],input[type=radio]){accent-color:var(--accent)}
+html #root .main-content :is(input,select,textarea):disabled{background:color-mix(in srgb,var(--paper) 72%,var(--line));color:var(--quiet);opacity:.75}
+html #root .main-content .study-flashcard-form,
+html #root .main-content .study-question-form,
+html #root .main-content .study-quiz-filters,
+html #root .main-content .study-material-staging,
+html #root .main-content .study-material-results,
+html #root .main-content .study-quiz-card,
+html #root .main-content .study-quiz-result,
+html #root .main-content .study-performance-summary>div,
+html #root .main-content .study-performance-topic,
+html #root .main-content .study-quiz-options label,
+html #root .main-content .study-question-item,
+html #root .main-content .study-flashcard,
+html #root .main-content .study-flashcard-list article,
+html #root .main-content .study-material-import-preview article{
+  color:var(--ink);
+  background:var(--paper);
+  border-color:var(--line);
+}
+html #root .main-content .study-flashcards :is(.study-flashcard-face strong,.study-flashcard-list article strong),
+html #root .main-content .study-question-bank :is(.study-question-item strong,.study-quiz-card h4,.study-quiz-score,.study-quiz-history strong,.study-quiz-review strong),
+html #root .main-content .study-material-importer :is(.study-material-staging>strong,.study-material-result>strong,.study-material-import-preview article>strong),
+html #root .main-content .study-performance :is(.study-performance-summary strong,.study-performance-topic-header strong,.study-performance-error strong){color:var(--ink)}
+html #root .main-content :is(.study-quiz-start,.study-flashcard-actions button){border:1px solid var(--line);border-radius:7px;color:var(--ink);background:var(--sheet)}
+html #root .main-content :is(.study-quiz-start:not(:disabled),.study-quiz-start:hover:not(:disabled),.study-flashcard-actions button:hover:not(:disabled)){border-color:#b89a62;background:var(--gold);color:#29271f}
+html #root .main-content .study-quiz-options label.correct,
+html #root .main-content .study-quiz-feedback.correct{color:#24563c;background:#e8f1e5;border-color:#9ebc9a}
+html #root .main-content .study-quiz-options label.incorrect,
+html #root .main-content .study-quiz-feedback.incorrect{color:#7a332d;background:#f7e9e5;border-color:#d7a6a0}
+html #root .main-content :is(.study-quiz-feedback p,.study-quiz-progress,.study-quiz-history>div,.study-quiz-review article p,.study-flashcard-meta,.study-performance-meta,.study-performance-topic-header span,.study-material-result>span,.study-material-result>p,.study-material-privacy,.study-flashcard-empty,.study-quiz-filters>span,.study-question-list-heading span){color:var(--quiet)}
+html #root .main-content .study-material-result.success>span{color:#24563c}
+html #root .main-content .study-material-result.error>span,
+html #root .main-content .module-error{color:#8c3b34}
+html #root .main-content .study-question-options-field,
+html #root .main-content .study-quiz-review{border-color:var(--line)}
+html #root .main-content :is(.study-quiz-review article,.study-flashcard-list){border-color:var(--line)}
+html #root .main-content .file-upload-button{color:#29271f;background:var(--gold);border-color:#b89a62}
+html #root .main-content :is(.text-action,.dashboard-link){color:var(--accent)}
+html #root .main-content :is(.text-action,.dashboard-link):hover{color:#5e451f;background:color-mix(in srgb,var(--gold) 20%,var(--sheet))}
