@@ -182,3 +182,10 @@ html #root .main-content :is(.study-quiz-review article,.study-flashcard-list){b
 html #root .main-content .file-upload-button{color:#29271f;background:var(--gold);border-color:#b89a62}
 html #root .main-content :is(.text-action,.dashboard-link){color:var(--accent)}
 html #root .main-content :is(.text-action,.dashboard-link):hover{color:#5e451f;background:color-mix(in srgb,var(--gold) 20%,var(--sheet))}
+/* Remove leftover blue accents from the legacy dark palette. */
+html #root .main-content :is(svg,.nav-icon,.weather-symbol,.mobile-context-icon,.study-flashcards-count,.study-flashcard-face span,.study-flashcard-list article span,.study-quiz-options label>span,.study-question-difficulty,.study-quiz-progress span,.study-performance-topic-header span,.study-material-import-preview article>span){color:var(--accent)}
+html #root .main-content .study-flashcards-count{background:color-mix(in srgb,var(--gold) 22%,var(--sheet));border-color:var(--line)}
+html #root .main-content .study-question-difficulty{background:color-mix(in srgb,var(--gold) 25%,var(--sheet))}
+html #root .main-content :is(.study-quiz-options label>span,.study-flashcard-list article span,.study-material-import-preview article>span){color:var(--accent)}
+html #root .main-content :is(.study-question-header p,.study-question-list-heading span,.study-material-importer>div:first-child>p,.study-material-import-empty,.study-performance-topic-header span){color:var(--quiet)}
+html #root .main-content :is(.study-quiz-progress,.study-question-difficulty,.study-flashcards-count){border-color:var(--line)}
