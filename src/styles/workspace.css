@@ -99,6 +99,11 @@ html .main-content :is(.dashboard-stat>strong,.weather-temperature){color:var(--
 html .main-content :is(.dashboard-panel-heading h2,.list-heading h2){font-size:20px}
 html .main-content :is(.dashboard-empty,.stored-file-info span,.study-topic p,.discipline-option span){font-size:12px}
 html .main-content .welcome{padding-top:38px}
+/* The legacy dark theme rules load before this light workspace skin. Keep the
+   welcome copy readable when the golden mascot design uses the paper palette. */
+html .main-content > .welcome .eyebrow{color:var(--accent)}
+html .main-content > .welcome h1{color:var(--ink)}
+html .main-content > .welcome .welcome-copy{color:var(--quiet)}
 html .main-content .study-topic p{white-space:pre-wrap}
 html .main-content .module-error{color:#ffb9b9}
 html .main-content :is(.assistant-message p,.assistant-message.from-user p,.assistant-proposal,.assistant-capabilities span,.assistant-suggestion-list button,.assistant-memory-content,.assistant-export-record,.study-quiz-filters,.apple-calendar-picker){background:var(--paper);color:var(--ink);border-color:var(--line)}
