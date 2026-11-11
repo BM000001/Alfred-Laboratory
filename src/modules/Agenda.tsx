@@ -35,6 +35,13 @@ function typeLabel(type: AppointmentType): string {
   return ({ class: 'Aula', exam: 'Prova', deadline: 'Prazo', personal: 'Pessoal', other: 'Outro' })[type];
 }
 
+function sourceLabel(item: Appointment): string | null {
+  if (item.externalProvider === 'google' || item.importedUid?.startsWith('google:')) return 'Google';
+  if (item.importedUid?.startsWith('apple:')) return 'iPhone';
+  if (item.importedUid?.startsWith('canvas:') || item.importedUid?.startsWith('ics:')) return 'iCalendar';
+  return null;
+}
+
 export function Agenda() {
   const [items, setItems] = useState<Appointment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -408,7 +415,7 @@ export function Agenda() {
           const deadlines = tasks.filter((task) => task.status !== 'completed' && task.dueDate?.slice(0, 10) === key);
           return <button type="button" role="gridcell" aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayEvents.length + deadlines.length} itens`} className={`calendar-day ${view === 'month' && day.getMonth() !== new Date(`${selectedDate}T12:00:00`).getMonth() ? 'outside-month' : ''} ${key === dateKey(new Date()) ? 'is-today' : ''} ${key === selectedDate ? 'is-selected' : ''}`} key={key} onClick={() => { setSelectedDate(key); setView('day'); }}>
             <span className="calendar-day-number">{day.getDate()}</span>
-            <span className="calendar-day-events">{dayEvents.slice(0, view === 'month' ? 2 : 5).map((item) => <span key={item.id} className={`calendar-event type-${item.type}`} title={item.title}>{item.isAllDay ? 'Dia inteiro · ' : `${formatTime(item.startsAt)} · `}{item.title}</span>)}{deadlines.slice(0, 2).map((task) => <span key={`task-${task.id}`} className="calendar-event task-event" title={task.title}>Prazo · {task.title}</span>)}</span>
+            <span className="calendar-day-events">{dayEvents.slice(0, view === 'month' ? 2 : 5).map((item) => { const source = sourceLabel(item); return <span key={item.id} className={`calendar-event type-${item.type}`} title={`${source ? `${source} · ` : ''}${item.title}`}>{item.isAllDay ? 'Dia inteiro · ' : `${formatTime(item.startsAt)} · `}{source ? `${source} · ` : ''}{item.title}</span>; })}{deadlines.slice(0, 2).map((task) => <span key={`task-${task.id}`} className="calendar-event task-event" title={task.title}>Prazo · {task.title}</span>)}</span>
           </button>;
         })}
       </div>}
@@ -446,7 +453,7 @@ export function Agenda() {
             <article className="appointment-card" key={item.id}>
               <div className="appointment-time">{item.isAllDay ? <strong>Dia inteiro</strong> : <><strong>{formatTime(item.startsAt)}</strong><span>{formatTime(item.endsAt)}</span></>}</div>
               <div className="appointment-details">
-                <span className={`appointment-type type-${item.type}`}>{typeLabel(item.type)}</span>{item.isRecurring && <span className="appointment-origin-tag">Recorrente</span>}{item.importedCalendarName && <span className="appointment-source-tag">{item.importedCalendarName}</span>}
+                <span className={`appointment-type type-${item.type}`}>{typeLabel(item.type)}</span>{sourceLabel(item) && <span className="appointment-source-tag">{sourceLabel(item)}</span>}{item.isRecurring && <span className="appointment-origin-tag">Recorrente</span>}{item.importedCalendarName && <span className="appointment-source-tag">{item.importedCalendarName}</span>}
                 <h3>{item.title}</h3>
                 <p>{new Date(item.startsAt).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}{item.location ? ` · ${item.location}` : ''}</p>
                 {item.description && <p>{item.description}</p>}
