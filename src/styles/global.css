@@ -3064,3 +3064,6 @@ select:focus-visible, textarea:focus-visible {
 .agenda-all-day { display:flex; align-items:center; gap:8px; margin:10px 0; color:var(--alfred-muted,#aab4c2); font-size:13px; }
 .agenda-all-day input { accent-color:#c5a059; }
 @media(max-width:640px) { .calendar-day { min-height:78px; padding:5px 3px; } .calendar-month .calendar-day { min-height:72px; } .calendar-event { font-size:9px; padding:2px 3px; } .calendar-weekday { font-size:10px; padding:7px 2px; } }
+
+/* Alfred A brand mark: keep image visible in both light and dark modes. */
+.brand-mark img { display: block; width: 26px; height: 26px; object-fit: contain; }
