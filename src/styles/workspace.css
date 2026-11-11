@@ -206,3 +206,38 @@ html #root .main-content .dashboard-focus-strip :is(strong,span){color:var(--ink
 html #root .main-content .nav-icon{color:currentColor}
 html #root .main-content .nav-item.active .nav-icon{color:#29271f}
 html #root .mobile-tabbar .nav-item.active .nav-icon{color:#29271f}
+
+/* Calendar surfaces and controls still inherited the former navy treatment. */
+html #root .main-content .agenda-module .agenda-toolbar{
+  color:var(--ink);
+  background:var(--sheet);
+  border-color:var(--line);
+  box-shadow:none;
+}
+html #root .main-content .agenda-module .agenda-toolbar h2{color:var(--ink)}
+html #root .main-content .agenda-module .agenda-controls{
+  color:var(--ink);
+  background:var(--sheet);
+  border-color:var(--line);
+  box-shadow:none;
+}
+html #root .main-content .agenda-module .agenda-date-label{color:var(--quiet)}
+html #root .main-content .agenda-module .agenda-date-label input{
+  color:var(--ink);
+  color-scheme:light;
+  background:var(--paper);
+  border-color:var(--line);
+}
+html :root[data-appearance=technical] #root .main-content .agenda-module .agenda-date-label input{color-scheme:dark}
+html #root .main-content .agenda-module .agenda-view-switch{
+  color:var(--quiet);
+  background:var(--paper);
+  border-color:var(--line);
+}
+html #root .main-content .agenda-module .agenda-view-switch button{color:var(--quiet);background:transparent}
+html #root .main-content .agenda-module .agenda-view-switch button.selected{
+  color:#29271f;
+  background:var(--gold);
+  box-shadow:none;
+}
+html #root .main-content .agenda-module .calendar-cell.is-today{box-shadow:inset 0 3px var(--accent)}
