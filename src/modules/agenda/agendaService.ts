@@ -62,6 +62,7 @@ export function createAgendaService(
         createdAt: now().toISOString(),
         ...(input.description?.trim() ? { description: input.description.trim() } : {}),
         ...(input.location?.trim() ? { location: input.location.trim() } : {}),
+        ...(input.projectId ? { projectId: input.projectId } : {}),
       };
 
       await repository.save(appointment);

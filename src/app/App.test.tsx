@@ -16,8 +16,8 @@ describe('App', () => {
   it('permite navegar entre as áreas principais', () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /^agenda$/i }));
-    expect(screen.getByRole('heading', { name: 'Agenda' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
+    expect(screen.getByRole('heading', { name: 'Calendário' })).toBeInTheDocument();
     expect(screen.getByText(/compromissos, eventos e prazos/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^estudos$/i }));
@@ -27,9 +27,10 @@ describe('App', () => {
   it('abre a Agenda funcional e permite iniciar um novo compromisso', async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /^agenda$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
 
-    expect(await screen.findByText('SEUS COMPROMISSOS')).toBeInTheDocument();
+    expect(await screen.findByText('CALENDÁRIO CENTRAL')).toBeInTheDocument();
+    expect(screen.getByRole('grid', { name: 'Calendário semanal' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /novo compromisso/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /novo compromisso/i }));
     expect(screen.getByRole('heading', { name: 'O que está marcado?' })).toBeInTheDocument();
@@ -103,7 +104,7 @@ describe('App', () => {
 
   it('impede envio da Agenda com data inválida sem lançar erro', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^agenda$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
     fireEvent.click(await screen.findByRole('button', { name: /novo compromisso/i }));
 
     fireEvent.change(screen.getByLabelText('Início'), { target: { value: '' } });
@@ -114,7 +115,7 @@ describe('App', () => {
 
   it('permite editar um compromisso existente sem criar um segundo registro', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^agenda$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
     fireEvent.click(await screen.findByRole('button', { name: /novo compromisso/i }));
 
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Revisão de algoritmos' } });
