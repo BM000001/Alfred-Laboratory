@@ -443,3 +443,105 @@ html #root .productivity-module .focus-history-item{
 }
 html #root .productivity-module .focus-history-item small{color:var(--quiet)}
 html #root .productivity-module .focus-history-dot{background:var(--accent)}
+
+
+/* Alfred assistant and project cards: replace the remaining legacy blue panels. */
+html #root .main-content .assistant-module .assistant-heading{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .assistant-module .assistant-heading :is(h2,p,.card-label){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-heading p,
+html #root .main-content .assistant-module .assistant-disclaimer{color:var(--quiet)}
+html #root .main-content .assistant-module .assistant-heading .assistant-status{
+  color:#477b68;
+  border-color:#c7d9c8;
+  background:#edf5ec;
+}
+html #root .main-content .assistant-module .assistant-capabilities span{
+  color:var(--quiet);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-message.from-user{
+  color:var(--ink);
+  border-color:#b89a62;
+  background:color-mix(in srgb,var(--gold) 24%,var(--sheet));
+}
+html #root .main-content .assistant-module .assistant-message.from-user :is(p,span){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-composer{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .assistant-module .assistant-composer input{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-composer .primary-action{
+  color:#29271f;
+  border-color:#b89a62;
+  background:var(--gold);
+  box-shadow:none;
+}
+html #root .main-content .assistant-module .assistant-suggestion-list button{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+}
+html #root .main-content .assistant-module .assistant-suggestion-list button:hover{
+  border-color:var(--accent);
+  background:color-mix(in srgb,var(--gold) 20%,var(--sheet));
+}
+html #root .main-content .assistant-proposal{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .assistant-proposal :is(h3,h4,strong,p,span){color:var(--ink)}
+html #root .main-content .assistant-proposal :is(small,.proposal-meta){color:var(--quiet)}
+html #root .main-content .assistant-proposal-actions .secondary-action{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-proposal-actions .secondary-action:hover:not(:disabled){
+  border-color:#b89a62;
+  color:#29271f;
+  background:var(--gold);
+}
+
+html #root .main-content .project-card{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .project-card:hover{
+  border-color:var(--accent);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .project-card :is(h3,strong){color:var(--ink)}
+html #root .main-content .project-card>p,
+html #root .main-content .project-card .task-meta{color:var(--quiet)}
+html #root .main-content .project-card .project-status{
+  color:#477b68;
+  border-color:#c7d9c8;
+  background:#edf5ec;
+}
+html #root .main-content .project-card .project-status.archived{
+  color:var(--quiet);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .project-card .progress-track{background:var(--line)}
+html #root .main-content .project-card .progress-track span{
+  background:var(--accent);
+  box-shadow:none;
+}
