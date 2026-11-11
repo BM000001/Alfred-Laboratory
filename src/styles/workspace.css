@@ -403,3 +403,21 @@ html #root .main-content :is(button,a,input,select,textarea):focus-visible{
   outline-color:var(--accent);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);
 }
+
+/* Finish matching legacy micro-details in technical mode. */
+html #root .main-content .eyebrow::before{background:var(--accent)}
+html #root .main-content .secondary-action{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+  box-shadow:none;
+}
+html #root .main-content .secondary-action:hover{
+  color:#29271f;
+  border-color:#b89a62;
+  background:var(--gold);
+}
+html #root .main-content .secondary-action:focus-visible{
+  outline-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);
+}
