@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { ActionProposal, ApprovalDecision, AssistantMessage, ToolDefinition } from './assistant/contracts';
 import './assistant/assistant.css';
+import { AlfredMascot } from '../components/AlfredMascot';
 import { ActionApprovalError, executeApprovedProposal } from './assistant/actionApproval';
 import { prepareTaskCompletion } from './assistant/actionProposals';
 import { prepareTaskCreation } from './assistant/taskCreationProposals';
@@ -371,7 +372,10 @@ export function Assistant() {
   return (
     <section className="assistant-module" aria-label="Assistente Alfred">
       <header className="assistant-heading">
-        <div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div>
+        <div className="assistant-heading-main">
+          <AlfredMascot compact mood={error ? 'warning' : pendingProposal ? 'curious' : loading || approving ? 'thinking' : 'idle'} />
+          <div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div>
+        </div>
         <div className="assistant-heading-actions">
           <span className="assistant-status"><i aria-hidden="true" /> Local</span>
           <button type="button" className="secondary-action" onClick={() => setConfirmClear(true)} disabled={!historyReady || loading || approving || pendingProposal !== null}>Limpar conversa</button>
