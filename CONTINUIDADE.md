@@ -1,5 +1,15 @@
 # Continuidade do Alfred
 
+## Marco — recuperação de escrita falha do assistente (2026-11-09)
+
+- PR #27: https://github.com/BM000001/Alfred-Laboratory/pull/27 — branch `test/assistant-write-retry-20261109`, base e destino `main`, sem merge.
+- Commit de teste `977a646c22b5e7cb19f07cca6628ef53be0b35de`. Arquivo: `src/modules/AssistantWriteRetry.test.tsx`.
+- Escopo autorizado: item 4 das próximas etapas prioritárias, estado de erro em propostas de ação. Testa falha de `taskRepository.save` na primeira confirmação, preservação do estado, ausência de falso sucesso e segunda confirmação bem-sucedida.
+- Papéis efetivos: exploração, implementação, QA e revisão manuais pelo coordenador; sem subagentes e sem carregamento nativo ECC.
+- Verificação: leitura de `Assistant.tsx` e testes existentes, inspeção dos PRs abertos e arquivos pertinentes; comandos `npm test` e `npm run build:pages` **não executados localmente**. CI GitHub Actions do SHA final ainda a verificar; Safari real não testado.
+- Riscos: comportamento assíncrono em jsdom. Próxima ação: conferir CI e corrigir falhas reproduzíveis; sem merge/deploy.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
