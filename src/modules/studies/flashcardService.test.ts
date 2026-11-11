@@ -31,6 +31,15 @@ describe('flashcardService', () => {
     expect(afterAgain.reviewCount).toBe(2);
   });
 
+  it('edits a persisted card without resetting its review history', async () => {
+    const repository = memoryRepository<StudyFlashcard>();
+    const service = createFlashcardService(repository, { createId: () => 'card-1', now: () => new Date('2026-11-04T12:00:00.000Z') });
+    const card = await service.create({ disciplineId: 'math', front: 'Pergunta antiga', back: 'Resposta antiga' });
+    await service.review(card.id, 'good');
+    const edited = await service.update(card.id, { front: 'Pergunta nova', back: 'Resposta nova' });
+    expect(edited).toMatchObject({ front: 'Pergunta nova', back: 'Resposta nova', reviewCount: 1, intervalDays: 3 });
+  });
+
   it('identifies cards that are due', () => {
     const card: StudyFlashcard = { id: '1', disciplineId: 'math', front: 'Q', back: 'A', createdAt: '', nextReviewAt: '2026-11-04T10:00:00.000Z', intervalDays: 0, reviewCount: 0 };
     expect(isFlashcardDue(card, new Date('2026-11-04T12:00:00.000Z'))).toBe(true);

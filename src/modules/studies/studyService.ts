@@ -44,7 +44,7 @@ export function createStudyService(disciplines: EntityRepository<Discipline>, to
     async createTopic(input: CreateStudyTopicInput) {
       const error = validateStudyTopic(input, await disciplines.getAll());
       if (error) throw new Error(error);
-      const topic: StudyTopic = { id: createId(), disciplineId: input.disciplineId, title: input.title.trim(), status: 'pending', createdAt: now().toISOString(), ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}) };
+      const topic: StudyTopic = { id: createId(), disciplineId: input.disciplineId, title: input.title.trim(), status: 'pending', createdAt: now().toISOString(), ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}), ...(input.sourceFileId ? { sourceFileId: input.sourceFileId } : {}), ...(input.sourceFileName ? { sourceFileName: input.sourceFileName } : {}) };
       await topics.save(topic);
       return topic;
     },

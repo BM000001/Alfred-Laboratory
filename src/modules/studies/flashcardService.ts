@@ -16,7 +16,7 @@ export function createFlashcardService(repository: EntityRepository<StudyFlashca
       if (!front || !back) throw new Error('Preencha a pergunta e a resposta.');
       if (front.length > 500 || back.length > 2000) throw new Error('A pergunta aceita até 500 caracteres e a resposta até 2.000.');
       const timestamp = now().toISOString();
-      const card: StudyFlashcard = { id: createId(), disciplineId: input.disciplineId, front, back, createdAt: timestamp, nextReviewAt: timestamp, intervalDays: 0, reviewCount: 0 };
+      const card: StudyFlashcard = { id: createId(), disciplineId: input.disciplineId, front, back, createdAt: timestamp, nextReviewAt: timestamp, intervalDays: 0, reviewCount: 0, ...(input.topicId ? { topicId: input.topicId } : {}), ...(input.sourceFileId ? { sourceFileId: input.sourceFileId } : {}), ...(input.sourceFileName ? { sourceFileName: input.sourceFileName } : {}), ...(input.subject ? { subject: input.subject } : {}) };
       await repository.save(card);
       return card;
     },
@@ -34,6 +34,16 @@ export function createFlashcardService(repository: EntityRepository<StudyFlashca
       const intervalDays = intervals[rating];
       const nextReview = new Date(reviewedAt.getTime() + (rating === 'again' ? 10 * 60 * 1000 : intervalDays * DAY));
       const updated: StudyFlashcard = { ...card, lastReviewedAt: reviewedAt.toISOString(), nextReviewAt: nextReview.toISOString(), intervalDays, reviewCount: card.reviewCount + 1 };
+      await repository.save(updated);
+      return updated;
+    },
+    async update(id: string, changes: { front: string; back: string }) {
+      const card = await repository.getById(id);
+      if (!card) throw new Error('Flashcard não encontrado.');
+      const front = changes.front.trim(), back = changes.back.trim();
+      if (!front || !back) throw new Error('Preencha a pergunta e a resposta.');
+      if (front.length > 500 || back.length > 2000) throw new Error('A pergunta aceita até 500 caracteres e a resposta até 2.000.');
+      const updated = { ...card, front, back };
       await repository.save(updated);
       return updated;
     },

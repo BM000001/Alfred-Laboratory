@@ -20,6 +20,7 @@ export function Studies() {
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [editingDisciplineId, setEditingDisciplineId] = useState<string | null>(null);
   const [selectedDiscipline, setSelectedDiscipline] = useState('');
+  const [studyRefreshVersion, setStudyRefreshVersion] = useState(0);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,6 +30,11 @@ export function Studies() {
     setDisciplines(loadedDisciplines.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
     setTopics(loadedTopics);
     setSelectedDiscipline((current) => current || loadedDisciplines[0]?.id || '');
+  }
+
+  async function refreshAfterMaterialImport() {
+    await refresh();
+    setStudyRefreshVersion((version) => version + 1);
   }
 
   useEffect(() => {
@@ -154,9 +160,9 @@ export function Studies() {
             <div><strong>{topic.title}</strong>{topic.notes && <p>{topic.notes}</p>}</div>
             <div><button className="text-action" type="button" onClick={() => editTopic(topic)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteTopic(topic)}>Excluir</button></div>
           </article>)}</div>}
-          <StudyFlashcards disciplineId={selectedDiscipline} />
-          <QuestionBank disciplineId={selectedDiscipline} topics={topics.filter((topic) => topic.disciplineId === selectedDiscipline)} />
-          <StudyMaterialImporter disciplineId={selectedDiscipline} topics={topics} />
+          <StudyFlashcards disciplineId={selectedDiscipline} refreshToken={studyRefreshVersion} />
+          <QuestionBank disciplineId={selectedDiscipline} topics={topics.filter((topic) => topic.disciplineId === selectedDiscipline)} refreshToken={studyRefreshVersion} />
+          <StudyMaterialImporter disciplineId={selectedDiscipline} onProcessed={refreshAfterMaterialImport} />
           <StudyPerformance disciplineId={selectedDiscipline} topics={topics} />
         </div>
       </div>

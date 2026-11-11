@@ -8,7 +8,7 @@ const service = createQuestionService(studyQuestionRepository, studyQuizAttemptR
 const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
-export function QuestionBank({ disciplineId, topics }: { disciplineId: string; topics: StudyTopic[] }) {
+export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disciplineId: string; topics: StudyTopic[]; refreshToken?: number }) {
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [history, setHistory] = useState<StudyQuizAttempt[]>([]);
   const [prompt, setPrompt] = useState('');
@@ -19,6 +19,7 @@ export function QuestionBank({ disciplineId, topics }: { disciplineId: string; t
   const [difficulty, setDifficulty] = useState<StudyQuestionDifficulty>('medium');
   const [quizTopicFilter, setQuizTopicFilter] = useState('all');
   const [quizDifficultyFilter, setQuizDifficultyFilter] = useState<StudyQuestionDifficulty | 'all'>('all');
+  const [quizQuestionCount, setQuizQuestionCount] = useState(10);
   const [phase, setPhase] = useState<'idle' | 'quiz' | 'result'>('idle');
   const [quizQuestions, setQuizQuestions] = useState<StudyQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -54,7 +55,7 @@ export function QuestionBank({ disciplineId, topics }: { disciplineId: string; t
     setQuizAnswers([]);
     setLastAttempt(null);
     return () => { active = false; };
-  }, [disciplineId]);
+  }, [disciplineId, refreshToken]);
 
   const availableQuizQuestions = useMemo(() => selectQuizQuestions(questions, {
     topicId: quizTopicFilter === 'all' ? undefined : quizTopicFilter,
@@ -101,7 +102,7 @@ export function QuestionBank({ disciplineId, topics }: { disciplineId: string; t
     const session = selectQuizQuestions(questions, {
       topicId: quizTopicFilter === 'all' ? undefined : quizTopicFilter,
       difficulty: quizDifficultyFilter,
-      limit: 10,
+      limit: quizQuestionCount,
     });
     if (!session.length) return;
     setQuizQuestions(session);
@@ -170,7 +171,7 @@ export function QuestionBank({ disciplineId, topics }: { disciplineId: string; t
 
   return <section className="study-question-bank" aria-label="Banco de questões e simulados">
     <div className="study-question-header">
-      <div><span className="card-label">PRÁTICA E AUTOAVALIAÇÃO</span><h3>Questões e simulados</h3><p>{questions.length} questão(ões) cadastrada(s) · simulados com até 10 questões</p></div>
+      <div><span className="card-label">PRÁTICA E AUTOAVALIAÇÃO</span><h3>Questões e simulados</h3><p>{questions.length} questão(ões) cadastrada(s) · simulados com até 50 questões</p></div>
       {phase === 'idle' && <button className="study-quiz-start" type="button" disabled={!availableQuizQuestions.length} onClick={startQuiz}>Iniciar simulado</button>}
       {phase !== 'idle' && <button className="study-quiz-start secondary" type="button" onClick={exitQuiz}>Sair do simulado</button>}
     </div>
@@ -181,7 +182,10 @@ export function QuestionBank({ disciplineId, topics }: { disciplineId: string; t
       <label htmlFor="study-quiz-difficulty-filter">Dificuldade
         <select id="study-quiz-difficulty-filter" value={quizDifficultyFilter} onChange={event => setQuizDifficultyFilter(event.target.value as StudyQuestionDifficulty | 'all')}><option value="all">Todas</option><option value="easy">Fácil</option><option value="medium">Média</option><option value="hard">Difícil</option></select>
       </label>
-      <span>{availableQuizQuestions.length} questão(ões) disponíveis · até 10 por simulado</span>
+      <label htmlFor="study-quiz-question-count">Quantidade de questões
+        <input id="study-quiz-question-count" type="number" min="1" max={Math.min(50, availableQuizQuestions.length)} value={Math.min(quizQuestionCount, Math.max(1, availableQuizQuestions.length))} onChange={(event) => setQuizQuestionCount(Math.max(1, Math.min(50, Number(event.target.value) || 1)))} disabled={!availableQuizQuestions.length} />
+      </label>
+      <span>{availableQuizQuestions.length} questão(ões) disponíveis</span>
     </div>}
     {error && <p className="module-error" role="alert">{error}</p>}
 
@@ -208,6 +212,17 @@ export function QuestionBank({ disciplineId, topics }: { disciplineId: string; t
       <p>{resultSummary.correct} acerto(s) de {resultSummary.total} questão(ões) · {resultSummary.incorrect} erro(s)</p>
       <div className="progress-track"><span style={{ width: `${resultSummary.percentage}%` }} /></div>
       <div className="study-quiz-result-actions"><button className="primary-action" type="button" onClick={startQuiz}>Refazer simulado</button><button className="text-action" type="button" onClick={exitQuiz}>Voltar ao banco</button></div>
+      <details className="study-quiz-review"><summary>Revisar respostas e explicações</summary>
+        {quizQuestions.map((question, index) => {
+          const answer = lastAttempt.answers.find((item) => item.questionId === question.id);
+          return <article key={question.id}>
+            <strong>{index + 1}. {question.prompt}</strong>
+            <p>Sua resposta: {answer?.selectedOptionIndex === null || answer?.selectedOptionIndex === undefined ? 'Sem resposta' : question.options[answer.selectedOptionIndex]}</p>
+            <p>Correta: {question.options[question.correctOptionIndex]}</p>
+            {question.explanation && <p>{question.explanation}</p>}
+          </article>;
+        })}
+      </details>
     </article>}
 
     {phase === 'idle' && <>

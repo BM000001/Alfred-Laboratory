@@ -6,7 +6,7 @@ export interface ExtractedPage {
 }
 
 export interface StoredTextExtraction {
-  format: 'txt' | 'md' | 'csv' | 'json' | 'pdf';
+  format: 'txt' | 'md' | 'csv' | 'json' | 'pdf' | 'docx' | 'pptx';
   text: string;
   characterCount: number;
   wordCount: number;
