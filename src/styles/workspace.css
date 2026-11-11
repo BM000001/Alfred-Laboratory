@@ -545,3 +545,9 @@ html #root .main-content .project-card .progress-track span{
   background:var(--accent);
   box-shadow:none;
 }
+
+/* The active sidebar label also needs the ink color, not only its icon. */
+html #root .sidebar .nav-item.active{color:#29271f}
+@media(max-width:700px){
+  html #root .mobile-tabbar .nav-item.active{color:#29271f}
+}
