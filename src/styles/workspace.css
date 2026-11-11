@@ -421,3 +421,25 @@ html #root .main-content .secondary-action:focus-visible{
   outline-color:var(--accent);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);
 }
+
+/* Apply the palette to the complete focus history, not only the timer card. */
+html #root .productivity-module .focus-side-card,
+html #root .productivity-module .focus-history{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .productivity-module .focus-clock{color:var(--ink)}
+html #root .productivity-module .focus-cycle span{background:var(--line)}
+html #root .productivity-module .focus-cycle span.done{
+  background:var(--accent);
+  box-shadow:none;
+}
+html #root .productivity-module .focus-history .list-heading h2,
+html #root .productivity-module .focus-history-item :is(strong,b){color:var(--ink)}
+html #root .productivity-module .focus-history-item{
+  border-color:var(--line);
+}
+html #root .productivity-module .focus-history-item small{color:var(--quiet)}
+html #root .productivity-module .focus-history-dot{background:var(--accent)}
