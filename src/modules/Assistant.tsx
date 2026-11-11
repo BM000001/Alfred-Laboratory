@@ -72,7 +72,7 @@ export function Assistant() {
       .catch(() => setError('Não foi possível salvar o histórico da conversa neste dispositivo.'));
   }, [messages, historyReady]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages, loading, pendingProposal]);
+  useEffect(() => { endRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' }); }, [messages, loading, pendingProposal]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
