@@ -242,7 +242,12 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
           {options.map((option, index) => <div className="study-question-option-input" key={index}>
             <input aria-label={`Alternativa ${String.fromCharCode(65 + index)}`} value={option} maxLength={300} onChange={(event) => setOptions((current) => current.map((value, optionIndex) => optionIndex === index ? event.target.value : value))} placeholder={`Alternativa ${String.fromCharCode(65 + index)}`} required />
             <label><input type="radio" name="study-correct-option" checked={correctOptionIndex === index} onChange={() => setCorrectOptionIndex(index)} /> Correta</label>
+            {options.length > 2 && <button className="text-action study-remove-option" type="button" aria-label={`Remover alternativa ${String.fromCharCode(65 + index)}`} onClick={() => {
+              setOptions((current) => current.filter((_, optionIndex) => optionIndex !== index));
+              setCorrectOptionIndex((current) => current === index ? 0 : current > index ? current - 1 : current);
+            }}>Remover</button>}
           </div>)}
+          <button className="text-action study-add-option" type="button" disabled={options.length >= 6} onClick={() => setOptions((current) => [...current, ''])}>Adicionar alternativa {options.length < 6 ? `(${options.length}/6)` : '(limite atingido)'}</button>
         </fieldset>
         <label htmlFor="study-question-explanation">Explicação da resposta <span>· opcional</span>
           <textarea id="study-question-explanation" rows={2} maxLength={2000} value={explanation} onChange={(event) => setExplanation(event.target.value)} placeholder="Explique por que a alternativa está correta..." />

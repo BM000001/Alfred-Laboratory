@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StudyMaterialImporter } from './StudyMaterialImporter';
 import { disciplineRepository, fileRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../../storage/repositories';
 
+vi.mock('../files/imageOcrExtractor', () => ({
+  extractImageTextWithLocalOcr: vi.fn(async (_file: File, onProgress?: (progress: { progress: number; status: string }) => void) => {
+    onProgress?.({ progress: 0.5, status: 'Reconhecendo texto da foto localmente' });
+    return { text: 'Definição: texto reconhecido da fotografia.', confidence: 96, language: 'por' as const };
+  }),
+}));
+
 const definitions = [
   'Encapsulamento: mecanismo que protege os dados internos de um objeto.',
   'Herança: relação que permite reutilizar características definidas em outra classe.',
@@ -20,10 +27,26 @@ beforeEach(async () => {
 afterEach(() => cleanup());
 
 describe('StudyMaterialImporter', () => {
+  it('stages a gallery photo and runs local OCR when Save is pressed', async () => {
+    render(<StudyMaterialImporter disciplineId="software" />);
+    const photo = new File(['photo-bytes'], 'anotacao.jpg', { type: 'image/jpeg', lastModified: 42 });
+    const input = screen.getByLabelText('Escolher arquivos ou fotos');
+    expect(input).toHaveAttribute('accept', expect.stringContaining('image/*'));
+    fireEvent.change(input, { target: { files: [photo] } });
+    expect(screen.getByText(/anotacao.jpg/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText(/OCR: revise a precisão/)).toBeInTheDocument();
+    const [stored] = await fileRepository.getAll();
+    expect(stored).toMatchObject({ name: 'anotacao.jpg', disciplineId: 'software', extraction: { format: 'image', extractionMethod: 'ocr', language: 'por', text: 'Definição: texto reconhecido da fotografia.' } });
+    expect((await studyFlashcardRepository.getAll()).length).toBeGreaterThan(0);
+    expect((await studyFlashcardRepository.getAll())[0].sourceFileName).toBe('anotacao.jpg');
+  });
+
   it('saves multiple materials once, processes immediately, and persists source-linked cards and questions', async () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     const files = [1, 2, 3].map((n) => new File([definitions], `aula-${n}.txt`, { type: 'text/plain', lastModified: n }));
-    fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files } });
+    fireEvent.change(screen.getByLabelText('Escolher arquivos ou fotos'), { target: { files } });
     expect(screen.getByText('3 arquivo(s) na preparação')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
@@ -46,7 +69,7 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     const valid = new File([definitions], 'material.txt', { type: 'text/plain' });
     const invalid = new File(['binary'], 'planilha.bin', { type: 'application/octet-stream' });
-    fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [valid, invalid] } });
+    fireEvent.change(screen.getByLabelText('Escolher arquivos ou fotos'), { target: { files: [valid, invalid] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText(/Formato ainda não suportado/)).toBeInTheDocument();
@@ -61,7 +84,7 @@ describe('StudyMaterialImporter', () => {
 
   it('does not generate unsupported resources for ordinary prose', async () => {
     render(<StudyMaterialImporter disciplineId="software" />);
-    fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File(['Texto de aula sem definições explícitas.'], 'resumo.txt')] } });
+    fireEvent.change(screen.getByLabelText('Escolher arquivos ou fotos'), { target: { files: [new File(['Texto de aula sem definições explícitas.'], 'resumo.txt')] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByText(/não encontrei definições explícitas suficientes/)).toBeInTheDocument();
     expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
@@ -78,7 +101,7 @@ describe('StudyMaterialImporter', () => {
     };
     vi.spyOn(fileRepository, 'getAll').mockResolvedValue([scanned]);
     render(<StudyMaterialImporter disciplineId="software" />);
-    fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File([pdfBytes], 'apostila.pdf', { type: 'application/pdf' })] } });
+    fireEvent.change(screen.getByLabelText('Escolher arquivos ou fotos'), { target: { files: [new File([pdfBytes], 'apostila.pdf', { type: 'application/pdf' })] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByText(/4 flashcard\(s\) e 4 questão\(ões\) gerados/)).toBeInTheDocument();
     expect(await fileRepository.getAll()).toHaveLength(1);

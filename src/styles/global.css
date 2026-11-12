@@ -2989,6 +2989,10 @@ select:focus-visible, textarea:focus-visible {
 .study-material-staging,.study-material-results{display:grid;gap:8px;padding:12px;border:1px solid rgba(151,177,222,.16);border-radius:10px;background:rgba(7,16,29,.38)}
 .study-material-staging>strong,.study-material-progress>strong{color:#dce8fc;font-size:12px}
 .study-material-staged-file{display:flex;justify-content:space-between;align-items:center;gap:10px;color:#a9bad3;font-size:11px}
+.study-material-staged-file-info{display:flex;align-items:center;gap:10px;min-width:0;overflow-wrap:anywhere}
+.study-material-photo-preview{width:48px;height:48px;flex:none;object-fit:cover;border:1px solid rgba(151,177,222,.2);border-radius:8px}
+.study-question-option-input .study-remove-option{justify-self:end}
+.study-question-options-field .study-add-option{width:max-content;max-width:100%;margin-top:4px}
 .study-material-staging .primary-action{width:max-content;max-width:100%}
 .study-material-progress{display:grid;gap:8px}
 .study-material-progress progress{width:100%;height:9px;accent-color:var(--blue)}

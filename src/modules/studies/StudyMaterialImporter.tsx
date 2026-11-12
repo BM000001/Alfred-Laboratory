@@ -87,7 +87,11 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
           } else {
             if (previous) sourceId = previous.id;
             else sourceId = (await files.add(file, disciplineId)).id;
-            extracted = await extractTextDocument(file);
+            extracted = await extractTextDocument(file, () => new Date(), (progress) => {
+              setStatuses((current) => current.map((status, statusIndex) => statusIndex === index
+                ? { ...status, detail: `${progress.status} · ${Math.round(progress.progress * 100)}%` }
+                : status));
+            });
             await files.saveExtraction(sourceId, extracted);
           }
           const generated = generateStudyResources(extracted.text);
@@ -149,17 +153,17 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
   return <section className="study-material-importer" aria-label="Adicionar material de estudo">
     <div>
       <span className="card-label">MATERIAL DA DISCIPLINA</span>
-      <h3>Adicionar arquivos de estudo</h3>
-      <p>Selecione um ou vários materiais. Ao clicar em Salvar, Alfred guarda os originais e processa o texto localmente; os recursos são criados somente quando há definições explícitas no documento.</p>
+      <h3>Adicionar materiais de estudo</h3>
+      <p>Escolha documentos ou fotos da galeria. Ao tocar em Salvar, Alfred guarda os originais, lê o texto localmente e cria flashcards e exercícios quando o conteúdo oferece base suficiente.</p>
     </div>
     <label className="file-upload-button study-material-select">
-      Adicionar arquivos
-      <input ref={fileInput} type="file" multiple accept=".pdf,.docx,.pptx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,text/csv,application/json" disabled={saving} onChange={stageFiles} />
+      Escolher arquivos ou fotos
+      <input ref={fileInput} type="file" multiple accept="image/*,.pdf,.docx,.pptx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,text/csv,application/json" disabled={saving} onChange={stageFiles} />
     </label>
     {staged.length > 0 && <div className="study-material-staging" aria-label="Arquivos aguardando processamento">
       <strong>{staged.length} arquivo(s) na preparação</strong>
       {staged.map((file) => <div className="study-material-staged-file" key={`${file.name}:${file.size}:${file.lastModified}`}>
-        <span>{file.name} · {(file.size / 1024).toFixed(0)} KB</span>
+        <span className="study-material-staged-file-info">{file.type.startsWith('image/') && <ImagePreview file={file} />}<span>{file.name} · {(file.size / 1024).toFixed(0)} KB</span></span>
         <button className="text-action" type="button" disabled={saving} aria-label={`Remover ${file.name}`} onClick={() => setStaged((current) => current.filter((item) => item !== file))}>Remover</button>
       </div>)}
       <button className="primary-action" type="button" onClick={() => void saveAndProcess()} disabled={saving || !disciplineId}>{saving ? 'Salvando e processando…' : 'Salvar'}</button>
@@ -175,6 +179,16 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
         <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
       </article>)}
     </div>}
-    <p className="study-material-privacy">Privacidade: extração e geração são locais. PDFs digitalizados continuam exigindo OCR local acionado na área Arquivos antes de serem usados aqui. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
+    <p className="study-material-privacy">Privacidade: fotos e documentos são lidos no dispositivo com OCR local em português; nada é enviado a serviços externos. Fotos HEIC dependem do suporte de leitura do Safari. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
   </section>;
+}
+
+function ImagePreview({ file }: { file: File }) {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  return url ? <img className="study-material-photo-preview" src={url} alt={`Prévia de ${file.name}`} /> : null;
 }
