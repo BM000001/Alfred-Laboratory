@@ -599,3 +599,16 @@ html #root .main-content .assistant-module .assistant-export-record :is(label,st
 html #root .main-content .assistant-module .assistant-export-panel :is(header .card-label,header h3,.assistant-export-group>strong,.assistant-export-preview>strong,.assistant-export-instruction>strong){color:var(--ink)}
 html #root .main-content .assistant-module .assistant-export-panel :is(.assistant-export-group>p,.assistant-export-panel>p,.assistant-export-record label){color:var(--quiet)}
 html #root .main-content .assistant-module .assistant-export-panel input{accent-color:var(--accent)}
+
+/* Remove the inherited blue tint from inactive mobile navigation icons and labels. */
+@media(max-width:700px){
+  html #root .mobile-tabbar .nav-item{
+    color:#c3c9bb;
+    border-color:transparent;
+    background:transparent;
+  }
+  html #root .mobile-tabbar .nav-item .nav-icon{color:currentColor;filter:none}
+  html #root .mobile-tabbar .nav-item:hover:not(.active){color:#f1eedf;background:#293329}
+  html #root .mobile-tabbar .mobile-more-menu .nav-item{color:#c3c9bb;background:transparent}
+  html #root .mobile-tabbar .mobile-more-menu .nav-item.active{color:#29271f;background:var(--gold)}
+}
