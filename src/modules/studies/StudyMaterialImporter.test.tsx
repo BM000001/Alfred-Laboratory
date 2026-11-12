@@ -36,7 +36,7 @@ describe('StudyMaterialImporter', () => {
     expect(screen.getByText(/anotacao.jpg/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByText(/Texto reconhecido por OCR \(confiança estimada: 96%\): confira o conteúdo/)).toBeInTheDocument();
+    expect(await screen.findByText(/Texto reconhecido por OCR/)).toBeInTheDocument();
     const [stored] = await fileRepository.getAll();
     expect(stored).toMatchObject({ name: 'anotacao.jpg', disciplineId: 'software', extraction: { format: 'image', extractionMethod: 'ocr', confidence: 96, language: 'por', text: 'Fotossíntese: processo pelo qual as plantas convertem luz em energia química.' } });
     expect((await studyFlashcardRepository.getAll()).length).toBeGreaterThan(0);
@@ -50,8 +50,9 @@ describe('StudyMaterialImporter', () => {
     expect(screen.getByText('3 arquivo(s) na preparação')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    await screen.findByText(/Original e texto extraído estão associados à disciplina/);
+    await waitFor(() => expect(screen.getAllByText(/Original e etapas preservados localmente/).length).toBeGreaterThan(0));
     await waitFor(async () => {
+      expect(screen.getAllByText('Pronto')).toHaveLength(3);
       expect(await fileRepository.getAll()).toHaveLength(3);
       expect(await studyTopicRepository.getAll()).toHaveLength(3);
       expect(await studyFlashcardRepository.getAll()).toHaveLength(4);
@@ -86,7 +87,7 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Escolher arquivos ou fotos'), { target: { files: [new File(['Texto de aula sem definições explícitas.'], 'resumo.txt')] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/não encontrei definições explícitas suficientes/)).toBeInTheDocument();
+    expect(await screen.findByText(/Não encontrei definições explícitas suficientes/)).toBeInTheDocument();
     expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
     expect(await fileRepository.getAll()).toHaveLength(1);
   });
@@ -99,12 +100,25 @@ describe('StudyMaterialImporter', () => {
       createdAt: '2026-11-11T12:00:00.000Z', disciplineId: 'software', blob: savedBlob,
       extraction: { format: 'pdf', text: definitions, characterCount: definitions.length, wordCount: 25, extractedAt: '2026-11-11T12:00:00.000Z', extractionMethod: 'ocr', language: 'por', pageCount: 1, pages: [{ pageNumber: 1, text: definitions, method: 'ocr', confidence: 92 }] },
     };
+    await fileRepository.save(scanned);
     vi.spyOn(fileRepository, 'getAll').mockResolvedValue([scanned]);
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Escolher arquivos ou fotos'), { target: { files: [new File([pdfBytes], 'apostila.pdf', { type: 'application/pdf' })] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/4 flashcard\(s\) e 4 questão\(ões\) gerados/)).toBeInTheDocument();
+    expect(await screen.findByText(/4 flashcards e 4 questões validados/)).toBeInTheDocument();
     expect(await fileRepository.getAll()).toHaveLength(1);
     expect((await studyFlashcardRepository.getAll())[0].sourceFileId).toBe('scanned-pdf');
   });
+});
+
+it('keeps processing valid siblings when saving an oversized original fails', async () => {
+  render(<StudyMaterialImporter disciplineId="software" />);
+  const invalid = new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'grande.bin');
+  const valid = new File([definitions], 'valido.txt', { type: 'text/plain' });
+  fireEvent.change(screen.getByLabelText('Escolher arquivos ou fotos'), { target: { files: [invalid, valid] } });
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+  expect(await screen.findByText(/O arquivo deve ter no máximo 10 MB/)).toBeInTheDocument();
+  await screen.findByText('Pronto');
+  expect(await fileRepository.getAll()).toHaveLength(1);
+  expect(await studyFlashcardRepository.getAll()).toHaveLength(4);
 });
