@@ -119,7 +119,7 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
             ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados${duplicates ? `; ${duplicates} duplicado(s) ignorado(s)` : ''}.`
             : `Texto salvo (${extracted.wordCount} palavras), mas não encontrei definições explícitas suficientes para gerar cartões ou questões com segurança.`;
           const ocrReview = extracted.extractionMethod === 'ocr'
-            ? `Texto reconhecido por OCR local${typeof extracted.confidence === 'number' ? ` (pontuação do mecanismo: ${Math.round(extracted.confidence)}%; não é garantia de acerto)` : ''}${extracted.preprocessing ? ` com a leitura de ${extracted.preprocessing === 'original' ? 'imagem original' : extracted.preprocessing === 'contrast' ? 'contraste ajustado' : 'alto contraste'}` : ''}: confira o conteúdo antes de estudar. `
+            ? `Texto reconhecido por OCR${typeof extracted.confidence === 'number' ? ` (confiança estimada: ${Math.round(extracted.confidence)}%)` : ''}: confira o conteúdo antes de estudar. A pontuação do mecanismo não é uma taxa de acerto${extracted.preprocessing ? `; leitura escolhida: ${extracted.preprocessing === 'original' ? 'imagem original' : extracted.preprocessing === 'contrast' ? 'contraste ajustado' : 'alto contraste'}` : ''}. `
             : '';
           nextStatuses.push({ name: file.name, status: 'success', detail: `${resourceMessage} ${ocrReview}Original e texto extraído estão associados à disciplina.` });
           processedSuccessfully.add(file);
