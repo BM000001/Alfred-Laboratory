@@ -1,5 +1,13 @@
 # Continuidade do Alfred
 
+## Marco — regressão de integridade do backup criptografado (2026-11-09)
+
+- Escopo autorizado: `CONTINUIDADE.md`, prioridade #2 (backup/restauração) e revisão de segurança da restauração. Teste de regressão para adulteração do ciphertext AES-GCM, independente do PR #30 (metadados do backup).
+- Implementação: commit `71b46191103db08531725d144815f40d6bbd0601`; arquivo `src/modules/backup/encryptedBackup.test.ts`. Um bit do ciphertext é alterado após criptografar e a restauração com a senha correta deve rejeitar o arquivo com erro genérico, sem expor conteúdo.
+- Papéis aplicados manualmente: explorer (leitura da implementação), QA (caso de regressão), security_reviewer (integridade AES-GCM) e reviewer (escopo do diff). Perfis Codex/ECC não carregados nativamente; nenhum subagente executado.
+- Validação: leitura estática de `encryptedBackup.ts` e `encryptedBackup.test.ts`; `npm test` e `npm run build:pages` não executados neste ambiente; CI e Safari/iPhone não confirmados. Risco: eventual incompatibilidade do ambiente Node com WebCrypto deve ser observada no CI.
+- PR: branch `test/backup-aes-gcm-tamper-20261109` para `main`, sem merge. Próxima ação: executar CI e corrigir apenas falha reproduzível; não publicar.
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
