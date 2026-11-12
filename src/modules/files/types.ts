@@ -12,6 +12,8 @@ export interface StoredTextExtraction {
   wordCount: number;
   extractedAt: string;
   extractionMethod?: 'text' | 'ocr';
+  /** OCR's provider-reported estimate (0–100); it is a signal, not a guarantee. */
+  confidence?: number;
   language?: string;
   pageCount?: number;
   pages?: ExtractedPage[];

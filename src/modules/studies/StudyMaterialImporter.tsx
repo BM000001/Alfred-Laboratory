@@ -118,7 +118,10 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
           const resourceMessage = cardsAdded || questionsAdded
             ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados${duplicates ? `; ${duplicates} duplicado(s) ignorado(s)` : ''}.`
             : `Texto salvo (${extracted.wordCount} palavras), mas não encontrei definições explícitas suficientes para gerar cartões ou questões com segurança.`;
-          nextStatuses.push({ name: file.name, status: 'success', detail: `${resourceMessage} ${extracted.extractionMethod === 'ocr' ? 'Texto reconhecido por OCR: revise a precisão antes de estudar. ' : ''}Original e texto extraído estão associados à disciplina.` });
+          const ocrReview = extracted.extractionMethod === 'ocr'
+            ? `Texto reconhecido por OCR${typeof extracted.confidence === 'number' ? ` (confiança estimada: ${Math.round(extracted.confidence)}%)` : ''}: confira o conteúdo antes de estudar. `
+            : '';
+          nextStatuses.push({ name: file.name, status: 'success', detail: `${resourceMessage} ${ocrReview}Original e texto extraído estão associados à disciplina.` });
           processedSuccessfully.add(file);
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : 'Falha inesperada ao processar este arquivo.';

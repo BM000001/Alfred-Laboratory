@@ -11,6 +11,7 @@ export interface ExtractedTextDocument {
   wordCount: number;
   extractedAt: string;
   extractionMethod?: 'text' | 'ocr';
+  confidence?: number;
   language?: string;
   pageCount?: number;
   pages?: ExtractedPdfPage[];
@@ -190,6 +191,7 @@ export async function extractTextDocument(
       wordCount: words.length,
       extractedAt: now().toISOString(),
       extractionMethod: 'ocr',
+      confidence: recognized.confidence,
       language: recognized.language,
     };
   }

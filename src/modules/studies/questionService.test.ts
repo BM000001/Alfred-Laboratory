@@ -36,6 +36,24 @@ describe('questionService', () => {
     })).rejects.toThrow('preencha todas');
   });
 
+  it('updates a question without changing its stable id or creation date and clears removed metadata', async () => {
+    const questions = memoryRepository<StudyQuestion>();
+    const service = createQuestionService(questions, memoryRepository<StudyQuizAttempt>(), {
+      createId: () => 'question-edit', now: () => new Date('2026-11-04T12:00:00.000Z'),
+    });
+    const created = await service.create({
+      disciplineId: 'math', topicId: 'limits', prompt: 'Pergunta antiga', options: ['A', 'B'],
+      correctOptionIndex: 1, difficulty: 'easy', sourceFileName: 'aula.pdf',
+    });
+    const updated = await service.update(created.id, {
+      disciplineId: 'math', prompt: 'Pergunta revisada', options: ['C', 'D', 'E'],
+      correctOptionIndex: 2, difficulty: 'hard',
+    });
+    expect(updated).toMatchObject({ id: created.id, createdAt: created.createdAt, prompt: 'Pergunta revisada', correctOptionIndex: 2, difficulty: 'hard' });
+    expect(updated.topicId).toBeUndefined();
+    expect(updated.sourceFileName).toBeUndefined();
+  });
+
   it('corrects answers and summarizes a quiz', () => {
     const question = { correctOptionIndex: 2 };
     expect(gradeStudyAnswer(question, 2)).toBe(true);
@@ -58,6 +76,30 @@ describe('questionService', () => {
     await service.saveAttempt(attempt);
     expect(await service.listAttempts()).toEqual([attempt]);
     await expect(service.saveAttempt({ ...attempt, correctAnswers: 0 })).rejects.toThrow('não confere');
+  });
+
+  it('stores immutable question snapshots so completed attempts survive question edits or deletion', async () => {
+    const questions = memoryRepository<StudyQuestion>();
+    const attempts = memoryRepository<StudyQuizAttempt>();
+    const service = createQuestionService(questions, attempts);
+    const question = await service.create({
+      disciplineId: 'math', topicId: 'limits', prompt: 'O que é limite?', options: ['A', 'B'],
+      correctOptionIndex: 1, explanation: 'Trecho fundamentado.', difficulty: 'medium', sourceFileName: 'aula.pdf',
+    });
+    const snapshot = {
+      prompt: question.prompt, options: [...question.options], correctOptionIndex: question.correctOptionIndex,
+      explanation: question.explanation, difficulty: question.difficulty, topicId: question.topicId,
+      sourceFileName: question.sourceFileName,
+    };
+    const attempt: StudyQuizAttempt = {
+      id: 'snapshot-attempt', disciplineId: 'math', startedAt: '2026-11-04T12:00:00.000Z',
+      completedAt: '2026-11-04T12:05:00.000Z', totalQuestions: 1, correctAnswers: 1,
+      answers: [{ questionId: question.id, selectedOptionIndex: 1, isCorrect: true, questionSnapshot: snapshot }],
+    };
+    await service.saveAttempt(attempt);
+    await service.delete(question.id);
+    expect((await service.listAttempts())[0].answers[0].questionSnapshot).toEqual(snapshot);
+    await expect(service.saveAttempt({ ...attempt, answers: [{ ...attempt.answers[0], questionSnapshot: { ...snapshot, correctOptionIndex: 9 } }] })).rejects.toThrow('histórico está inválida');
   });
 });
 

@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
 import type { StudyTopic } from './types';
-import type { StudyQuestion, StudyQuizAnswer, StudyQuizAttempt, StudyQuestionDifficulty } from './questionTypes';
+import type { StudyQuestion, StudyQuizAnswer, StudyQuizAttempt, StudyQuestionDifficulty, StudyQuestionSnapshot } from './questionTypes';
 import { createQuestionService, gradeStudyAnswer, summarizeQuiz, selectQuizQuestions } from './questionService';
 
 const service = createQuestionService(studyQuestionRepository, studyQuizAttemptRepository);
 const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
-export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disciplineId: string; topics: StudyTopic[]; refreshToken?: number }) {
+export function QuestionBank({ disciplineId, topics, refreshToken = 0, onAttemptSaved }: { disciplineId: string; topics: StudyTopic[]; refreshToken?: number; onAttemptSaved?: () => void }) {
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [history, setHistory] = useState<StudyQuizAttempt[]>([]);
+  const [editingQuestionId, setEditingQuestionId] = useState('');
   const [prompt, setPrompt] = useState('');
   const [options, setOptions] = useState<string[]>(emptyOptions);
   const [correctOptionIndex, setCorrectOptionIndex] = useState(0);
@@ -28,6 +29,7 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
   const [quizAnswers, setQuizAnswers] = useState<StudyQuizAnswer[]>([]);
   const [quizStartedAt, setQuizStartedAt] = useState('');
   const [lastAttempt, setLastAttempt] = useState<StudyQuizAttempt | null>(null);
+  const [historyAttemptId, setHistoryAttemptId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -54,6 +56,7 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
     setQuizQuestions([]);
     setQuizAnswers([]);
     setLastAttempt(null);
+    setHistoryAttemptId('');
     return () => { active = false; };
   }, [disciplineId, refreshToken]);
 
@@ -71,7 +74,8 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
     event.preventDefault();
     setError('');
     try {
-      await service.create({
+      const existing = questions.find((question) => question.id === editingQuestionId);
+      const input = {
         disciplineId,
         ...(topicId ? { topicId } : {}),
         prompt,
@@ -79,7 +83,13 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
         correctOptionIndex,
         explanation,
         difficulty,
-      });
+        ...(existing?.sourceFileId ? { sourceFileId: existing.sourceFileId } : {}),
+        ...(existing?.sourceFileName ? { sourceFileName: existing.sourceFileName } : {}),
+        ...(existing?.subject ? { subject: existing.subject } : {}),
+      };
+      if (editingQuestionId) await service.update(editingQuestionId, input);
+      else await service.create(input);
+      setEditingQuestionId('');
       setPrompt('');
       setOptions(emptyOptions);
       setCorrectOptionIndex(0);
@@ -90,6 +100,26 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível salvar a questão.');
     }
+  }
+
+  function editQuestion(question: StudyQuestion) {
+    setEditingQuestionId(question.id);
+    setPrompt(question.prompt);
+    setOptions([...question.options]);
+    setCorrectOptionIndex(question.correctOptionIndex);
+    setTopicId(question.topicId ?? '');
+    setExplanation(question.explanation ?? '');
+    setDifficulty(question.difficulty);
+  }
+
+  function cancelQuestionEdit() {
+    setEditingQuestionId('');
+    setPrompt('');
+    setOptions(emptyOptions);
+    setCorrectOptionIndex(0);
+    setTopicId('');
+    setExplanation('');
+    setDifficulty('medium');
   }
 
   async function deleteQuestion(question: StudyQuestion) {
@@ -130,6 +160,7 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
       questionId: currentQuestion.id,
       selectedOptionIndex,
       isCorrect: gradeStudyAnswer(currentQuestion, selectedOptionIndex),
+      questionSnapshot: snapshotQuestion(currentQuestion),
     };
     const updatedAnswers = [...quizAnswers, answer];
     if (questionIndex + 1 < quizQuestions.length) {
@@ -156,6 +187,7 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
       setLastAttempt(attempt);
       setPhase('result');
       await refresh();
+      onAttemptSaved?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o resultado do simulado.');
     }
@@ -213,12 +245,13 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
       <div className="progress-track"><span style={{ width: `${resultSummary.percentage}%` }} /></div>
       <div className="study-quiz-result-actions"><button className="primary-action" type="button" onClick={startQuiz}>Refazer simulado</button><button className="text-action" type="button" onClick={exitQuiz}>Voltar ao banco</button></div>
       <details className="study-quiz-review"><summary>Revisar respostas e explicações</summary>
-        {quizQuestions.map((question, index) => {
-          const answer = lastAttempt.answers.find((item) => item.questionId === question.id);
-          return <article key={question.id}>
+        {lastAttempt.answers.map((answer, index) => {
+          const question = answer.questionSnapshot ?? quizQuestions.find((item) => item.id === answer.questionId);
+          if (!question) return <article key={`${answer.questionId}:${index}`}><strong>{index + 1}. Questão original indisponível</strong><p>Esta tentativa foi criada em uma versão anterior que não guardava uma cópia da questão.</p></article>;
+          return <article key={`${answer.questionId}:${index}`}>
             <strong>{index + 1}. {question.prompt}</strong>
-            <p>Sua resposta: {answer?.selectedOptionIndex === null || answer?.selectedOptionIndex === undefined ? 'Sem resposta' : question.options[answer.selectedOptionIndex]}</p>
-            <p>Correta: {question.options[question.correctOptionIndex]}</p>
+            <p>Sua resposta: {answer.selectedOptionIndex === null || answer.selectedOptionIndex === undefined ? 'Sem resposta' : question.options[answer.selectedOptionIndex] ?? 'Alternativa não disponível'}</p>
+            <p>Correta: {question.options[question.correctOptionIndex] ?? 'Alternativa não disponível'}</p>
             {question.explanation && <p>{question.explanation}</p>}
           </article>;
         })}
@@ -227,6 +260,7 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
 
     {phase === 'idle' && <>
       <form className="study-question-form" onSubmit={createQuestion}>
+        {editingQuestionId && <strong>Editar questão do banco</strong>}
         <label htmlFor="study-question-prompt">Enunciado da questão</label>
         <textarea id="study-question-prompt" rows={3} maxLength={1000} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Digite uma pergunta objetiva..." required />
         <div className="study-question-form-grid">
@@ -252,16 +286,48 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
         <label htmlFor="study-question-explanation">Explicação da resposta <span>· opcional</span>
           <textarea id="study-question-explanation" rows={2} maxLength={2000} value={explanation} onChange={(event) => setExplanation(event.target.value)} placeholder="Explique por que a alternativa está correta..." />
         </label>
-        <button className="primary-action" type="submit">Salvar questão</button>
+        <button className="primary-action" type="submit">{editingQuestionId ? 'Salvar alterações' : 'Salvar questão'}</button>
+        {editingQuestionId && <button className="text-action" type="button" onClick={cancelQuestionEdit}>Cancelar edição</button>}
       </form>
       {loading ? <p className="module-feedback">Carregando questões...</p> : questions.length ? <div className="study-question-list">
         <div className="study-question-list-heading"><strong>Banco desta disciplina</strong><span>As questões mais recentes aparecem primeiro</span></div>
         {questions.map((question) => <article className="study-question-item" key={question.id}>
           <div><span className="study-question-difficulty">{difficultyLabels[question.difficulty]}</span><strong>{question.prompt}</strong><p>{question.options.length} alternativas{question.topicId ? ` · ${topics.find((topic) => topic.id === question.topicId)?.title ?? 'Tópico vinculado'}` : ''}</p></div>
-          <button className="text-action" type="button" onClick={() => void deleteQuestion(question)}>Excluir</button>
+          <div><button className="text-action" type="button" onClick={() => editQuestion(question)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteQuestion(question)}>Excluir</button></div>
         </article>)}
       </div> : <div className="study-flashcard-empty">Cadastre questões objetivas acima. Depois, inicie um simulado para responder e receber a correção automaticamente.</div>}
-      {history.length > 0 && <div className="study-quiz-history"><strong>Histórico de simulados</strong>{history.slice(0, 5).map((attempt) => <div key={attempt.id}><span>{new Date(attempt.completedAt).toLocaleDateString('pt-BR')}</span><strong>{attempt.correctAnswers}/{attempt.totalQuestions} acertos · {Math.round(attempt.correctAnswers / attempt.totalQuestions * 100)}%</strong></div>)}</div>}
+      {history.length > 0 && <div className="study-quiz-history"><strong>Histórico de simulados</strong>{history.map((attempt) => <div key={attempt.id}>
+        <span>{new Date(attempt.completedAt).toLocaleDateString('pt-BR')} · {attempt.totalQuestions} questões</span>
+        <strong>{attempt.correctAnswers}/{attempt.totalQuestions} acertos · {attempt.totalQuestions ? Math.round(attempt.correctAnswers / attempt.totalQuestions * 100) : 0}%</strong>
+        <button className="text-action" type="button" aria-expanded={historyAttemptId === attempt.id} onClick={() => setHistoryAttemptId((current) => current === attempt.id ? '' : attempt.id)}>{historyAttemptId === attempt.id ? 'Fechar revisão' : 'Revisar'}</button>
+      </div>)}
+        {history.find((attempt) => attempt.id === historyAttemptId) && <details className="study-quiz-review" open>
+          <summary>Respostas desta tentativa</summary>
+          {history.find((attempt) => attempt.id === historyAttemptId)!.answers.map((answer, index) => {
+            const question = answer.questionSnapshot ?? questions.find((item) => item.id === answer.questionId);
+            if (!question) return <article key={`${answer.questionId}:${index}`}><strong>{index + 1}. Questão original indisponível</strong><p>Esta tentativa antiga não contém uma cópia da questão.</p></article>;
+            return <article key={`${answer.questionId}:${index}`}>
+              <strong>{index + 1}. {question.prompt}</strong>
+              <p>Sua resposta: {answer.selectedOptionIndex === null ? 'Sem resposta' : question.options[answer.selectedOptionIndex] ?? 'Alternativa não disponível'}</p>
+              <p>Correta: {question.options[question.correctOptionIndex] ?? 'Alternativa não disponível'}</p>
+              {question.explanation && <p>{question.explanation}</p>}
+            </article>;
+          })}
+        </details>}
+      </div>}
     </>}
   </section>;
+}
+
+function snapshotQuestion(question: StudyQuestion): StudyQuestionSnapshot {
+  return {
+    prompt: question.prompt,
+    options: [...question.options],
+    correctOptionIndex: question.correctOptionIndex,
+    ...(question.explanation ? { explanation: question.explanation } : {}),
+    difficulty: question.difficulty,
+    ...(question.topicId ? { topicId: question.topicId } : {}),
+    ...(question.sourceFileName ? { sourceFileName: question.sourceFileName } : {}),
+    ...(question.subject ? { subject: question.subject } : {}),
+  };
 }

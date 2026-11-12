@@ -12,10 +12,10 @@ vi.mock('../files/imageOcrExtractor', () => ({
 }));
 
 const definitions = [
-  'Encapsulamento: mecanismo que protege os dados internos de um objeto.',
-  'Herança: relação que permite reutilizar características definidas em outra classe.',
-  'Polimorfismo: capacidade de responder de formas diferentes a uma mesma operação.',
-  'Abstração: processo que representa somente aspectos importantes de uma entidade.',
+  'Encapsulamento: técnica que protege componentes e estruturas internas dos programas contra acessos indevidos.',
+  'Herança: relação que permite reutilizar componentes e estruturas já definidas por outros programas.',
+  'Polimorfismo: capacidade de alterar comportamentos de componentes e estruturas durante a execução dos programas.',
+  'Abstração: representação que simplifica componentes e estruturas para facilitar a análise dos programas.',
 ].join('\n');
 
 beforeEach(async () => {
@@ -36,9 +36,9 @@ describe('StudyMaterialImporter', () => {
     expect(screen.getByText(/anotacao.jpg/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByText(/Texto reconhecido por OCR: revise a precisão/)).toBeInTheDocument();
+    expect(await screen.findByText(/Texto reconhecido por OCR \(confiança estimada: 96%\): confira o conteúdo/)).toBeInTheDocument();
     const [stored] = await fileRepository.getAll();
-    expect(stored).toMatchObject({ name: 'anotacao.jpg', disciplineId: 'software', extraction: { format: 'image', extractionMethod: 'ocr', language: 'por', text: 'Fotossíntese: processo pelo qual as plantas convertem luz em energia química.' } });
+    expect(stored).toMatchObject({ name: 'anotacao.jpg', disciplineId: 'software', extraction: { format: 'image', extractionMethod: 'ocr', confidence: 96, language: 'por', text: 'Fotossíntese: processo pelo qual as plantas convertem luz em energia química.' } });
     expect((await studyFlashcardRepository.getAll()).length).toBeGreaterThan(0);
     expect((await studyFlashcardRepository.getAll())[0].sourceFileName).toBe('anotacao.jpg');
   });

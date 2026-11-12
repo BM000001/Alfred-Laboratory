@@ -31,5 +31,37 @@ describe('QuestionBank option editor', () => {
     const [saved] = await studyQuestionRepository.getAll();
     expect(saved.options).toEqual(['Resposta A', 'Resposta B']);
     expect(saved.correctOptionIndex).toBe(1);
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+    fireEvent.change(screen.getByLabelText('Enunciado da questão'), { target: { value: 'Enunciado revisado pelo estudante?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+    expect(await screen.findByText('Enunciado revisado pelo estudante?')).toBeInTheDocument();
+    expect((await studyQuestionRepository.getById(saved.id))?.options).toEqual(['Resposta A', 'Resposta B']);
+  });
+
+  it('saves a reviewed question snapshot and lets the student reopen that attempt after the question is deleted', async () => {
+    await studyQuestionRepository.save({
+      id: 'question-history', disciplineId: 'software', topicId: 'topic-1',
+      prompt: 'Qual conceito descreve a proteção de dados?', options: ['Herança', 'Encapsulamento'],
+      correctOptionIndex: 1, explanation: 'O conteúdo associa encapsulamento à proteção de dados.',
+      difficulty: 'medium', createdAt: '2026-11-11T12:00:00.000Z', sourceFileName: 'aula.pdf',
+    });
+    const view = render(<QuestionBank disciplineId="software" topics={[]} />);
+    await screen.findByText(/1 questão\(ões\) cadastrada/);
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar simulado' }));
+    fireEvent.click(screen.getAllByRole('radio')[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir resposta' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar simulado' }));
+    expect(await screen.findByText('100%')).toBeInTheDocument();
+
+    const [attempt] = await studyQuizAttemptRepository.getAll();
+    expect(attempt.answers[0].questionSnapshot).toMatchObject({ prompt: 'Qual conceito descreve a proteção de dados?', sourceFileName: 'aula.pdf' });
+    view.unmount();
+    await studyQuestionRepository.delete('question-history');
+    render(<QuestionBank disciplineId="software" topics={[]} />);
+    await screen.findByText(/0 questão\(ões\) cadastrada/);
+    fireEvent.click(await screen.findByRole('button', { name: 'Revisar' }));
+
+    expect(await screen.findByText(/Qual conceito descreve a proteção de dados\?/)).toBeInTheDocument();
+    expect(screen.getByText('O conteúdo associa encapsulamento à proteção de dados.')).toBeInTheDocument();
   });
 });
