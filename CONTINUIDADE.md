@@ -1,5 +1,15 @@
 # Continuidade do Alfred
 
+## Marco — foco nas sugestões do assistente (2026-11-09)
+
+- Escopo autorizado: prioridade 3 de “Próximas etapas prioritárias” (acessibilidade e mobile da interface conversacional); branch `fix/assistant-suggestion-focus-20261109`, criada a partir de `main`.
+- Implementação: `a078e8df4fcbe30ffd93432bf54bcd54dabe1f23` — `src/modules/Assistant.tsx`; a seleção de uma sugestão agora coloca o foco no campo de mensagem e mantém as mesmas restrições de envio. Nenhum envio automático ou alteração de dados.
+- Teste: `0afebe0dfb0ef809b7f55a44096e5e594482acd1` — `src/modules/AssistantSuggestions.test.tsx`; verifica foco, conteúdo e ausência de envio ao selecionar sugestão. Sem novo design nem dependências.
+- Papéis realmente executados: coordenador aplicou manualmente orientação de exploração/implementação/revisão; nenhum subagente iniciou e nenhum perfil foi carregado nativamente pelo ECC.
+- Comandos/resultados: consulta via GitHub de PRs/CI, `AGENTS.md`, `CONTINUIDADE.md`, `CLAUDE.md`, `README.md`, `docs/AI_WORKFLOW.md`; inspeção estática de código e diff. `npm test` e `npm run build:pages` **não executados localmente**; validação pelo CI do PR pendente (não presumir aprovação). Homologação Safari/iPhone não executada.
+- PR: branch de trabalho para `main`, sem merge; próxima ação conferir CI, revisar falhas concretas e validar em Safari quando disponível.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
