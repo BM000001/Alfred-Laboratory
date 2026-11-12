@@ -6,6 +6,25 @@ export interface StudyDefinition {
   sourceExcerpt: string;
 }
 
+const GENERIC_TERMS = new Set([
+  'exemplo', 'exemplos', 'observação', 'observacoes', 'nota', 'notas', 'definição', 'definicao',
+  'conceito', 'conceitos', 'capítulo', 'capitulo', 'seção', 'secao', 'unidade', 'aula',
+  'figura', 'tabela', 'quadro', 'fonte', 'referência', 'referencia', 'resumo', 'questão', 'questao',
+  'resposta', 'atenção', 'atencao', 'importante', 'objetivo', 'introdução', 'introducao',
+].map((term) => normalize(term)));
+
+function normalize(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
+}
+
+function isStudyTerm(term: string): boolean {
+  const normalized = normalize(term).replace(/^["'“”‘’]+|["'“”‘’]+$/g, '').replace(/\s+/g, ' ');
+  const words = normalized.split(' ');
+  return normalized.length >= 2 && normalized.length <= 60 && words.length <= 6 &&
+    !GENERIC_TERMS.has(normalized) && !/^(?:capitulo|capítulo|secao|seção|unidade|aula)\s+\d+$/u.test(normalized) &&
+    !/^\d+(?:\.\d+)*$/u.test(normalized);
+}
+
 export function extractStudyDefinitions(source: string): StudyDefinition[] {
   const definitions: StudyDefinition[] = [];
   const seen = new Set<string>();
@@ -23,10 +42,10 @@ export function extractStudyDefinitions(source: string): StudyDefinition[] {
     const copula = line.match(/^(.{2,90}?)\s+(?:é|são|significa|consiste em|corresponde a)\s+(.{20,500})$/iu);
     const match = colon ?? copula;
     if (!match) continue;
-    const term = match[1].trim().replace(/[.,;]+$/, '');
+    const term = match[1].trim().replace(/[.,;]+$/, '').replace(/^["'“”‘’]+|["'“”‘’]+$/g, '');
     const definition = match[2].trim();
-    if (term.split(/\s+/).length > 10 || definition.split(/\s+/).length < 4) continue;
-    const key = `${term.toLocaleLowerCase('pt-BR')}|${definition.toLocaleLowerCase('pt-BR')}`;
+    if (!isStudyTerm(term) || definition.split(/\s+/).length < 4) continue;
+    const key = `${normalize(term)}|${normalize(definition)}`;
     if (seen.has(key)) continue;
     seen.add(key);
     definitions.push({ term, definition, sourceExcerpt: line });
@@ -46,24 +65,21 @@ export function generateStudyResources(source: string): {
   }));
   const questions = definitions.length >= 4
     ? definitions.slice(0, 30).flatMap((entry, index) => {
-      const distractors = definitions
-        .filter((candidate) => candidate.term !== entry.term && candidate.definition !== entry.definition)
-        .slice(index % Math.max(1, definitions.length - 1))
-        .concat(definitions.filter((candidate) => candidate.term !== entry.term));
-      const uniqueDefinitions = [...new Set(distractors.map((candidate) => candidate.definition))]
-        .filter((definition) => definition !== entry.definition && definition.length <= 300)
-        .slice(0, 3);
-      if (entry.definition.length > 300 || uniqueDefinitions.length < 3) return [];
-      const options = [entry.definition, ...uniqueDefinitions];
-      // Deterministic per item but not always in the first position.
-      const correctOptionIndex = (index * 3 + 1) % options.length;
+      // A question's choices are explicit concepts from the same source, never
+      // unrelated definition paragraphs presented as arbitrary answers.
+      const terms = [...new Set(definitions.map((candidate) => candidate.term))];
+      const distractors = terms.filter((term) => normalize(term) !== normalize(entry.term)).slice(0, 3);
+      if (entry.definition.length > 300 || distractors.length < 3) return [];
+      const options = [entry.term, ...distractors];
+      // Rotate the supported answer position deterministically; no content is shuffled or invented.
+      const correctOptionIndex = index % options.length;
       [options[0], options[correctOptionIndex]] = [options[correctOptionIndex], options[0]];
       return [{
-        prompt: `Qual alternativa corresponde à definição de “${entry.term}” apresentada no material?`,
+        prompt: `Qual conceito é definido no material como: “${entry.definition}”?`,
         options,
         correctOptionIndex,
         explanation: `Trecho de origem: ${entry.sourceExcerpt}`,
-        difficulty: 'medium' as const,
+        difficulty: 'easy' as const,
         subject: entry.term,
       }];
     })

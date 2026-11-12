@@ -7,7 +7,7 @@ import { disciplineRepository, fileRepository, studyFlashcardRepository, studyQu
 vi.mock('../files/imageOcrExtractor', () => ({
   extractImageTextWithLocalOcr: vi.fn(async (_file: File, onProgress?: (progress: { progress: number; status: string }) => void) => {
     onProgress?.({ progress: 0.5, status: 'Reconhecendo texto da foto localmente' });
-    return { text: 'Definição: texto reconhecido da fotografia.', confidence: 96, language: 'por' as const };
+    return { text: 'Fotossíntese: processo pelo qual as plantas convertem luz em energia química.', confidence: 96, language: 'por' as const };
   }),
 }));
 
@@ -38,7 +38,7 @@ describe('StudyMaterialImporter', () => {
 
     expect(await screen.findByText(/OCR: revise a precisão/)).toBeInTheDocument();
     const [stored] = await fileRepository.getAll();
-    expect(stored).toMatchObject({ name: 'anotacao.jpg', disciplineId: 'software', extraction: { format: 'image', extractionMethod: 'ocr', language: 'por', text: 'Definição: texto reconhecido da fotografia.' } });
+    expect(stored).toMatchObject({ name: 'anotacao.jpg', disciplineId: 'software', extraction: { format: 'image', extractionMethod: 'ocr', language: 'por', text: 'Fotossíntese: processo pelo qual as plantas convertem luz em energia química.' } });
     expect((await studyFlashcardRepository.getAll()).length).toBeGreaterThan(0);
     expect((await studyFlashcardRepository.getAll())[0].sourceFileName).toBe('anotacao.jpg');
   });
@@ -62,7 +62,7 @@ describe('StudyMaterialImporter', () => {
     const [card] = await studyFlashcardRepository.getAll();
     expect(card).toMatchObject({ disciplineId: 'software', sourceFileId: expect.any(String), sourceFileName: expect.stringMatching(/aula-/), topicId: expect.any(String) });
     const [question] = await studyQuestionRepository.getAll();
-    expect(question.options[question.correctOptionIndex]).toBe(question.explanation?.replace(/^Trecho de origem: [^:]+:\s*/, ''));
+    expect(question.options[question.correctOptionIndex]).toBe(question.subject);
   });
 
   it('preserves successful output when a sibling file has an unsupported format', async () => {
