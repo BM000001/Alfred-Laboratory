@@ -94,7 +94,11 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
             });
             await files.saveExtraction(sourceId, extracted);
           }
-          const generated = generateStudyResources(extracted.text);
+          const lowConfidenceImage = extracted.format === 'image' && typeof extracted.confidence === 'number' && extracted.confidence < 65;
+          // OCR below this threshold is useful as a saved draft, but unsafe as
+          // an automatic source for questions. The original and extraction are
+          // preserved so the student can correct the text in the next review step.
+          const generated = lowConfidenceImage ? { flashcards: [], questions: [] } : generateStudyResources(extracted.text);
           const topic = await study.createTopic({
             disciplineId,
             title: file.name,
@@ -115,7 +119,9 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
             await questions.create({ disciplineId, topicId: topic.id, ...question, sourceFileId: sourceId, sourceFileName: file.name });
             questionKeys.add(key); questionsAdded++;
           }
-          const resourceMessage = cardsAdded || questionsAdded
+          const resourceMessage = lowConfidenceImage
+            ? `Texto salvo com confiança baixa (${Math.round(extracted.confidence ?? 0)}%). Revise e corrija a transcrição antes de gerar exercícios.`
+            : cardsAdded || questionsAdded
             ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados${duplicates ? `; ${duplicates} duplicado(s) ignorado(s)` : ''}.`
             : `Texto salvo (${extracted.wordCount} palavras), mas não encontrei definições explícitas suficientes para gerar cartões ou questões com segurança.`;
           const ocrReview = extracted.extractionMethod === 'ocr'
