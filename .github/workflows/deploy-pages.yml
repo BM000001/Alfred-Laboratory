@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - feat/studies-gallery-exercises-20261112
+      - feat/studies-board-ocr-pipeline
   workflow_dispatch:
 permissions:
   contents: read
