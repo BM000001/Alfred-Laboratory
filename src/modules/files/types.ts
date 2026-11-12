@@ -14,6 +14,8 @@ export interface StoredTextExtraction {
   extractionMethod?: 'text' | 'ocr';
   /** OCR's provider-reported estimate (0–100); it is a signal, not a guarantee. */
   confidence?: number;
+  /** Locally selected image preparation pass; it does not imply OCR correctness. */
+  preprocessing?: 'original' | 'contrast' | 'threshold';
   language?: string;
   pageCount?: number;
   pages?: ExtractedPage[];

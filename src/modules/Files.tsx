@@ -181,7 +181,7 @@ export function Files({ projectId, disciplineId, allowUpload = true }: { project
       {preview.language && <p className="optional-label">Idioma reconhecido: português · Revise o texto antes de usá-lo em materiais de estudo.</p>}
       <h2>{preview.fileName}</h2>
       <p className="optional-label">{preview.wordCount} palavras · {preview.characterCount} caracteres</p>
-      {typeof preview.confidence === 'number' && <p className="optional-label">OCR: confiança estimada em {Math.round(preview.confidence)}% · confira o texto reconhecido antes de estudar.</p>}
+      {typeof preview.confidence === 'number' && <p className="optional-label">OCR: pontuação do mecanismo {Math.round(preview.confidence)}%{preview.preprocessing ? ` · leitura escolhida: ${preview.preprocessing === 'original' ? 'original' : preview.preprocessing === 'contrast' ? 'contraste ajustado' : 'alto contraste'}` : ''}. Essa pontuação não é uma taxa de acerto; revise o texto antes de estudar.</p>}
       {preview.pages ? <div className="pdf-page-preview">{preview.pages.map((page) => <section className="pdf-page" key={page.pageNumber}>
         <h3>Página {page.pageNumber}</h3>
         <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{page.text || 'Nenhum texto reconhecido nesta página.'}{page.confidence !== null && page.confidence !== undefined ? <small className="ocr-confidence">Confiança estimada: {Math.round(page.confidence)}% · {page.method === 'ocr' ? (page.confidence < 60 ? 'OCR · revise com atenção' : 'OCR') : 'texto original'}</small> : null}</p>

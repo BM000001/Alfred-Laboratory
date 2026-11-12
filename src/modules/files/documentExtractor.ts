@@ -12,6 +12,7 @@ export interface ExtractedTextDocument {
   extractedAt: string;
   extractionMethod?: 'text' | 'ocr';
   confidence?: number;
+  preprocessing?: 'original' | 'contrast' | 'threshold';
   language?: string;
   pageCount?: number;
   pages?: ExtractedPdfPage[];
@@ -192,6 +193,7 @@ export async function extractTextDocument(
       extractedAt: now().toISOString(),
       extractionMethod: 'ocr',
       confidence: recognized.confidence,
+      preprocessing: recognized.preprocessing,
       language: recognized.language,
     };
   }
