@@ -6,12 +6,14 @@ export interface ExtractedPage {
 }
 
 export interface StoredTextExtraction {
-  format: 'txt' | 'md' | 'csv' | 'json' | 'pdf' | 'docx' | 'pptx';
+  format: 'txt' | 'md' | 'csv' | 'json' | 'pdf' | 'docx' | 'pptx' | 'image';
   text: string;
   characterCount: number;
   wordCount: number;
   extractedAt: string;
   extractionMethod?: 'text' | 'ocr';
+  /** OCR's provider-reported estimate (0–100); it is a signal, not a guarantee. */
+  confidence?: number;
   language?: string;
   pageCount?: number;
   pages?: ExtractedPage[];

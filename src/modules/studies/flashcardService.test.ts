@@ -29,6 +29,10 @@ describe('flashcardService', () => {
     expect(afterAgain.intervalDays).toBe(0);
     expect(afterAgain.nextReviewAt).toBe('2026-11-04T12:10:00.000Z');
     expect(afterAgain.reviewCount).toBe(2);
+    expect(afterAgain.reviewHistory).toEqual([
+      { ratedAt: '2026-11-04T12:00:00.000Z', rating: 'good', intervalDays: 3, nextReviewAt: '2026-11-07T12:00:00.000Z' },
+      { ratedAt: '2026-11-04T12:00:00.000Z', rating: 'again', intervalDays: 0, nextReviewAt: '2026-11-04T12:10:00.000Z' },
+    ]);
   });
 
   it('edits a persisted card without resetting its review history', async () => {
@@ -44,5 +48,16 @@ describe('flashcardService', () => {
     const card: StudyFlashcard = { id: '1', disciplineId: 'math', front: 'Q', back: 'A', createdAt: '', nextReviewAt: '2026-11-04T10:00:00.000Z', intervalDays: 0, reviewCount: 0 };
     expect(isFlashcardDue(card, new Date('2026-11-04T12:00:00.000Z'))).toBe(true);
     expect(isFlashcardDue(card, new Date('2026-11-04T09:00:00.000Z'))).toBe(false);
+  });
+
+  it('keeps a bounded, persistent review log when a card is reviewed many times', async () => {
+    const repository = memoryRepository<StudyFlashcard>();
+    const service = createFlashcardService(repository, { createId: () => 'card-1', now: () => new Date('2026-11-04T12:00:00.000Z') });
+    let card = await service.create({ disciplineId: 'math', front: 'Pergunta', back: 'Resposta' });
+    for (let index = 0; index < 205; index++) card = await service.review(card.id, 'good');
+    const persisted = await repository.getById(card.id);
+    expect(persisted?.reviewCount).toBe(205);
+    expect(persisted?.reviewHistory).toHaveLength(200);
+    expect(persisted?.reviewHistory?.at(-1)?.rating).toBe('good');
   });
 });

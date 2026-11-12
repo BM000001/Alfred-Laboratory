@@ -41,4 +41,17 @@ describe('summarizeStudyPerformance', () => {
     const result = summarizeStudyPerformance(topics, [], attempts);
     expect(result).toEqual([]);
   });
+
+  it('keeps performance for deleted questions when an immutable attempt snapshot exists', () => {
+    const result = summarizeStudyPerformance(topics, [], [{
+      id: 'snapshot-attempt', disciplineId: 'math', startedAt: '2026-11-04T00:00:00.000Z',
+      completedAt: '2026-11-04T00:05:00.000Z', totalQuestions: 1, correctAnswers: 0,
+      answers: [{ questionId: 'deleted-question', selectedOptionIndex: 0, isCorrect: false, questionSnapshot: {
+        prompt: 'Explique limite', options: ['A', 'B'], correctOptionIndex: 1, difficulty: 'easy', topicId: 'topic-a',
+      } }],
+    }]);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ topicId: 'topic-a', answered: 1, incorrect: 1, accuracy: 0 });
+    expect(result[0].questions[0].prompt).toBe('Explique limite');
+  });
 });

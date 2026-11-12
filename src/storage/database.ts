@@ -1,7 +1,7 @@
 import { getAlfredDatabaseName } from './namespace';
 
 export const ALFRED_DATABASE_NAME = getAlfredDatabaseName(import.meta.env.BASE_URL);
-export const ALFRED_DATABASE_VERSION = 12;
+export const ALFRED_DATABASE_VERSION = 13;
 export const STORE_NAMES = {
   tasks: 'tasks',
   projects: 'projects',
@@ -11,6 +11,7 @@ export const STORE_NAMES = {
   studyFlashcards: 'studyFlashcards',
   studyQuestions: 'studyQuestions',
   studyQuizAttempts: 'studyQuizAttempts',
+  studyLearningProgress: 'studyLearningProgress',
   files: 'files',
   focusSessions: 'focusSessions',
   assistantMessages: 'assistantMessages',
