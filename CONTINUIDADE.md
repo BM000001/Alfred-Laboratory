@@ -94,3 +94,17 @@
 - Não afirmar testes locais: validação oficial deve ser comprovada no GitHub Actions.
 - Atualizar este documento em cada marco confirmado.
 - Não criar registros fictícios nem incluir segredos ou dados pessoais.
+
+## 2026-11-11 — Espaços integrados e identidade Alfred
+- Branch: `feat/alfred-workspace-design`; sem merge na main.
+- Navegação agrupada em Hoje, Organização, Estudos, Projetos, Alfred e Configurações. Calendário, tarefas e foco continuam acessíveis dentro de Organização.
+- Calendário com grades de dia/semana/mês/ano, navegação de período, abertura de eventos e integração/importação preservadas em seção recolhível.
+- Projetos abrem seu próprio espaço com tarefas editáveis, arquivos vinculados e caderno de anotações persistentes. Campos opcionais nos registros existentes evitam migração destrutiva. Arquivos antigos continuam acessíveis na biblioteca de materiais em Estudos.
+- Disciplinas separadas em conteúdos, materiais, anotações e prática, preservando flashcards, questões, importação e desempenho.
+- Mascote e fontes locais reutilizados do protótipo aprovado. Movimento suave, reação ao apontar/clicar e respeito a movimento reduzido. Clicar abre o assistente existente, sem ativar provedores remotos.
+- Aparência Cotidiano/Técnico com seleção explícita e persistência, disponível somente na inicial e em Configurações.
+- Backup preserva vínculos de projeto/disciplina, texto de notas e extrações de arquivos. Testes de escopo, edição, navegação com rascunho e restauração adicionados.
+- Build para GitHub Pages passou localmente; aviso existente de bundle acima de 500 kB permanece. Verificação visual pendente: Chromium local não inicia por bloqueio de socket; navegador compartilhado não alcança a prévia local (ERR_CONNECTION_REFUSED). Não foi validado em Safari/iPhone.
+- Próximo passo: CI da PR e revisão visual dos seis espaços em desktop e Safari antes de integrar.
+- Validação local final: `npm test -- --maxWorkers=2` — 41 arquivos, 240 testes aprovados; `npm run build:pages` — aprovado. Uma execução concorrente ao build excedeu o prazo de consultas de dois testes de interface; a execução isolada e a suíte completa com dois workers passaram. A validação oficial da PR será feita pelo GitHub Actions.
+- Checkpoint local: `470f386055255e0b72463a010f4e3ea25ed30f43`. Push bloqueado pela revisão automática: exige autorização explícita para transmitir o código a BM000001/Alfred. Não há PR nem publicação desta implementação. Patch completo preservado em `/workspace/alfred-workspace-design.patch`; retomar pelo push da branch após autorização. Não apagar o checkout antes de confirmar o envio.

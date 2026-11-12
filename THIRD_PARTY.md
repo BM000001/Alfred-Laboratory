@@ -1,14 +1,21 @@
 # Dependências de terceiros
 
-Dependências de desenvolvimento usadas no build e nos testes. Nenhuma biblioteca é incluída no código entregue ao usuário, exceto o que aparece no site gerado.
+Dependências diretas de runtime incluídas no Alfred-Laboratory. Licenças consultadas nos metadados dos pacotes instalados em 11/11/2026; esta lista não substitui uma auditoria das dependências transitivas.
 
-| Pacote | Uso | Versão | Licença | Situação |
-|---|---|---|---|---|
-| typescript | compilação | ~6.0.3 | Apache-2.0 | verificar com `npm ls --long` após a instalação |
-| @types/node | tipos para testes | ~25.6.0 | MIT | verificar com `npm ls --long` após a instalação |
+| Pacote | Uso | Versão | Licença |
+|---|---|---:|---|
+| react | Interface | 19.3.1 | MIT |
+| react-dom | Renderização da interface | 19.3.1 | MIT |
+| pdfjs-dist | Extração local de PDFs e renderização para OCR | 6.5.438 | Apache-2.0 |
+| tesseract.js | OCR local opcional no navegador | 7.0.0 | Apache-2.0 |
+| tesseract.js-core | Núcleo WebAssembly do OCR | 7.0.0 | Apache-2.0 |
+| @tesseract.js-data/por | Modelo português para OCR offline | 1.0.0 | MIT |
+| fflate | Leitura local dos pacotes ZIP OOXML DOCX/PPTX | 0.8.3 | MIT |
 
-Dependências de runtime no navegador: nenhuma. O aplicativo usa apenas APIs nativas do navegador (IndexedDB, Web Crypto, Service Worker, Cache API).
+PDFs, DOCX, PPTX e texto são processados no navegador. A extração, a geração local de recursos e os materiais não são enviados a provedores externos. O OCR utiliza assets locais do próprio Alfred e só começa mediante ação explícita na área Arquivos.
 
-Qualquer nova dependência precisa ser registrada aqui com a licença verificada antes de ser adicionada.
+O pacote `@tesseract.js-data/por` e os núcleos WebAssembly representam download significativo quando o OCR é utilizado; não são necessários para ler DOCX/PPTX nem entram no fluxo inicial de geração de recursos.
 
-- PDF.js (`pdfjs-dist`): Apache-2.0. Used locally in the browser to extract selectable text from PDF files; no document content is sent to a remote service.
+## Identidade visual
+- Mascote dourado: arte aprovada pelo proprietário e hospedada localmente em `src/assets/alfred.png`.
+- Fontes Noto: arquivos e licença original estão em `src/assets/fonts/`; nenhuma fonte é carregada de um serviço externo.

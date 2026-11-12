@@ -1,0 +1,614 @@
+@font-face{font-family:Alfred;src:url('../assets/fonts/noto-regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:Alfred;src:url('../assets/fonts/noto-bold.ttf') format('truetype');font-weight:700;font-display:swap}
+:root{--paper:#f4f1e9;--sheet:#fcfaf5;--ink:#292c28;--quiet:#606658;--line:#d6d7ca;--accent:#795c2c;--gold:#ddc18d;--navy:var(--ink);--blue:var(--accent);--bronze:var(--accent);--surface:var(--sheet);--muted:var(--quiet);color-scheme:light}
+:root[data-appearance=technical]{--paper:#171c19;--sheet:#222a24;--ink:#f1eedf;--quiet:#b7c0af;--line:#455142;--accent:#e1c083;--gold:#ddc18d;color-scheme:dark}
+html body{background:var(--paper);color:var(--ink);font-family:Alfred,system-ui,sans-serif}
+html body::before,html body::after{display:none}
+html .app-shell{width:min(100% - 48px,1440px);background:transparent}
+html .topbar{background:transparent;border-color:var(--line);box-shadow:none}
+html .brand{color:var(--ink)}
+html .brand-mark{background:#242c23;color:var(--gold)}
+html .workspace{grid-template-columns:210px minmax(0,1fr);gap:42px}
+html .sidebar-shell{background:#202820;border:1px solid #394336;border-radius:12px;padding:16px 10px;align-self:start;position:sticky;top:24px}
+html .sidebar{background:transparent}
+html .sidebar .nav-item{color:#c3c9bb;background:transparent;border:0;min-height:46px;font-size:13px}
+html .sidebar .nav-item.active{background:var(--gold);color:#29271f;box-shadow:none}
+html .sidebar .nav-item:hover:not(.active){background:#ffffff0d}
+html .sidebar .nav-caption,html .sidebar-note small{color:#b0b8a5}
+html .sidebar-note{border-color:#46513f;color:var(--gold)}
+html .nav-bottom{border-color:#46513f}
+html .main-content{min-width:0;background:transparent;color:var(--ink)}
+html .welcome{position:relative;padding:38px 0 26px;min-height:210px;border-color:var(--line)}
+html .welcome h1{font-family:Georgia,serif;color:var(--ink);font-size:clamp(36px,5vw,62px);font-weight:400;letter-spacing:-1.5px}
+html .welcome-copy{color:var(--quiet);max-width:540px;line-height:1.7;font-size:14px}
+html .welcome:has(.mascot-companion){padding-right:180px}
+html .eyebrow,html .card-label{color:var(--accent)}
+html .topbar-caption,html .topbar-status,html .app-footer,html .mobile-page-context{color:var(--quiet)}
+html .main-content :is(h2,h3,h4,strong,label){color:var(--ink)}
+html .main-content :is(p,small,.task-meta,.progress-label,.field-label,.optional-label){color:var(--quiet)}
+html .main-content :is(.entry-panel,.task-row,.project-card,.overview-card,.empty-state,.appointment-card,.discipline-option,.study-topic,.study-flashcards,.study-question-bank,.study-material-importer,.study-performance,.backup-panel,.assistant-panel){background:var(--sheet);border:1px solid var(--line);box-shadow:none;color:var(--ink)}
+html .main-content :is(input,select,textarea){background:var(--paper);border:1px solid var(--line);color:var(--ink);font-size:14px;min-height:42px;border-radius:6px}
+html .main-content :is(input[type=checkbox],input[type=radio]){min-height:20px;width:20px;accent-color:var(--accent)}
+html .main-content :is(input,textarea)::placeholder{color:var(--quiet);opacity:.85}
+html .main-content .primary-action{background:var(--gold);color:#28251d;border:1px solid #b89a62;border-radius:6px;box-shadow:none;font-size:13px;min-height:44px}
+html .main-content .primary-action:hover:not(:disabled){background:#ecd3a8;box-shadow:none}
+html .main-content :is(.text-action,.dashboard-link){color:var(--accent);font-size:12px;min-height:40px;background:transparent}
+html .main-content :is(.progress-track){background:var(--line)}
+html .main-content :is(.progress-track) span{background:var(--accent)}
+html .main-content .discipline-option.selected{border-color:var(--accent);background:color-mix(in srgb,var(--gold) 20%,var(--sheet))}
+html .workspace-tabs{display:flex;gap:8px;overflow-x:auto;padding:0 0 14px;margin:14px 0 24px;border-bottom:1px solid var(--line)}
+html .workspace-tabs button,html .appearance-picker button{border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--quiet);padding:11px 16px;min-height:44px;white-space:nowrap;font:inherit;cursor:pointer}
+html .workspace-tabs button[aria-current],html .appearance-picker button[aria-pressed=true]{background:var(--gold);border-color:#ad8b50;color:#28251d}
+.appearance-picker{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:24px;font-size:12px}
+.appearance-picker>span{margin-right:10px;color:var(--quiet)}
+.mascot-companion{background:none;border:0;display:flex;align-items:center;flex-direction:column;color:var(--accent);cursor:pointer;padding:0 12px;font:inherit;font-size:11px}
+.mascot-companion img{width:130px;height:190px;object-fit:contain;animation:alfred-breathe 5s ease-in-out infinite;transform-origin:50% 90%;filter:drop-shadow(0 9px 7px #0002)}
+.mascot-companion:hover img{animation:alfred-greet .7s ease-in-out}
+.mascot-companion:active img{transform:rotate(-5deg) scale(.96)}
+.welcome>.mascot-companion{position:absolute;right:4px;bottom:14px}
+.assistant-introduction{display:flex;align-items:center;gap:30px;border:1px solid var(--line);background:var(--sheet);padding:20px;margin-bottom:24px;border-radius:12px}
+.assistant-introduction p{max-width:460px;line-height:1.8}
+.project-workspace-heading{padding:26px 0;border-bottom:1px solid var(--line)}
+.project-workspace-heading h2{font:36px Georgia,serif}
+.project-open{border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:8px 0;display:flex;gap:20px;align-items:center;min-height:44px}
+.project-open span{color:var(--accent)}
+.notes-workspace{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,2.5fr);gap:22px}
+.note-index{display:flex;flex-direction:column;gap:10px;min-width:0}
+.note-index input{width:100%}
+.note-link{border:1px solid var(--line);border-radius:7px;background:var(--sheet);padding:14px;text-align:left;cursor:pointer;display:grid;gap:7px}
+.note-link small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.note-link[aria-pressed=true]{border-color:var(--accent)}
+.note-editor textarea{line-height:1.9;resize:vertical;min-height:280px}
+.calendar-integrations{margin:15px 0;color:var(--quiet)}
+.calendar-integrations>summary{cursor:pointer;padding:12px 0;min-height:44px}
+.calendar-step{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);background:var(--sheet);margin-bottom:25px;border-radius:8px;overflow:auto}
+.calendar-cell{min-height:120px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;min-width:0}
+.calendar-week .calendar-cell{min-height:280px}
+.calendar-date{display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:transparent;border:0;color:var(--ink);cursor:pointer;min-height:44px}
+.calendar-date small{text-transform:uppercase;font-size:9px}
+.calendar-cell.is-today{background:color-mix(in srgb,var(--gold) 16%,var(--sheet));box-shadow:inset 0 3px var(--accent)}
+.calendar-cell.other-month{opacity:.6}
+.calendar-event{display:grid;width:100%;gap:3px;text-align:left;padding:7px;border:0;border-left:3px solid var(--accent);background:color-mix(in srgb,var(--gold) 24%,var(--sheet));color:var(--ink);border-radius:4px;margin:5px 0;cursor:pointer;font-size:11px;overflow-wrap:anywhere;min-height:44px}
+.calendar-event small{font-size:9px}
+.calendar-day{grid-template-columns:1fr}
+.calendar-year{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-bottom:25px}
+.mini-month{border:1px solid var(--line);border-radius:7px;background:var(--sheet);padding:12px}
+.mini-month>button{text-transform:capitalize;font-weight:700}
+.mini-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;gap:2px}
+.mini-month-grid>span{color:var(--quiet);font-size:10px;padding:6px 0}
+.mini-month-grid button{border:0;background:transparent;color:var(--ink);min-height:32px;border-radius:4px;cursor:pointer;font-size:12px}
+.mini-month-grid button.has-events{background:var(--gold);color:#28251d;font-weight:700}
+html .agenda-view-switch button{background:transparent;color:var(--quiet);min-height:44px}
+html .agenda-view-switch button.selected{background:var(--gold);color:#28251d}
+html .app-footer{border-color:var(--line)}
+html button:focus-visible,html a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+[hidden]{display:none!important}
+@keyframes alfred-breathe{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-5px) rotate(1deg)}}
+@keyframes alfred-greet{0%,100%{transform:rotate(0)}30%{transform:rotate(-5deg)}70%{transform:rotate(4deg)}}
+@media(max-width:900px){html .workspace{grid-template-columns:175px minmax(0,1fr);gap:22px}html .app-shell{width:calc(100% - 28px)}.calendar-year{grid-template-columns:repeat(2,minmax(0,1fr))}.calendar-week,.calendar-month{grid-template-columns:repeat(7,minmax(95px,1fr))}}
+@media(max-width:700px){html .workspace{display:block}html .sidebar-shell{display:none}html .app-shell{width:calc(100% - 28px)}html .welcome{padding-top:25px;min-height:175px}html .welcome:has(.mascot-companion){padding-right:115px}.mascot-companion img{width:95px;height:145px}.mascot-companion{font-size:9px;padding:0}.notes-workspace{grid-template-columns:1fr}.note-index{max-height:220px;overflow:auto}.calendar-year{gap:10px}.mini-month{padding:7px}.mini-month-grid button{min-height:34px;font-size:11px}.assistant-introduction{gap:15px;padding:12px}.assistant-introduction p{font-size:12px}html .mobile-tabbar{background:#202820;border-color:#46513f;box-shadow:none}html .mobile-tabbar .nav-item{color:#c3c9bb}html .mobile-tabbar .nav-item.active{background:#dfc596;color:#29271f}html .mobile-more-menu{background:#202820;border-color:#46513f}html .mobile-more-heading{color:#c3c9bb}html .main-content{padding-bottom:50px}}
+@media(prefers-reduced-motion:reduce){.mascot-companion img,.mascot-companion:hover img{animation:none}.mascot-companion:active img{transform:none}*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+/* Keep the existing feature layouts, with the same palette in every workspace. */
+html,html #root{background:var(--paper);color:var(--ink)}
+:root{--alfred-bg:var(--paper);--alfred-text:var(--ink);--alfred-panel:var(--sheet);--alfred-border:var(--line);--alfred-accent:var(--accent);--alfred-muted:var(--quiet)}
+html .main-content :is(.dashboard-stat,.dashboard-panel,.study-progress,.stored-file,.backup-preview,.weather-city-form,.study-quiz-filters,.study-performance-topic,.study-performance-empty,.study-performance-summary>div,.flashcard-card,.study-question,.study-quiz-question,.study-material-import,.assistant-conversation,.assistant-message,.assistant-command-form,.assistant-memory-panel,.assistant-memory-list li,.assistant-export-panel,.assistant-export-record,.assistant-export-preview,.assistant-export-controls,.assistant-export-audit,.assistant-export-result){background:var(--sheet);border-color:var(--line);box-shadow:none;color:var(--ink)}
+html .main-content :is(.dashboard-stat,.dashboard-panel,.study-progress,.stored-file,.assistant-module,.study-content) :is(h2,h3,strong){color:var(--ink)}
+html .main-content :is(.dashboard-stat,.dashboard-panel,.study-progress,.stored-file,.assistant-module,.study-content) :is(p,small,label,span:not(.appointment-type):not(.priority):not(.dashboard-priority)){color:var(--quiet)}
+html .main-content :is(.dashboard-stat>strong,.weather-temperature){color:var(--ink)}
+html .main-content :is(.dashboard-panel-heading h2,.list-heading h2){font-size:20px}
+html .main-content :is(.dashboard-empty,.stored-file-info span,.study-topic p,.discipline-option span){font-size:12px}
+html .main-content .welcome{padding-top:38px}
+/* The legacy dark theme rules load before this light workspace skin. Keep the
+   welcome copy readable when the golden mascot design uses the paper palette. */
+html .main-content > .welcome .eyebrow{color:var(--accent)}
+html .main-content > .welcome h1{color:var(--ink)}
+html .main-content > .welcome .welcome-copy{color:var(--quiet)}
+html .main-content .study-topic p{white-space:pre-wrap}
+html .main-content .module-error{color:#ffb9b9}
+html .main-content :is(.assistant-message p,.assistant-message.from-user p,.assistant-proposal,.assistant-capabilities span,.assistant-suggestion-list button,.assistant-memory-content,.assistant-export-record,.study-quiz-filters,.apple-calendar-picker){background:var(--paper);color:var(--ink);border-color:var(--line)}
+html .main-content .assistant-message p{font-size:13px}
+
+/* Reapply the golden palette to legacy controls and study widgets. The
+   original module stylesheet has later, more specific dark theme selectors. */
+html #root .main-content .entry-panel,
+html #root .main-content .backup-settings .entry-panel,
+html #root .main-content .study-content,
+html #root .main-content .discipline-list,
+html #root .main-content .study-flashcards,
+html #root .main-content .study-question-bank,
+html #root .main-content .study-material-importer,
+html #root .main-content .study-performance,
+html #root .main-content .apple-calendar-panel{
+  color:var(--ink);
+  background:var(--sheet);
+  border-color:var(--line);
+  box-shadow:none;
+}
+html #root .main-content .entry-panel :is(h2,h3,h4,legend),
+html #root .main-content .study-content :is(h2,h3,h4,strong),
+html #root .main-content .discipline-list :is(h2,h3,h4,strong),
+html #root .main-content .study-flashcards :is(h3,h4,strong,label,legend,summary),
+html #root .main-content .study-question-bank :is(h3,h4,strong,label,legend,summary),
+html #root .main-content .study-material-importer :is(h3,h4,strong,label,legend),
+html #root .main-content .study-performance :is(h3,h4,strong,label){color:var(--ink)}
+html #root .main-content :is(.field-label,.entry-panel label,.study-content p,.study-content small,.discipline-list p,.discipline-list small,.study-flashcards p,.study-flashcards small,.study-question-bank p,.study-question-bank small,.study-material-importer p,.study-material-importer small,.study-performance p,.study-performance small){color:var(--quiet)}
+html #root .main-content :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea){
+  color:var(--ink);
+  background:var(--sheet);
+  border-color:var(--line);
+  box-shadow:none;
+  caret-color:var(--accent);
+}
+html #root .main-content :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea)::placeholder{color:var(--quiet);opacity:.8}
+html #root .main-content :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea):focus{border-color:var(--accent);background:var(--sheet);box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 42%,transparent);outline:0}
+html #root .main-content :is(input[type=checkbox],input[type=radio]){accent-color:var(--accent)}
+html #root .main-content :is(input,select,textarea):disabled{background:color-mix(in srgb,var(--paper) 72%,var(--line));color:var(--quiet);opacity:.75}
+html #root .main-content .study-flashcard-form,
+html #root .main-content .study-question-form,
+html #root .main-content .study-quiz-filters,
+html #root .main-content .study-material-staging,
+html #root .main-content .study-material-results,
+html #root .main-content .study-quiz-card,
+html #root .main-content .study-quiz-result,
+html #root .main-content .study-performance-summary>div,
+html #root .main-content .study-performance-topic,
+html #root .main-content .study-quiz-options label,
+html #root .main-content .study-question-item,
+html #root .main-content .study-flashcard,
+html #root .main-content .study-flashcard-list article,
+html #root .main-content .study-material-import-preview article{
+  color:var(--ink);
+  background:var(--paper);
+  border-color:var(--line);
+}
+html #root .main-content .study-flashcards :is(.study-flashcard-face strong,.study-flashcard-list article strong),
+html #root .main-content .study-question-bank :is(.study-question-item strong,.study-quiz-card h4,.study-quiz-score,.study-quiz-history strong,.study-quiz-review strong),
+html #root .main-content .study-material-importer :is(.study-material-staging>strong,.study-material-result>strong,.study-material-import-preview article>strong),
+html #root .main-content .study-performance :is(.study-performance-summary strong,.study-performance-topic-header strong,.study-performance-error strong){color:var(--ink)}
+html #root .main-content :is(.study-quiz-start,.study-flashcard-actions button){border:1px solid var(--line);border-radius:7px;color:var(--ink);background:var(--sheet)}
+html #root .main-content :is(.study-quiz-start:not(:disabled),.study-quiz-start:hover:not(:disabled),.study-flashcard-actions button:hover:not(:disabled)){border-color:#b89a62;background:var(--gold);color:#29271f}
+html #root .main-content .study-quiz-options label.correct,
+html #root .main-content .study-quiz-feedback.correct{color:#24563c;background:#e8f1e5;border-color:#9ebc9a}
+html #root .main-content .study-quiz-options label.incorrect,
+html #root .main-content .study-quiz-feedback.incorrect{color:#7a332d;background:#f7e9e5;border-color:#d7a6a0}
+html #root .main-content :is(.study-quiz-feedback p,.study-quiz-progress,.study-quiz-history>div,.study-quiz-review article p,.study-flashcard-meta,.study-performance-meta,.study-performance-topic-header span,.study-material-result>span,.study-material-result>p,.study-material-privacy,.study-flashcard-empty,.study-quiz-filters>span,.study-question-list-heading span){color:var(--quiet)}
+html #root .main-content .study-material-result.success>span{color:#24563c}
+html #root .main-content .study-material-result.error>span,
+html #root .main-content .module-error{color:#8c3b34}
+html #root .main-content .study-question-options-field,
+html #root .main-content .study-quiz-review{border-color:var(--line)}
+html #root .main-content :is(.study-quiz-review article,.study-flashcard-list){border-color:var(--line)}
+html #root .main-content .file-upload-button{color:#29271f;background:var(--gold);border-color:#b89a62}
+html #root .main-content :is(.text-action,.dashboard-link){color:var(--accent)}
+html #root .main-content :is(.text-action,.dashboard-link):hover{color:#5e451f;background:color-mix(in srgb,var(--gold) 20%,var(--sheet))}
+/* Remove leftover blue accents from the legacy dark palette. */
+html #root .main-content :is(svg,.nav-icon,.weather-symbol,.mobile-context-icon,.study-flashcards-count,.study-flashcard-face span,.study-flashcard-list article span,.study-quiz-options label>span,.study-question-difficulty,.study-quiz-progress span,.study-performance-topic-header span,.study-material-import-preview article>span){color:var(--accent)}
+html #root .main-content .study-flashcards-count{background:color-mix(in srgb,var(--gold) 22%,var(--sheet));border-color:var(--line)}
+html #root .main-content .study-question-difficulty{background:color-mix(in srgb,var(--gold) 25%,var(--sheet))}
+html #root .main-content :is(.study-quiz-options label>span,.study-flashcard-list article span,.study-material-import-preview article>span){color:var(--accent)}
+html #root .main-content :is(.study-question-header p,.study-question-list-heading span,.study-material-importer>div:first-child>p,.study-material-import-empty,.study-performance-topic-header span){color:var(--quiet)}
+html #root .main-content :is(.study-quiz-progress,.study-question-difficulty,.study-flashcards-count){border-color:var(--line)}
+/* Keep the same warm identity in technical mode and on mobile. */
+html #root .main-content :is(.eyebrow,.card-label,.dashboard-panel-heading .card-label,.dashboard-stat .card-label,.dashboard-focus-strip .card-label){color:var(--accent)}
+html #root .main-content :is(.dashboard-stat .stat-icon,.weather-symbol,.mobile-context-icon){color:var(--accent);background:color-mix(in srgb,var(--gold) 18%,var(--sheet));border-color:var(--line)}
+html #root .main-content .dashboard-stat{background:var(--sheet);border-color:var(--line);box-shadow:none}
+html #root .main-content .dashboard-stat:hover{border-color:var(--accent);background:var(--sheet)}
+html #root .main-content .focus-card,
+html #root .main-content .focus-side-card,
+html #root .main-content .productivity-module .focus-card{color:var(--ink);background:var(--sheet);border-color:var(--line);box-shadow:none}
+html #root .main-content .focus-mode-switch,
+html #root .main-content .agenda-view-switch{background:var(--paper);border-color:var(--line)}
+html #root .main-content :is(.focus-mode-switch button,.agenda-view-switch button){color:var(--quiet)}
+html #root .main-content :is(.focus-mode-switch button.selected,.agenda-view-switch button.selected){color:#29271f;background:var(--gold);box-shadow:none}
+html #root .main-content .dashboard-focus-strip{background:var(--sheet);border-color:var(--line)}
+html #root .main-content .dashboard-focus-strip :is(strong,span){color:var(--ink)}
+html #root .main-content .nav-icon{color:currentColor}
+html #root .main-content .nav-item.active .nav-icon{color:#29271f}
+html #root .mobile-tabbar .nav-item.active .nav-icon{color:#29271f}
+
+/* Calendar surfaces and controls still inherited the former navy treatment. */
+html #root .main-content .agenda-module .agenda-toolbar{
+  color:var(--ink);
+  background:var(--sheet);
+  border-color:var(--line);
+  box-shadow:none;
+}
+html #root .main-content .agenda-module .agenda-toolbar h2{color:var(--ink)}
+html #root .main-content .agenda-module .agenda-controls{
+  color:var(--ink);
+  background:var(--sheet);
+  border-color:var(--line);
+  box-shadow:none;
+}
+html #root .main-content .agenda-module .agenda-date-label{color:var(--quiet)}
+html #root .main-content .agenda-module .agenda-date-label input{
+  color:var(--ink);
+  color-scheme:light;
+  background:var(--paper);
+  border-color:var(--line);
+}
+html :root[data-appearance=technical] #root .main-content .agenda-module .agenda-date-label input{color-scheme:dark}
+html #root .main-content .agenda-module .agenda-view-switch{
+  color:var(--quiet);
+  background:var(--paper);
+  border-color:var(--line);
+}
+html #root .main-content .agenda-module .agenda-view-switch button{color:var(--quiet);background:transparent}
+html #root .main-content .agenda-module .agenda-view-switch button.selected{
+  color:#29271f;
+  background:var(--gold);
+  box-shadow:none;
+}
+html #root .main-content .agenda-module .calendar-cell.is-today{box-shadow:inset 0 3px var(--accent)}
+
+/* Keep navigation icons and the compact Alfred note in the golden palette. */
+html #root .sidebar .nav-item .nav-icon,
+html #root .mobile-tabbar .nav-item .nav-icon{color:currentColor}
+html #root .sidebar .nav-item.active .nav-icon,
+html #root .mobile-tabbar .nav-item.active .nav-icon{color:#29271f;filter:none}
+html #root .sidebar-note{
+  color:var(--gold);
+  border-color:#46513f;
+  background:#202820;
+}
+html #root .sidebar-note-mark{
+  color:var(--gold);
+  border-color:#46513f;
+  background:color-mix(in srgb,var(--gold) 18%,#202820);
+}
+html #root .sidebar-note strong{color:var(--ink)}
+html #root .sidebar-note small{color:#b0b8a5}
+html #root .mobile-tabbar .nav-item.active{
+  color:#29271f;
+  border-color:#b89a62;
+  background:var(--gold);
+  box-shadow:none;
+}
+
+
+/* Final golden theme layer: neutralize legacy blue gradients and details. */
+html #root .dashboard .dashboard-stat{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+}
+html #root .dashboard .dashboard-stat::after{
+  border-color:color-mix(in srgb,var(--accent) 12%,transparent);
+  background:none;
+  box-shadow:0 0 0 17px color-mix(in srgb,var(--accent) 4%,transparent);
+}
+html #root .dashboard .dashboard-stat:hover{
+  border-color:var(--accent);
+  background:var(--sheet);
+  box-shadow:0 10px 24px rgba(30,35,26,.08);
+}
+html #root .dashboard .dashboard-stat .stat-icon{
+  color:var(--accent);
+  border-color:var(--line);
+  background:color-mix(in srgb,var(--gold) 18%,var(--sheet));
+}
+html #root .dashboard .dashboard-stat .card-label,
+html #root .dashboard .dashboard-greeting .card-label{color:var(--accent)}
+html #root .dashboard .dashboard-stat>strong,
+html #root .dashboard .dashboard-panel-heading h2,
+html #root .dashboard .dashboard-greeting h2{color:var(--ink)}
+html #root .dashboard .dashboard-stat>p,
+html #root .dashboard .dashboard-empty,
+html #root .dashboard .dashboard-panel small{color:var(--quiet)}
+html #root .dashboard .dashboard-empty,
+html #root .dashboard .weather-empty{
+  color:var(--quiet);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .dashboard .dashboard-empty::before,
+html #root .dashboard .weather-empty::before{
+  background:var(--accent);
+  box-shadow:none;
+}
+html #root .dashboard .dashboard-link{color:var(--accent)}
+html #root .dashboard .dashboard-link:hover{color:var(--ink)}
+html #root .dashboard .dashboard-focus-strip{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+}
+html #root .dashboard .dashboard-focus-strip :is(strong,span){color:var(--ink)}
+
+html #root .productivity-module .focus-card{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .productivity-module .focus-card::after{
+  border-color:color-mix(in srgb,var(--accent) 14%,transparent);
+  box-shadow:0 0 0 24px color-mix(in srgb,var(--accent) 4%,transparent),0 0 0 48px color-mix(in srgb,var(--accent) 3%,transparent);
+}
+html #root .productivity-module .focus-card-heading h2,
+html #root .productivity-module .focus-side-card h3{color:var(--ink)}
+html #root .productivity-module :is(.focus-session-count,.focus-guidance){color:var(--quiet)}
+html #root .productivity-module .focus-session-count{
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .productivity-module .focus-task-select{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .productivity-module .focus-mode-switch{
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .productivity-module .focus-mode-switch button{color:var(--quiet)}
+html #root .productivity-module .focus-mode-switch button.selected{
+  color:#29271f;
+  border-color:#b89a62;
+  background:var(--gold);
+  box-shadow:none;
+}
+html #root .productivity-module .focus-progress{background:var(--line)}
+html #root .productivity-module .focus-progress span{
+  background:linear-gradient(90deg,var(--accent),var(--gold));
+  box-shadow:none;
+}
+
+html #root .sidebar .nav-item:hover{color:var(--ink);background:#293329}
+html #root .sidebar .nav-item.active{
+  color:#29271f;
+  border-color:#b89a62;
+  background:var(--gold);
+  box-shadow:none;
+}
+html #root .sidebar .nav-item.active .nav-icon{color:#29271f;filter:none}
+html #root .sidebar-note{
+  color:var(--gold);
+  border-color:#46513f;
+  background:#202820;
+}
+html #root .sidebar-note-mark{
+  color:var(--gold);
+  border-color:#46513f;
+  background:color-mix(in srgb,var(--gold) 18%,#202820);
+}
+html #root .sidebar-note strong{color:var(--ink)}
+html #root .sidebar-note small{color:#b0b8a5}
+
+@media(max-width:700px){
+  html #root .mobile-tabbar .nav-item.active{
+    color:#29271f;
+    border-color:#b89a62;
+    background:var(--gold);
+    box-shadow:none;
+  }
+  html #root .mobile-tabbar .nav-item.active .nav-icon{color:#29271f;filter:none}
+  html #root .mobile-context-icon{
+    color:var(--accent);
+    border-color:var(--line);
+    background:color-mix(in srgb,var(--gold) 18%,var(--sheet));
+    box-shadow:none;
+  }
+  html #root .mobile-more-menu .nav-item.active{
+    color:#29271f;
+    border-color:#b89a62;
+    background:var(--gold);
+    box-shadow:none;
+  }
+}
+
+html #root .main-content :is(button,a,input,select,textarea):focus-visible{
+  outline-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);
+}
+
+/* Finish matching legacy micro-details in technical mode. */
+html #root .main-content .eyebrow::before{background:var(--accent)}
+html #root .main-content .secondary-action{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+  box-shadow:none;
+}
+html #root .main-content .secondary-action:hover{
+  color:#29271f;
+  border-color:#b89a62;
+  background:var(--gold);
+}
+html #root .main-content .secondary-action:focus-visible{
+  outline-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);
+}
+
+/* Apply the palette to the complete focus history, not only the timer card. */
+html #root .productivity-module .focus-side-card,
+html #root .productivity-module .focus-history{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .productivity-module .focus-clock{color:var(--ink)}
+html #root .productivity-module .focus-cycle span{background:var(--line)}
+html #root .productivity-module .focus-cycle span.done{
+  background:var(--accent);
+  box-shadow:none;
+}
+html #root .productivity-module .focus-history .list-heading h2,
+html #root .productivity-module .focus-history-item :is(strong,b){color:var(--ink)}
+html #root .productivity-module .focus-history-item{
+  border-color:var(--line);
+}
+html #root .productivity-module .focus-history-item small{color:var(--quiet)}
+html #root .productivity-module .focus-history-dot{background:var(--accent)}
+
+
+/* Alfred assistant and project cards: replace the remaining legacy blue panels. */
+html #root .main-content .assistant-module .assistant-heading{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .assistant-module .assistant-heading :is(h2,p,.card-label){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-heading p,
+html #root .main-content .assistant-module .assistant-disclaimer{color:var(--quiet)}
+html #root .main-content .assistant-module .assistant-heading .assistant-status{
+  color:#477b68;
+  border-color:#c7d9c8;
+  background:#edf5ec;
+}
+html #root .main-content .assistant-module .assistant-capabilities span{
+  color:var(--quiet);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-message.from-user{
+  color:var(--ink);
+  border-color:#b89a62;
+  background:color-mix(in srgb,var(--gold) 24%,var(--sheet));
+}
+html #root .main-content .assistant-module .assistant-message.from-user :is(p,span){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-composer{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .assistant-module .assistant-composer input{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-composer .primary-action{
+  color:#29271f;
+  border-color:#b89a62;
+  background:var(--gold);
+  box-shadow:none;
+}
+html #root .main-content .assistant-module .assistant-suggestion-list button{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+}
+html #root .main-content .assistant-module .assistant-suggestion-list button:hover{
+  border-color:var(--accent);
+  background:color-mix(in srgb,var(--gold) 20%,var(--sheet));
+}
+html #root .main-content .assistant-proposal{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .assistant-proposal :is(h3,h4,strong,p,span){color:var(--ink)}
+html #root .main-content .assistant-proposal :is(small,.proposal-meta){color:var(--quiet)}
+html #root .main-content .assistant-proposal-actions .secondary-action{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-proposal-actions .secondary-action:hover:not(:disabled){
+  border-color:#b89a62;
+  color:#29271f;
+  background:var(--gold);
+}
+
+html #root .main-content .project-card{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .project-card:hover{
+  border-color:var(--accent);
+  background:var(--sheet);
+  box-shadow:none;
+}
+html #root .main-content .project-card :is(h3,strong){color:var(--ink)}
+html #root .main-content .project-card>p,
+html #root .main-content .project-card .task-meta{color:var(--quiet)}
+html #root .main-content .project-card .project-status{
+  color:#477b68;
+  border-color:#c7d9c8;
+  background:#edf5ec;
+}
+html #root .main-content .project-card .project-status.archived{
+  color:var(--quiet);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .project-card .progress-track{background:var(--line)}
+html #root .main-content .project-card .progress-track span{
+  background:var(--accent);
+  box-shadow:none;
+}
+
+/* The active sidebar label also needs the ink color, not only its icon. */
+html #root .sidebar .nav-item.active{color:#29271f}
+@media(max-width:700px){
+  html #root .mobile-tabbar .nav-item.active{color:#29271f}
+}
+
+/* Final pass for small blue accents inside the assistant conversation. */
+html #root .main-content .assistant-module .assistant-heading::after{
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--gold) 55%,transparent),transparent);
+}
+html #root .main-content .assistant-module .assistant-conversation{
+  scrollbar-color:var(--accent) transparent;
+}
+html #root .main-content .assistant-module .assistant-message.from-user p{
+  color:var(--ink);
+  border-color:#b89a62;
+  background:color-mix(in srgb,var(--gold) 26%,var(--sheet));
+}
+html #root .main-content .assistant-module :is(.assistant-loading,.assistant-suggestion-list button span){
+  color:var(--accent);
+}
+html #root .main-content .assistant-module .assistant-suggestions-label{color:var(--accent)}
+html #root .main-content .assistant-module .assistant-proposal-record{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-proposal-record :is(span,strong){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-memory-toggle{color:var(--ink)}
+html #root .main-content .assistant-module .assistant-memory-toggle :is(strong,small){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-memory-toggle>span:last-child{color:var(--accent)}
+html #root .main-content .assistant-module .assistant-memory-content{border-color:var(--line)}
+html #root .main-content .assistant-module .assistant-memory-content :is(p,label,small){color:var(--quiet)}
+html #root .main-content .assistant-module .assistant-memory-list li{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-memory-list li :is(span,strong,p){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-memory-actions button{
+  color:var(--accent);
+  border-color:var(--line);
+  background:var(--sheet);
+}
+html #root .main-content .assistant-module .assistant-export-record{
+  color:var(--ink);
+  border-color:var(--line);
+  background:var(--paper);
+}
+html #root .main-content .assistant-module .assistant-export-record :is(label,strong,span,p){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-export-panel :is(header .card-label,header h3,.assistant-export-group>strong,.assistant-export-preview>strong,.assistant-export-instruction>strong){color:var(--ink)}
+html #root .main-content .assistant-module .assistant-export-panel :is(.assistant-export-group>p,.assistant-export-panel>p,.assistant-export-record label){color:var(--quiet)}
+html #root .main-content .assistant-module .assistant-export-panel input{accent-color:var(--accent)}
+
+/* Remove the inherited blue tint from inactive mobile navigation icons and labels. */
+@media(max-width:700px){
+  html #root .mobile-tabbar .nav-item{
+    color:#c3c9bb;
+    border-color:transparent;
+    background:transparent;
+  }
+  html #root .mobile-tabbar .nav-item .nav-icon{color:currentColor;filter:none}
+  html #root .mobile-tabbar .nav-item:hover:not(.active){color:#f1eedf;background:#293329}
+  html #root .mobile-tabbar .mobile-more-menu .nav-item{color:#c3c9bb;background:transparent}
+  html #root .mobile-tabbar .mobile-more-menu .nav-item.active{color:#29271f;background:var(--gold)}
+}

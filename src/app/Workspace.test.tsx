@@ -1,0 +1,55 @@
+import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import App from './App';
+import { fileRepository, projectRepository, taskRepository } from '../storage/repositories';
+
+describe('Integrated workspaces', () => {
+  it('opens a project, scopes tasks, edits details and reopens its saved note', async () => {
+    const project = { id: 'workspace-project', name: 'Projeto de teste do espaço', status: 'active' as const, createdAt: new Date().toISOString() };
+    await projectRepository.save(project);
+    await taskRepository.save({ id: 'outside-task', title: 'Tarefa de outro espaço', status: 'pending', priority: 'low', projectId: 'another-project', createdAt: new Date().toISOString() });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Projetos' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Projeto de teste do espaço/ }));
+    expect(await screen.findByRole('heading', { name: 'O que precisa ser feito?' })).toBeInTheDocument();
+    expect(screen.queryByText('Tarefa de outro espaço')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Entrega vinculada' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar tarefa' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Entrega vinculada' }));
+    fireEvent.change(screen.getByLabelText('Detalhes'), { target: { value: 'Revisar antes de entregar.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar tarefa' }));
+    await waitFor(async () => expect((await taskRepository.getAll()).find(task => task.title === 'Entrega vinculada')).toMatchObject({ projectId: project.id, description: 'Revisar antes de entregar.' }));
+    const nav = screen.getByRole('navigation', { name: 'Conteúdo do projeto' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Anotações' }));
+    fireEvent.change(screen.getByLabelText('Título da anotação'), { target: { value: 'Decisões do projeto' } });
+    fireEvent.change(screen.getByLabelText('Conteúdo'), { target: { value: 'Documento inicial.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar anotação' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Anotação salva');
+    fireEvent.click(within(nav).getByRole('button', { name: 'Arquivos' }));
+    expect(await screen.findByText('Sua biblioteca está vazia.')).toBeInTheDocument();
+    fireEvent.click(within(nav).getByRole('button', { name: 'Anotações' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Decisões do projeto/ }));
+    expect(screen.getByLabelText('Conteúdo')).toHaveValue('Documento inicial.');
+    const note = (await fileRepository.getAll()).find(file => file.name === 'Decisões do projeto');
+    expect(note?.projectId).toBe(project.id);
+  });
+  it('shows selected appearance only in Hoje and settings, and guards unsaved notes', async () => {
+    await projectRepository.save({ id: 'workspace-project', name: 'Projeto de teste do espaço', status: 'active', createdAt: new Date().toISOString() });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+    expect(screen.getByRole('button', { name: 'Técnico' })).toHaveAttribute('aria-pressed', 'true');
+    expect(document.documentElement.dataset.appearance).toBe('technical');
+    fireEvent.click(screen.getByRole('button', { name: 'Projetos' }));
+    expect(screen.queryByRole('group', { name: 'Aparência' })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /Projeto de teste do espaço/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anotações' }));
+    fireEvent.change(screen.getByLabelText('Título da anotação'), { target: { value: 'Rascunho' } });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+    expect(screen.getByLabelText('Título da anotação')).toHaveValue('Rascunho');
+    confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+    expect(screen.getByRole('button', { name: 'Técnico' })).toHaveAttribute('aria-pressed', 'true');
+    confirm.mockRestore();
+  });
+});

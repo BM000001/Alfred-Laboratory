@@ -1,100 +1,180 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { StudyTopic } from './types';
-import { parseStudyMaterial, type ParsedStudyMaterial } from './studyMaterialParser';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { extractTextDocument } from '../files/documentExtractor';
+import { createFileService } from '../files/fileService';
+import { fileRepository, disciplineRepository, studyFlashcardRepository, studyQuestionRepository, studyTopicRepository, studyQuizAttemptRepository } from '../../storage/repositories';
+import type { StoredFile } from '../files/types';
+import type { ExtractedTextDocument } from '../files/documentExtractor';
+import { createStudyService } from './studyService';
 import { createFlashcardService } from './flashcardService';
 import { createQuestionService } from './questionService';
-import { studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
+import { generateStudyResources } from './studyMaterialGeneration';
 
+const files = createFileService(fileRepository);
+const study = createStudyService(disciplineRepository, studyTopicRepository);
 const flashcards = createFlashcardService(studyFlashcardRepository);
 const questions = createQuestionService(studyQuestionRepository, studyQuizAttemptRepository);
 
-function normalize(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
+interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'error'; detail: string; }
+
+function readBlob(blob: Blob): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => reader.result instanceof ArrayBuffer ? resolve(reader.result) : reject(new Error('Não foi possível comparar o arquivo salvo.'));
+    reader.onerror = () => reject(reader.error ?? new Error('Falha ao comparar o arquivo salvo.'));
+    reader.readAsArrayBuffer(blob);
+  });
 }
 
-export function StudyMaterialImporter({ disciplineId, topics }: { disciplineId: string; topics: StudyTopic[] }) {
-  const availableTopics = useMemo(() => topics.filter(topic => topic.disciplineId === disciplineId && topic.notes?.trim()), [topics, disciplineId]);
-  const [selectedTopicId, setSelectedTopicId] = useState('');
-  const [parsed, setParsed] = useState<ParsedStudyMaterial | null>(null);
-  const [error, setError] = useState('');
-  const [feedback, setFeedback] = useState('');
+async function sameBytes(left: Blob, right: Blob): Promise<boolean> {
+  if (left.size !== right.size) return false;
+  const [leftBytes, rightBytes] = await Promise.all([readBlob(left), readBlob(right)]);
+  const a = new Uint8Array(leftBytes), b = new Uint8Array(rightBytes);
+  return a.every((byte, index) => byte === b[index]);
+}
+
+export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplineId: string; onProcessed?: () => Promise<void> }) {
+  const [staged, setStaged] = useState<File[]>([]);
+  const [statuses, setStatuses] = useState<ProcessingStatus[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
+  const cancelRef = useRef(false);
 
-  const selectedTopic = availableTopics.find(topic => topic.id === selectedTopicId);
+  useEffect(() => { setStaged([]); setStatuses([]); setError(''); }, [disciplineId]);
 
-  useEffect(() => {
-    setSelectedTopicId('');
-    setParsed(null);
-    setError('');
-    setFeedback('');
-  }, [disciplineId]);
-
-  function analyze() {
-    setError('');
-    setFeedback('');
-    setParsed(null);
-    if (!selectedTopic?.notes) {
-      setError('Selecione um material salvo que contenha a resposta gerada.');
-      return;
+  function stageFiles(event: ChangeEvent<HTMLInputElement>) {
+    const incoming = Array.from(event.target.files ?? []);
+    if (incoming.length) {
+      setStaged((current) => {
+        const seen = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+        return [...current, ...incoming.filter((file) => {
+          const key = `${file.name}:${file.size}:${file.lastModified}`;
+          if (seen.has(key)) return false;
+          seen.add(key); return true;
+        })];
+      });
+      setError('');
     }
-    try { setParsed(parseStudyMaterial(selectedTopic.notes)); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível interpretar o material.'); }
+    event.target.value = '';
   }
 
-  async function importMaterial() {
-    if (!parsed || !selectedTopic) return;
-    setSaving(true);
-    setError('');
-    setFeedback('');
+  async function saveAndProcess() {
+    if (!staged.length || saving || !disciplineId) return;
+    setSaving(true); setError(''); cancelRef.current = false;
+    const queue = [...staged];
+    const nextStatuses: ProcessingStatus[] = [];
+    const processedSuccessfully = new Set<File>();
+    setStatuses(queue.map((file) => ({ name: file.name, status: 'processing', detail: 'Aguardando processamento local.' })));
     try {
       const [existingCards, existingQuestions] = await Promise.all([flashcards.list(), questions.list()]);
-      const cardKeys = new Set(existingCards.filter(item => item.disciplineId === disciplineId).map(item => normalize(item.front) + '|' + normalize(item.back)));
-      const questionKeys = new Set(existingQuestions.filter(item => item.disciplineId === disciplineId).map(item => normalize(item.prompt)));
-      let cardsAdded = 0;
-      let questionsAdded = 0;
-      let duplicates = 0;
-      for (const card of parsed.flashcards) {
-        const key = normalize(card.front) + '|' + normalize(card.back);
-        if (cardKeys.has(key)) { duplicates++; continue; }
-        await flashcards.create({ disciplineId, ...card });
-        cardKeys.add(key);
-        cardsAdded++;
+      const savedFiles = await fileRepository.getAll();
+      const cardKeys = new Set(existingCards.filter((item) => item.disciplineId === disciplineId).map((item) => normalize(item.front) + '|' + normalize(item.back)));
+      const questionKeys = new Set(existingQuestions.filter((item) => item.disciplineId === disciplineId).map((item) => normalize(item.prompt)));
+      for (const [index, file] of queue.entries()) {
+          if (cancelRef.current) {
+            setStatuses((current) => current.map((status, statusIndex) => statusIndex >= index && status.status === 'processing' ? { ...status, status: 'error', detail: 'Cancelado antes deste arquivo; permaneceu na preparação para uma nova tentativa.' } : status));
+            break;
+          }
+        setStatuses((current) => current.map((status, statusIndex) => statusIndex === index ? { ...status, detail: 'Salvando original e extraindo texto no dispositivo…' } : status));
+        let sourceId = '';
+        try {
+          // Save the original first. A format/extraction failure must not erase the user's file.
+          const previous = await findPreviouslyStoredFile(savedFiles, file, disciplineId);
+          let extracted: ExtractedTextDocument;
+          if (previous?.extraction) {
+            sourceId = previous.id;
+            extracted = { fileName: previous.name, ...previous.extraction };
+          } else {
+            if (previous) sourceId = previous.id;
+            else sourceId = (await files.add(file, disciplineId)).id;
+            extracted = await extractTextDocument(file);
+            await files.saveExtraction(sourceId, extracted);
+          }
+          const generated = generateStudyResources(extracted.text);
+          const topic = await study.createTopic({
+            disciplineId,
+            title: file.name,
+            sourceFileId: sourceId,
+            sourceFileName: file.name,
+            notes: `${extracted.wordCount} palavras extraídas localmente em ${new Date(extracted.extractedAt).toLocaleString('pt-BR')}.`,
+          });
+          let cardsAdded = 0, questionsAdded = 0, duplicates = 0;
+          for (const card of generated.flashcards) {
+            const key = normalize(card.front) + '|' + normalize(card.back);
+            if (cardKeys.has(key)) { duplicates++; continue; }
+            await flashcards.create({ disciplineId, ...card, topicId: topic.id, sourceFileId: sourceId, sourceFileName: file.name });
+            cardKeys.add(key); cardsAdded++;
+          }
+          for (const question of generated.questions) {
+            const key = normalize(question.prompt);
+            if (questionKeys.has(key)) { duplicates++; continue; }
+            await questions.create({ disciplineId, topicId: topic.id, ...question, sourceFileId: sourceId, sourceFileName: file.name });
+            questionKeys.add(key); questionsAdded++;
+          }
+          const resourceMessage = cardsAdded || questionsAdded
+            ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados${duplicates ? `; ${duplicates} duplicado(s) ignorado(s)` : ''}.`
+            : `Texto salvo (${extracted.wordCount} palavras), mas não encontrei definições explícitas suficientes para gerar cartões ou questões com segurança.`;
+          nextStatuses.push({ name: file.name, status: 'success', detail: `${resourceMessage} ${extracted.extractionMethod === 'ocr' ? 'Texto reconhecido por OCR: revise a precisão antes de estudar. ' : ''}Original e texto extraído estão associados à disciplina.` });
+          processedSuccessfully.add(file);
+        } catch (cause) {
+          const message = cause instanceof Error ? cause.message : 'Falha inesperada ao processar este arquivo.';
+          nextStatuses.push({ name: file.name, status: 'error', detail: `${message}${sourceId ? ' O original foi preservado na biblioteca.' : ''}` });
+        }
+        setStatuses((current) => current.map((status, statusIndex) => statusIndex === index ? nextStatuses[nextStatuses.length - 1] : status));
       }
-      for (const question of parsed.questions) {
-        const key = normalize(question.prompt);
-        if (questionKeys.has(key)) { duplicates++; continue; }
-        await questions.create({ disciplineId, topicId: selectedTopic.id, ...question });
-        questionKeys.add(key);
-        questionsAdded++;
+      if (cancelRef.current) setError('Processamento interrompido. Os arquivos já concluídos foram preservados.');
+      setStaged((current) => current.filter((file) => !processedSuccessfully.has(file)));
+      if (processedSuccessfully.size) {
+        try { await onProcessed?.(); }
+        catch { setError('Os materiais foram salvos, mas a tela não conseguiu atualizar. Recarregue para ver os recursos.'); }
       }
-      setFeedback(`Importação concluída: ${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) adicionados. ${duplicates} duplicado(s) ignorado(s).`);
-      setParsed(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível importar o material.');
-    } finally {
-      setSaving(false);
-    }
+      setError(cause instanceof Error ? cause.message : 'Não foi possível iniciar o processamento.');
+    } finally { setSaving(false); }
   }
 
-  return <section className="study-material-importer" aria-label="Importar material de estudo gerado">
-    <div><span className="card-label">REAPROVEITAR CONTEÚDO</span><h3>Converter material salvo</h3><p>Leia um conteúdo gerado anteriormente e transforme a resposta estruturada em flashcards e questões desta disciplina.</p></div>
-    {availableTopics.length === 0 ? <p className="study-material-import-empty">Nenhum conteúdo com anotações está disponível nesta disciplina. Salve primeiro uma resposta na Central de Estudos.</p> : <>
-      <label htmlFor="study-material-source">Material salvo</label>
-      <select id="study-material-source" value={selectedTopicId} onChange={event => { setSelectedTopicId(event.target.value); setParsed(null); setError(''); setFeedback(''); }}>
-        <option value="">Selecione um conteúdo...</option>
-        {availableTopics.map(topic => <option key={topic.id} value={topic.id}>{topic.title}</option>)}
-      </select>
-      <button type="button" className="secondary-action" disabled={!selectedTopicId} onClick={analyze}>Analisar conteúdo salvo</button>
-    </>}
-    {error && <p className="module-error" role="alert">{error}</p>}
-    {feedback && <p className="module-feedback" role="status">{feedback}</p>}
-    {parsed && <div className="study-material-import-preview">
-      <strong>Prévia para conferência</strong>
-      <p>{parsed.flashcards.length} flashcard(s) · {parsed.questions.length} questão(ões)</p>
-      {parsed.flashcards.slice(0, 3).map((card, index) => <article key={index}><span>FLASHCARD {index + 1}</span><strong>{card.front}</strong><p>{card.back}</p></article>)}
-      {parsed.questions.slice(0, 3).map((question, index) => <article key={index}><span>QUESTÃO {index + 1}</span><strong>{question.prompt}</strong><p>{question.options.length} alternativas · resposta {String.fromCharCode(65 + question.correctOptionIndex)}</p></article>)}
-      {(parsed.flashcards.length + parsed.questions.length) > 6 && <small>Exibindo até 3 exemplos de cada tipo. Todos os itens válidos serão importados.</small>}
-      <button type="button" className="primary-action" disabled={saving} onClick={() => void importMaterial()}>{saving ? 'Importando...' : 'Confirmar e importar'}</button>
+  function normalize(value: string) {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
+  }
+
+  async function findPreviouslyStoredFile(existing: StoredFile[], file: File, currentDisciplineId: string): Promise<StoredFile | undefined> {
+    for (const candidate of existing) {
+      if (candidate.disciplineId !== currentDisciplineId || candidate.name !== file.name || candidate.size !== file.size) continue;
+      if (await sameBytes(candidate.blob, file)) return candidate;
+    }
+    return undefined;
+  }
+
+  const finishedCount = statuses.filter((item) => item.status !== 'processing').length;
+  return <section className="study-material-importer" aria-label="Adicionar material de estudo">
+    <div>
+      <span className="card-label">MATERIAL DA DISCIPLINA</span>
+      <h3>Adicionar arquivos de estudo</h3>
+      <p>Selecione um ou vários materiais. Ao clicar em Salvar, Alfred guarda os originais e processa o texto localmente; os recursos são criados somente quando há definições explícitas no documento.</p>
+    </div>
+    <label className="file-upload-button study-material-select">
+      Adicionar arquivos
+      <input ref={fileInput} type="file" multiple accept=".pdf,.docx,.pptx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,text/csv,application/json" disabled={saving} onChange={stageFiles} />
+    </label>
+    {staged.length > 0 && <div className="study-material-staging" aria-label="Arquivos aguardando processamento">
+      <strong>{staged.length} arquivo(s) na preparação</strong>
+      {staged.map((file) => <div className="study-material-staged-file" key={`${file.name}:${file.size}:${file.lastModified}`}>
+        <span>{file.name} · {(file.size / 1024).toFixed(0)} KB</span>
+        <button className="text-action" type="button" disabled={saving} aria-label={`Remover ${file.name}`} onClick={() => setStaged((current) => current.filter((item) => item !== file))}>Remover</button>
+      </div>)}
+      <button className="primary-action" type="button" onClick={() => void saveAndProcess()} disabled={saving || !disciplineId}>{saving ? 'Salvando e processando…' : 'Salvar'}</button>
     </div>}
+    {error && <p className="module-error" role="alert">{error}</p>}
+    {saving && <div className="study-material-progress" aria-live="polite">
+      <strong>Processamento local · {finishedCount} de {statuses.length} concluído(s)</strong>
+      <progress value={finishedCount} max={statuses.length || 1} aria-label="Progresso real do processamento dos materiais" />
+      <button className="text-action" type="button" onClick={() => { cancelRef.current = true; }}>Parar após o arquivo atual</button>
+    </div>}
+    {statuses.length > 0 && <div className="study-material-results" aria-live="polite">
+      {statuses.map((item, index) => <article key={`${item.name}:${index}`} className={`study-material-result ${item.status}`}>
+        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
+      </article>)}
+    </div>}
+    <p className="study-material-privacy">Privacidade: extração e geração são locais. PDFs digitalizados continuam exigindo OCR local acionado na área Arquivos antes de serem usados aqui. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
   </section>;
 }

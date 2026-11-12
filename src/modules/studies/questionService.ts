@@ -44,6 +44,9 @@ export function createQuestionService(
         ...(explanation ? { explanation } : {}),
         difficulty: input.difficulty,
         createdAt: now().toISOString(),
+        ...(input.sourceFileId ? { sourceFileId: input.sourceFileId } : {}),
+        ...(input.sourceFileName ? { sourceFileName: input.sourceFileName } : {}),
+        ...(input.subject ? { subject: input.subject } : {}),
       };
       await questions.save(question);
       return question;

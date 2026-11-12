@@ -10,6 +10,10 @@ export interface StudyFlashcard {
   nextReviewAt: string;
   intervalDays: number;
   reviewCount: number;
+  topicId?: string;
+  sourceFileId?: string;
+  sourceFileName?: string;
+  subject?: string;
 }
 
-export type CreateFlashcardInput = Pick<StudyFlashcard, 'disciplineId' | 'front' | 'back'>;
+export type CreateFlashcardInput = Pick<StudyFlashcard, 'disciplineId' | 'front' | 'back'> & Partial<Pick<StudyFlashcard, 'topicId' | 'sourceFileId' | 'sourceFileName' | 'subject'>>;

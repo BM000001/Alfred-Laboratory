@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { zipSync, strToU8 } from 'fflate';
 import { extractTextDocument } from './documentExtractor';
 
 describe('extractTextDocument', () => {
@@ -24,7 +25,26 @@ describe('extractTextDocument', () => {
 
   it('rejeita arquivos vazios e formatos ainda não suportados', async () => {
     await expect(extractTextDocument(new File([], 'vazio.txt'))).rejects.toThrow(/vazio/);
-    await expect(extractTextDocument(new File(['conteúdo'], 'aula.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }))).rejects.toThrow(/não suportado/);
+    await expect(extractTextDocument(new File(['conteúdo'], 'aula.odt'))).rejects.toThrow(/não suportado/);
+  });
+
+  it('extrai parágrafos e entidades XML de DOCX local', async () => {
+    const archive = zipSync({ 'word/document.xml': strToU8('<w:document xmlns:w="x"><w:body><w:p><w:r><w:t>Árvore &amp; grafo</w:t></w:r></w:p><w:p><w:r><w:t>Uma segunda linha.</w:t></w:r></w:p></w:body></w:document>') });
+    const result = await extractTextDocument(new File([archive], 'aula.docx'));
+    expect(result).toMatchObject({ format: 'docx', text: 'Árvore & grafo\nUma segunda linha.', wordCount: 5 });
+  });
+
+  it('extrai texto de slides PPTX na ordem numérica', async () => {
+    const archive = zipSync({
+      'ppt/slides/slide2.xml': strToU8('<p:sld xmlns:a="x"><a:p><a:r><a:t>Segundo slide</a:t></a:r></a:p></p:sld>'),
+      'ppt/slides/slide1.xml': strToU8('<p:sld xmlns:a="x"><a:p><a:r><a:t>Primeiro slide</a:t></a:r></a:p></p:sld>'),
+    });
+    const result = await extractTextDocument(new File([archive], 'aula.pptx'));
+    expect(result).toMatchObject({ format: 'pptx', text: 'Primeiro slide\n\nSegundo slide' });
+  });
+
+  it('reports corrupted Office packages without pretending to extract text', async () => {
+    await expect(extractTextDocument(new File(['não é zip'], 'quebrado.docx'))).rejects.toThrow(/ZIP válido/);
   });
 
   it('valida JSON antes de disponibilizar o texto extraído', async () => {

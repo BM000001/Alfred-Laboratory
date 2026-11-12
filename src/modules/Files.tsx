@@ -12,7 +12,7 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
-export function Files() {
+export function Files({ projectId, disciplineId, allowUpload = true }: { projectId?: string; disciplineId?: string; allowUpload?: boolean }) {
   const [items, setItems] = useState<FileSummary[]>([]);
   const [disciplines, setDisciplines] = useState<Discipline[]>([]);
   const [query, setQuery] = useState('');
@@ -43,16 +43,19 @@ export function Files() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
-  const visible = useMemo(() => items.filter((item) =>
+  const scopedItems = useMemo(() => items.filter((item) =>
+    item.kind !== 'note' && (projectId ? item.projectId === projectId : !item.projectId) &&
+    (!disciplineId || item.disciplineId === disciplineId)), [items, projectId, disciplineId]);
+  const visible = useMemo(() => scopedItems.filter((item) =>
     item.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')) &&
     (filterDiscipline === 'all' || (filterDiscipline === 'unassigned' ? !item.disciplineId : item.disciplineId === filterDiscipline)),
-  ), [items, query, filterDiscipline]);
+  ), [scopedItems, query, filterDiscipline]);
   async function addFile(event: ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0];
     if (!selected) return;
     setError('');
     setPreview(null);
-    try { await files.add(selected, uploadDiscipline || undefined); await refresh(); }
+    try { await files.add(selected, disciplineId || uploadDiscipline || undefined, projectId); await refresh(); }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o arquivo.'); }
     event.target.value = '';
   }
@@ -138,26 +141,26 @@ export function Files() {
   }
   return <section className="files-module">
     {error && <p className="module-error" role="alert">{error}</p>}
-    <div className="files-toolbar">
+    {allowUpload && <div className="files-toolbar">
       <label className="file-upload-button">Adicionar arquivo<input type="file" onChange={addFile} aria-label="Selecionar arquivo" /></label>
       <span className="optional-label">Armazenamento local · até 10 MB por arquivo</span>
       <span className="optional-label">OCR em português: processamento neste dispositivo, até 20 páginas por operação. Na primeira utilização, os componentes são carregados do próprio Alfred e ficam em cache para uso offline.</span>
-    </div>
-    <label className="field-label" htmlFor="file-discipline">Vincular novo arquivo à disciplina <span className="optional-label">· opcional</span></label>
-    <select id="file-discipline" value={uploadDiscipline} onChange={(event) => setUploadDiscipline(event.target.value)}>
+    </div>}
+    {allowUpload && <><label className="field-label" htmlFor="file-discipline">Vincular novo arquivo à disciplina <span className="optional-label">· opcional</span></label>
+    <select id="file-discipline" disabled={Boolean(disciplineId)} value={disciplineId || uploadDiscipline} onChange={(event) => setUploadDiscipline(event.target.value)}>
       <option value="">Sem disciplina</option>
       {disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
-    </select>
+    </select></>}
     <label className="field-label" htmlFor="file-search">Pesquisar arquivos</label>
     <input id="file-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite o nome do arquivo..." />
     <label className="field-label" htmlFor="file-filter-discipline">Filtrar por disciplina</label>
-    <select id="file-filter-discipline" value={filterDiscipline} onChange={(event) => setFilterDiscipline(event.target.value)}>
+    <select id="file-filter-discipline" disabled={Boolean(disciplineId)} value={disciplineId || filterDiscipline} onChange={(event) => setFilterDiscipline(event.target.value)}>
       <option value="all">Todas as disciplinas</option>
       <option value="unassigned">Sem disciplina</option>
       {disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
     </select>
     {loading ? <p className="module-feedback">Carregando arquivos...</p> : visible.length === 0 ?
-      <div className="empty-state"><strong>{items.length ? 'Nenhum resultado encontrado.' : 'Sua biblioteca está vazia.'}</strong><p>Adicione materiais de estudo, documentos e outros arquivos para mantê-los organizados neste dispositivo.</p></div> :
+      <div className="empty-state"><strong>{scopedItems.length ? 'Nenhum resultado encontrado.' : 'Sua biblioteca está vazia.'}</strong><p>Adicione materiais de estudo, documentos e outros arquivos para mantê-los organizados neste dispositivo.</p></div> :
       <div className="stored-file-list">{visible.map((item) => <article className="stored-file" key={item.id}>
         <span className="stored-file-icon" aria-hidden="true">▤</span>
         <div className="stored-file-info"><strong>{item.name}</strong><span>{formatSize(item.size)} · {new Date(item.createdAt).toLocaleDateString('pt-BR')} · {disciplineName(item.disciplineId)}</span></div>

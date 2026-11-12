@@ -12,11 +12,13 @@ export interface StudyTopic {
   disciplineId: string;
   title: string;
   notes?: string;
+  sourceFileId?: string;
+  sourceFileName?: string;
   status: StudyTopicStatus;
   createdAt: string;
 }
 
 export type CreateDisciplineInput = Pick<Discipline, 'name'> & Partial<Pick<Discipline, 'description'>>;
 export type UpdateDisciplineInput = Partial<Pick<Discipline, 'name' | 'description'>>;
-export type CreateStudyTopicInput = Pick<StudyTopic, 'disciplineId' | 'title'> & Partial<Pick<StudyTopic, 'notes'>>;
-export type UpdateStudyTopicInput = Partial<Pick<StudyTopic, 'title' | 'notes' | 'status'>>;
+export type CreateStudyTopicInput = Pick<StudyTopic, 'disciplineId' | 'title'> & Partial<Pick<StudyTopic, 'notes' | 'sourceFileId' | 'sourceFileName'>>;
+export type UpdateStudyTopicInput = Partial<Pick<StudyTopic, 'title' | 'notes' | 'status' | 'sourceFileId' | 'sourceFileName'>>;
