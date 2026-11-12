@@ -372,7 +372,7 @@ export function Agenda() {
         </button>
       </div>
 
-      <details className="calendar-integrations"><summary>Importar e conectar calendários</summary><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
+      <details className="calendar-integrations" open><summary>Conectar calendários · Google, iPhone ou arquivo .ics</summary><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
         <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM APPLE</span><h3 id="apple-calendar-title">Conectar Calendário Apple</h3></div><span className={appleAvailable ? 'apple-calendar-indicator' : 'apple-calendar-unavailable'}><span /> {appleAvailable ? 'Disponível neste dispositivo' : 'Aguardando app iOS'}</span></div>
         {appleAvailable ? <>
           <p>Conecte o calendário do iPhone para trazer seus próximos 90 dias de eventos. A sincronização é somente leitura e não altera seus compromissos manuais. Eventos ausentes só são arquivados quando o iPhone confirma que a leitura foi completa.</p>

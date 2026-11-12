@@ -11,6 +11,7 @@ import {
   deleteGoogleEvent,
   disconnectGoogleCalendar,
   getGoogleCalendarSession,
+  isGoogleCalendarConfigured,
   isGoogleCalendarSessionActive,
   listGoogleCalendars,
   listGoogleEvents,
@@ -62,6 +63,7 @@ export interface GoogleCalendarPanelProps {
 }
 
 export function GoogleCalendarPanel({ appointments, onChanged }: GoogleCalendarPanelProps) {
+  const integrationConfigured = isGoogleCalendarConfigured();
   const [connected, setConnected] = useState(isGoogleCalendarSessionActive());
   const [accountId, setAccountId] = useState<string | null>(null);
   const [calendars, setCalendars] = useState<GoogleCalendarInfo[]>([]);
@@ -469,12 +471,13 @@ export function GoogleCalendarPanel({ appointments, onChanged }: GoogleCalendarP
     <section className="entry-panel apple-calendar-panel google-calendar-panel" aria-labelledby="google-calendar-title">
       <div className="apple-calendar-heading">
         <div><span className="card-label">INTEGRAÇÃO WEB</span><h3 id="google-calendar-title">Google Calendar</h3></div>
-        <span className={connected ? 'apple-calendar-indicator' : 'apple-calendar-unavailable'}><span /> {connected ? 'Conectado nesta sessão' : 'Não conectado'}</span>
+        <span className={connected ? 'apple-calendar-indicator' : 'apple-calendar-unavailable'}><span /> {connected ? 'Conectado nesta sessão' : integrationConfigured ? 'Não conectado' : 'Configuração necessária'}</span>
       </div>
       <p>Conecte sua conta Google para importar eventos e enviar compromissos do Alfred. Seus dados continuam no dispositivo; somente operações que você confirmar serão enviadas ao Google. Mantenha a janela do Google Apps Script aberta durante a conexão.</p>
+      {!integrationConfigured && <p className="module-feedback" role="status">A integração ainda não foi configurada neste build. Em GitHub → Settings → Secrets and variables → Actions → Variables, defina <code>VITE_GOOGLE_APPS_SCRIPT_URL</code> com a URL HTTPS de implantação terminada em <code>/exec</code>; depois, execute um novo deploy do Pages.</p>}
       <div className="apple-calendar-actions">
         {!connected ? (
-          <button className="primary-action" type="button" disabled={busy} onClick={() => void connect()}>Conectar Google Calendar</button>
+          <button className="primary-action" type="button" disabled={busy || !integrationConfigured} onClick={() => void connect()}>Conectar Google Calendar</button>
         ) : (
           <>
             <button className="primary-action" type="button" disabled={busy} onClick={() => void syncSelected('manual')}>{busy ? 'Aguarde...' : 'Sincronizar agora'}</button>
