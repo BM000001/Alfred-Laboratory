@@ -1,0 +1,66 @@
+name: Alfred Laboratory - scheduled and event-driven agent queue
+
+on:
+  schedule:
+    - cron: '13,43 * * * *'
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_run:
+    workflows: ["Laboratory iPhone homologation build"]
+    types: [completed]
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: alfred-agent-event-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.workflow_run.id || github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  route:
+    # Independent opt-in switches; both are false until explicitly configured in repository Variables.
+    if: >-
+      (
+        (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+        github.ref == 'refs/heads/main' &&
+        vars.ALFRED_LAB_AGENT_30M_APPROVED == 'true'
+      ) ||
+      (
+        (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') &&
+        vars.ALFRED_LAB_EVENT_ROUTER_APPROVED == 'true'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout trusted default-branch router
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Classify event and create bounded task envelope
+        id: route
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          node .github/scripts/alfred-agent-event-router.mjs \
+            --event-name "$GITHUB_EVENT_NAME" \
+            --event-path "$GITHUB_EVENT_PATH" \
+            --output "$RUNNER_TEMP/alfred-agent-task.json"
+      - name: Preserve task envelope for review
+        if: steps.route.outputs.has_task == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: alfred-agent-task-${{ github.run_id }}
+          path: ${{ runner.temp }}/alfred-agent-task.json
+          if-no-files-found: error
+          retention-days: 14
