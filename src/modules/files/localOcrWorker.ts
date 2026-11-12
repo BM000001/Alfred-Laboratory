@@ -15,6 +15,8 @@ export async function createLocalOcrWorker(onStatus?: (status: string, progress:
     gzip: true,
     cacheMethod: 'write',
     workerBlobURL: false,
+    // Jobs already reject their promises; do not also throw outside the pipeline.
+    errorHandler: () => {},
     logger: (message) => {
       if (message.status) onStatus?.(message.status, message.progress ?? 0);
     },

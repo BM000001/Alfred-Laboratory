@@ -1,3 +1,4 @@
+import type { ProcessingProfile } from '../studies/materialReliability';
 import type { ExtractedPdfPage } from './pdfExtractor';
 import { unzipSync } from 'fflate';
 
@@ -11,6 +12,7 @@ export interface ExtractedTextDocument {
   wordCount: number;
   extractedAt: string;
   extractionMethod?: 'text' | 'ocr';
+  imageQuality?: number;
   confidence?: number;
   language?: string;
   pageCount?: number;
@@ -175,12 +177,14 @@ export async function extractTextDocument(
   file: File,
   now: () => Date = () => new Date(),
   onProgress?: (progress: { progress: number; status: string }) => void,
+  options?: { profile?: ProcessingProfile; signal?: AbortSignal },
 ): Promise<ExtractedTextDocument> {
+  options?.signal?.throwIfAborted();
   if (file.size <= 0) throw new Error('O arquivo está vazio.');
   const format = getFormat(file);
   if (format === 'pdf') return (await import('./pdfExtractor')).extractPdfDocument(file, now);
   if (format === 'image') {
-    const recognized = await (await import('./imageOcrExtractor')).extractImageTextWithLocalOcr(file, onProgress);
+    const recognized = await (await import('./imageOcrExtractor')).extractImageTextWithLocalOcr(file, onProgress, options);
     const text = recognized.text.trim();
     const words = text.match(/[\p{L}\p{N}_]+/gu) ?? [];
     return {
@@ -192,6 +196,7 @@ export async function extractTextDocument(
       extractedAt: now().toISOString(),
       extractionMethod: 'ocr',
       confidence: recognized.confidence,
+      imageQuality: recognized.imageQuality,
       language: recognized.language,
     };
   }

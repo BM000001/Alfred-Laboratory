@@ -1,3 +1,4 @@
+import type { MaterialProcessingState } from '../studies/materialProcessor';
 export interface ExtractedPage {
   pageNumber: number;
   text: string;
@@ -13,6 +14,7 @@ export interface StoredTextExtraction {
   extractedAt: string;
   extractionMethod?: 'text' | 'ocr';
   /** OCR's provider-reported estimate (0–100); it is a signal, not a guarantee. */
+  imageQuality?: number;
   confidence?: number;
   language?: string;
   pageCount?: number;
@@ -33,6 +35,7 @@ export interface StoredFile {
   updatedAt?: string;
   /** Extracted content is stored locally alongside the original blob. */
   extraction?: StoredTextExtraction;
+  processing?: MaterialProcessingState;
   blob: Blob;
 }
 export interface FileSummary {

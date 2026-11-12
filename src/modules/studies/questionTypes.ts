@@ -10,6 +10,8 @@ export interface StudyQuestion {
   explanation?: string;
   difficulty: StudyQuestionDifficulty;
   createdAt: string;
+  sourceExcerpt?: string;
+  confidence?: number;
   sourceFileId?: string;
   sourceFileName?: string;
   subject?: string;
@@ -23,6 +25,8 @@ export interface CreateStudyQuestionInput {
   correctOptionIndex: number;
   explanation?: string;
   difficulty: StudyQuestionDifficulty;
+  sourceExcerpt?: string;
+  confidence?: number;
   sourceFileId?: string;
   sourceFileName?: string;
   subject?: string;

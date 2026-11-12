@@ -20,6 +20,8 @@ export interface StudyFlashcard {
   /** Bounded event history. Optional so cards saved by older Alfred versions remain readable. */
   reviewHistory?: FlashcardReviewEvent[];
   topicId?: string;
+  sourceExcerpt?: string;
+  confidence?: number;
   sourceFileId?: string;
   sourceFileName?: string;
   subject?: string;

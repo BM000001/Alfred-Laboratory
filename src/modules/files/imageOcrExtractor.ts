@@ -1,3 +1,5 @@
+import { PSM } from 'tesseract.js';
+import { PROCESSING_PROFILES, assessMaterial, type ProcessingProfile } from '../studies/materialReliability';
 import { createLocalOcrWorker } from './localOcrWorker';
 
 export interface ImageOcrProgress {
@@ -9,6 +11,7 @@ export interface ImageOcrResult {
   text: string;
   confidence: number;
   language: 'por';
+  imageQuality?: number;
 }
 
 const MAX_IMAGE_EDGE = 2200;
@@ -22,13 +25,11 @@ interface OcrCandidate {
 /** Keeps OCR selection deterministic and avoids preferring a long garbage result. */
 export function chooseBestOcrCandidate(candidates: OcrCandidate[]): OcrCandidate {
   return [...candidates].sort((left, right) => {
-    const confidenceDelta = right.confidence - left.confidence;
-    if (Math.abs(confidenceDelta) > 2) return confidenceDelta;
-    return right.text.trim().length - left.text.trim().length;
+    return assessMaterial(right.text, right.confidence).score - assessMaterial(left.text, left.confidence).score;
   })[0] ?? { text: '', confidence: 0 };
 }
 
-function createPreprocessedVariants(source: HTMLCanvasElement): HTMLCanvasElement[] {
+export function createPreprocessedVariants(source: HTMLCanvasElement): HTMLCanvasElement[] {
   const variants = [source];
   const gray = document.createElement('canvas');
   gray.width = source.width;
@@ -69,7 +70,9 @@ function createPreprocessedVariants(source: HTMLCanvasElement): HTMLCanvasElemen
 export async function extractImageTextWithLocalOcr(
   file: File,
   onProgress?: (progress: ImageOcrProgress) => void,
+  options?: { profile?: ProcessingProfile; signal?: AbortSignal },
 ): Promise<ImageOcrResult> {
+  options?.signal?.throwIfAborted();
   if (!file.type.toLowerCase().startsWith('image/')) throw new Error('Escolha uma imagem JPG, PNG, HEIC ou outro formato de foto.');
   if (file.size <= 0) throw new Error('A imagem está vazia.');
   if (typeof createImageBitmap !== 'function') throw new Error('Este navegador não oferece leitura local desta imagem. Salve a foto como JPG ou PNG e tente novamente.');
@@ -98,18 +101,31 @@ export async function extractImageTextWithLocalOcr(
 
     onProgress?.({ progress: 0, status: 'Preparando a foto para OCR local' });
     worker = await createLocalOcrWorker((status, progress) => onProgress?.({ progress: Math.min(0.95, progress * 0.95), status }));
+    const profile = PROCESSING_PROFILES[options?.profile ?? 'board'];
+    await worker.setParameters({ tessedit_pageseg_mode: profile.layout === 'sparse' ? PSM.SPARSE_TEXT : profile.layout === 'block' ? PSM.SINGLE_BLOCK : PSM.AUTO });
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let sum = 0, squares = 0, count = 0;
+    for (let i = 0; i < pixels.length; i += 64) { const value = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3; sum += value; squares += value * value; count++; }
+    const contrast = Math.sqrt(Math.max(0, squares / count - (sum / count) ** 2));
+    const imageQuality = Math.round(Math.min(100, contrast * 2, Math.min(bitmap.width, bitmap.height) / 6));
     const candidates: OcrCandidate[] = [];
-    const variants = createPreprocessedVariants(canvas);
+    const variants = createPreprocessedVariants(canvas).slice(0, profile.variants);
     for (const [index, variant] of variants.entries()) {
       onProgress?.({ progress: Math.min(0.92, 0.08 + (index / variants.length) * 0.72), status: `Lendo versão ${index + 1} de ${variants.length} da foto` });
-      const recognized = await worker.recognize(variant);
+      options?.signal?.throwIfAborted();
+      const abort = () => { void worker?.terminate(); };
+      options?.signal?.addEventListener('abort', abort, { once: true });
+      let recognized;
+      try { recognized = await worker.recognize(variant); }
+      finally { options?.signal?.removeEventListener('abort', abort); }
+      options?.signal?.throwIfAborted();
       candidates.push({ text: recognized.data.text.trim(), confidence: Number.isFinite(recognized.data.confidence) ? recognized.data.confidence : 0 });
     }
     const best = chooseBestOcrCandidate(candidates);
     const text = best.text.trim();
     onProgress?.({ progress: 1, status: text ? `Texto reconhecido · confiança estimada em ${Math.round(best.confidence)}%` : 'Nenhum texto reconhecido' });
     if (!text) throw new Error('Não encontrei texto legível na foto. Tente uma imagem mais nítida, reta e bem iluminada.');
-    return { text, confidence: best.confidence, language: 'por' };
+    return { text, confidence: best.confidence, imageQuality, language: 'por' };
   } finally {
     bitmap.close();
     await worker?.terminate();
