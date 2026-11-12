@@ -36,7 +36,7 @@ describe('StudyMaterialImporter', () => {
     expect(screen.getByText(/anotacao.jpg/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByText(/OCR: revise a precisão/)).toBeInTheDocument();
+    expect(await screen.findByText(/Texto reconhecido por OCR: revise a precisão/)).toBeInTheDocument();
     const [stored] = await fileRepository.getAll();
     expect(stored).toMatchObject({ name: 'anotacao.jpg', disciplineId: 'software', extraction: { format: 'image', extractionMethod: 'ocr', language: 'por', text: 'Fotossíntese: processo pelo qual as plantas convertem luz em energia química.' } });
     expect((await studyFlashcardRepository.getAll()).length).toBeGreaterThan(0);
