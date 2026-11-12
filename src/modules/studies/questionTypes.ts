@@ -10,6 +10,8 @@ export interface StudyQuestion {
   explanation?: string;
   difficulty: StudyQuestionDifficulty;
   createdAt: string;
+  sourceExcerpt?: string;
+  confidence?: number;
   sourceFileId?: string;
   sourceFileName?: string;
   subject?: string;
@@ -23,6 +25,8 @@ export interface CreateStudyQuestionInput {
   correctOptionIndex: number;
   explanation?: string;
   difficulty: StudyQuestionDifficulty;
+  sourceExcerpt?: string;
+  confidence?: number;
   sourceFileId?: string;
   sourceFileName?: string;
   subject?: string;
@@ -32,6 +36,19 @@ export interface StudyQuizAnswer {
   questionId: string;
   selectedOptionIndex: number | null;
   isCorrect: boolean;
+  /** Immutable copy lets old attempts remain reviewable after question edits/deletion. */
+  questionSnapshot?: StudyQuestionSnapshot;
+}
+
+export interface StudyQuestionSnapshot {
+  prompt: string;
+  options: string[];
+  correctOptionIndex: number;
+  explanation?: string;
+  difficulty: StudyQuestionDifficulty;
+  topicId?: string;
+  sourceFileName?: string;
+  subject?: string;
 }
 
 export interface StudyQuizAttempt {

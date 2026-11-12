@@ -1,7 +1,8 @@
+import type { ProcessingProfile } from '../studies/materialReliability';
 import type { ExtractedPdfPage } from './pdfExtractor';
 import { unzipSync } from 'fflate';
 
-export type TextDocumentFormat = 'txt' | 'md' | 'csv' | 'json' | 'pdf' | 'docx' | 'pptx';
+export type TextDocumentFormat = 'txt' | 'md' | 'csv' | 'json' | 'pdf' | 'docx' | 'pptx' | 'image';
 
 export interface ExtractedTextDocument {
   fileName: string;
@@ -11,6 +12,8 @@ export interface ExtractedTextDocument {
   wordCount: number;
   extractedAt: string;
   extractionMethod?: 'text' | 'ocr';
+  imageQuality?: number;
+  confidence?: number;
   language?: string;
   pageCount?: number;
   pages?: ExtractedPdfPage[];
@@ -25,6 +28,17 @@ const FORMAT_BY_EXTENSION: Record<string, TextDocumentFormat> = {
   pdf: 'pdf',
   docx: 'docx',
   pptx: 'pptx',
+  jpg: 'image',
+  jpeg: 'image',
+  png: 'image',
+  webp: 'image',
+  bmp: 'image',
+  gif: 'image',
+  tif: 'image',
+  tiff: 'image',
+  avif: 'image',
+  heic: 'image',
+  heif: 'image',
 };
 
 const MAX_OFFICE_UNCOMPRESSED_BYTES = 25 * 1024 * 1024;
@@ -134,6 +148,7 @@ function getFormat(file: File): TextDocumentFormat {
   if (format) return format;
 
   const mime = file.type.toLocaleLowerCase('en-US');
+  if (mime.startsWith('image/')) return 'image';
   if (mime === 'text/plain') return 'txt';
   if (mime === 'text/markdown') return 'md';
   if (mime === 'text/csv') return 'csv';
@@ -161,10 +176,30 @@ function readFileAsText(file: File): Promise<string> {
 export async function extractTextDocument(
   file: File,
   now: () => Date = () => new Date(),
+  onProgress?: (progress: { progress: number; status: string }) => void,
+  options?: { profile?: ProcessingProfile; signal?: AbortSignal },
 ): Promise<ExtractedTextDocument> {
+  options?.signal?.throwIfAborted();
   if (file.size <= 0) throw new Error('O arquivo está vazio.');
   const format = getFormat(file);
   if (format === 'pdf') return (await import('./pdfExtractor')).extractPdfDocument(file, now);
+  if (format === 'image') {
+    const recognized = await (await import('./imageOcrExtractor')).extractImageTextWithLocalOcr(file, onProgress, options);
+    const text = recognized.text.trim();
+    const words = text.match(/[\p{L}\p{N}_]+/gu) ?? [];
+    return {
+      fileName: file.name,
+      format,
+      text,
+      characterCount: text.length,
+      wordCount: words.length,
+      extractedAt: now().toISOString(),
+      extractionMethod: 'ocr',
+      confidence: recognized.confidence,
+      imageQuality: recognized.imageQuality,
+      language: recognized.language,
+    };
+  }
   if (format === 'docx' || format === 'pptx') return extractOfficeDocument(file, format, now);
 
   const decoded = (await readFileAsText(file)).replace(/^\uFEFF/, '');

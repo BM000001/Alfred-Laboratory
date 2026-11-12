@@ -1,6 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { createWorker, OEM } from 'tesseract.js';
+import { createLocalOcrWorker } from './localOcrWorker';
 import type { ExtractedPdfPage } from './pdfExtractor';
 
 export const MAX_OCR_PAGES_PER_RUN = 20;
@@ -31,8 +31,6 @@ export interface OcrPdfResult {
   extractionMethod: 'text' | 'ocr';
   language?: 'por';
 }
-
-type OcrWorker = Awaited<ReturnType<typeof createWorker>>;
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -72,24 +70,6 @@ function buildText(pages: OcrPage[]): string {
   return pages.map((page) => '[Página ' + page.pageNumber + ']\n' + page.text).join('\n\n').trim();
 }
 
-function assetUrl(relativePath: string): string {
-  return new URL(import.meta.env.BASE_URL + 'ocr/' + relativePath, window.location.origin).toString();
-}
-
-async function createLocalOcrWorker(onStatus?: (status: string, progress: number) => void): Promise<OcrWorker> {
-  return createWorker('por', OEM.LSTM_ONLY, {
-    workerPath: assetUrl('worker.min.js'),
-    corePath: assetUrl('core'),
-    langPath: assetUrl('lang'),
-    gzip: true,
-    cacheMethod: 'write',
-    workerBlobURL: false,
-    logger: (message) => {
-      if (message.status) onStatus?.(message.status, message.progress ?? 0);
-    },
-  });
-}
-
 /**
  * Recognizes only pages without a useful text layer. The PDF and page images
  * stay in the browser; worker, WebAssembly and Portuguese model are self-hosted.
@@ -105,7 +85,7 @@ export async function extractPdfWithLocalOcr(
 
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(await readFileAsArrayBuffer(file)) });
   let document: pdfjsLib.PDFDocumentProxy | undefined;
-  let ocrWorker: OcrWorker | undefined;
+  let ocrWorker: Awaited<ReturnType<typeof createLocalOcrWorker>> | undefined;
 
   try {
     document = await loadingTask.promise;
