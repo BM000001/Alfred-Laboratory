@@ -44,6 +44,16 @@ let readyResolve: (() => void) | null = null;
 let readyReject: ((error: Error) => void) | null = null;
 const pending = new Map<string, PendingRequest>();
 
+export function isGoogleCalendarConfigured(): boolean {
+  if (!APP_SCRIPT_URL) return false;
+  try {
+    const url = new URL(APP_SCRIPT_URL);
+    return url.protocol === 'https:' && url.hostname === 'script.google.com' && url.pathname.includes('/macros/s/') && url.pathname.endsWith('/exec');
+  } catch {
+    return false;
+  }
+}
+
 function createNonce(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
@@ -110,8 +120,7 @@ function ensureBridge(): void {
   if (!APP_SCRIPT_URL) {
     throw new Error("A integração Google ainda não foi configurada. Falta definir VITE_GOOGLE_APPS_SCRIPT_URL.");
   }
-  const url = new URL(APP_SCRIPT_URL);
-  if (url.protocol !== "https:" || url.hostname !== "script.google.com" || !url.pathname.includes("/macros/s/") || !url.pathname.endsWith("/exec")) {
+  if (!isGoogleCalendarConfigured()) {
     throw new Error("A URL do Google Apps Script não é válida. Use a URL HTTPS de implantação /exec.");
   }
 }
