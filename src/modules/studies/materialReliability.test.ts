@@ -46,3 +46,8 @@ it('structures only evidence present in the source', async () => {
   expect(blocks.map(block => block.kind)).toEqual(['title', 'step', 'example', 'formula', 'question']);
   for (const block of blocks) expect(text.slice(block.region.start, block.region.end)).toBe(block.text);
 });
+
+it('does not join separate lowercase definitions as wrapped text', () => {
+  const source = 'mitose: divisão celular que mantém cromossomos\nmeiose: divisão celular que reduz cromossomos.';
+  expect(correctMaterial(source, 'f', 'printed').corrected).toBe(source);
+});

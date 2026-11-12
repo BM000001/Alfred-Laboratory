@@ -46,7 +46,7 @@ export function assessMaterial(text: string, ocr?: number, imageQuality?: number
 export function correctMaterial(raw: string, sourceFileId: string, profile: ProcessingProfile) {
   const corrections: Correction[] = [];
   // Only typography/line wrapping: no dictionary guesses, especially in formulas.
-  const corrected = raw.replace(/\u00ad|\u00a0|([\p{Ll}]{3,})-\r?\n([\p{Ll}]{3,})|([^\n]+:[^\n.!?;]*)\r?\n(?=[\p{Ll}])/gu, (original: string, left: string | undefined, right: string | undefined, wrapped: string | undefined, offset: number) => {
+  const corrected = raw.replace(/\u00ad|\u00a0|([\p{Ll}]{3,})-\r?\n([\p{Ll}]{3,})|([^\n]+:[^\n.!?;]*)\r?\n(?=[\p{Ll}][^:\n=]*(?:\n|$))/gu, (original: string, left: string | undefined, right: string | undefined, wrapped: string | undefined, offset: number) => {
     if (wrapped) {
       if (!['printed', 'prose'].includes(profile)) return original;
       const replacement = wrapped.trimEnd() + ' ';
