@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Alfred",
+    "slug": "alfred-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "alfred",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "br.com.bm000001.alfred"
+    },
+    "android": {
+      "package": "br.com.bm000001.alfred",
+      "edgeToEdgeEnabled": true
+    }
+  }
+}
