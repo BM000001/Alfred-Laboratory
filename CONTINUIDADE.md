@@ -1,5 +1,26 @@
 # Continuidade do Alfred
 
+## Marco — piloto executável dos agentes (2026-11-09)
+
+- PR #20: adicionado `scripts/pilot-codex-agents.sh`, para executar em sessão Codex autenticada um piloto **real** e somente leitura com os perfis `explorer` e `reviewer` (máximo de dois auxiliares, timeout 600 s, registros JSONL privados em diretório temporário).
+- Modificado o workflow `.github/workflows/lab-iphone-preview.yml` para verificar sintaxe Bash e preflight do piloto sem iniciar agentes, sem fazer login ou consumir modelo.
+- O CI do commit `db5c1cff4a52284d31302eb759ec28e06b75a414` concluiu com sucesso no run https://github.com/BM000001/Alfred-Laboratory/actions/runs/42672790204 . O script recebeu depois limite de execução e documentação adicional, exigindo nova validação do head final.
+- Nenhum subagente Codex foi iniciado nesta sessão; Codex CLI indisponível. O piloto **não** está operacional 24h, não instala ECC, não altera app e não substitui a automação horária do ChatGPT.
+- Próxima ação: testar o piloto com Codex CLI autenticado em um Codespace confiável, confirmar eventos/threads de subagentes e só depois considerar executor autônomo com autenticação e custos aprovados.
+
+## Equipe do Laboratório — piloto em 2026-11-09
+
+- Repositório deste marco: BM000001/Alfred-Laboratory. Base ativa: main; develop-app legada.
+- PR #20: oito perfis locais configurados, ainda sem merge. Configuração revisada no SHA 5f62f3a6aacab7e87cfeb9490f30f7c2f079c059.
+- CI desse SHA aprovado: https://github.com/BM000001/Alfred-Laboratory/actions/runs/42558852961.
+- Piloto real nesta sessão: dois subagentes leram e aplicaram manualmente os perfis explorer e reviewer do repositório. Ambos concluíram tarefas somente de leitura. Não houve descoberta automática dos TOMLs pelo Codex CLI nem carregamento comprovado do plugin ECC.
+- Reviewer: nenhum bloqueio na configuração; recomendou este registro de continuidade.
+- Explorer: examinou main no SHA df723c16a588dc74a46bfe5f377d3ff5c7f6c1ce. Em src/app/App.tsx, o link da marca usa href="/Alfred/"; abrir em nova aba no Laboratório pode levar ao original. Correção candidata: usar import.meta.env.BASE_URL e verificar destino para builds Laboratório/produção e clique comum. Não corrigido neste piloto.
+- Navegação observada: quatro atalhos mobile e cinco áreas em Mais. Agrupar Mais é proposta posterior de UX, não bug comprovado.
+- Nenhum teste de navegador/Safari foi executado neste piloto. Os seis outros perfis ainda não foram exercitados.
+- Próximo passo: testar implementer e QA numa correção isolada; confirmar carregamento nativo dos perfis no Codespace quando houver acesso à sessão. Agentes desta conversa não constituem serviço contínuo.
+
+
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
