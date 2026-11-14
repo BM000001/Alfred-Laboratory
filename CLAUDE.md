@@ -1,3 +1,5 @@
+> **Coordenação entre IAs:** antes de executar uma tarefa, consulte [AGENTS.md](AGENTS.md) e [docs/PROCESSO_IAS.md](docs/PROCESSO_IAS.md) (v2.2). Este arquivo complementa essas regras; em conflitos de fluxo, prevalece o processo v2.2, mantendo os controles de segurança daqui.
+
 # Instruções de desenvolvimento — Alfred
 
 ## Missão
@@ -43,7 +45,7 @@ Nunca simule que uma integração ou ação foi concluída.
 3. Implemente apenas o escopo necessário.
 4. Execute testes, lint e build disponíveis.
 5. Revise o diff e preserve alterações não relacionadas.
-6. Atualize `CONTINUIDADE.md` com o que mudou, testes e próximo passo.
+6. Registre checkpoint e próximo passo na Issue/PR; atualize `CONTINUIDADE.md` somente quando o estado geral do projeto for afetado.
 7. Faça commit com mensagem objetiva quando autorizado e quando o ambiente permitir.
 
 ## Comunicação de progresso
@@ -66,7 +68,7 @@ Se não conseguir executar um teste, declare isso claramente.
 - Depois de validar a unidade, faça commit com mensagem objetiva e envie imediatamente com `git push` para a branch de trabalho.
 - Confirme que o push terminou sem erro e que `git status` não mostra alterações pendentes. Só então informe que o checkpoint está salvo no GitHub.
 - Trabalhe sempre em branch própria; nunca use `main` diretamente para desenvolvimento.
-- Atualize `CONTINUIDADE.md` em cada checkpoint relevante, registrando commit, branch, arquivos, testes, pendências e próximo passo.
+- Atualize a Issue/PR com commit, branch, arquivos, testes, pendências e próximo passo; sincronize `CONTINUIDADE.md` somente para marcos que mudarem a visão geral do projeto.
 - Ao perceber limite de uso, interrupção, troca de conta ou encerramento iminente, pare de iniciar funcionalidades novas. Salve o estado atual, faça commit e push, atualize a continuidade e informe claramente o que ficou sem salvar.
 - Se não for possível fazer push, NÃO diga que está salvo. Preserve o trabalho no ambiente local, gere um patch com `git diff > backup-sessao.patch` (e inclua também alterações staged com `git diff --cached`, se necessário), informe o caminho exato e instrua a não apagar o Codespace até recuperar o backup.
 - Nunca descarte alterações para limpar a árvore de trabalho. Nunca use `git reset --hard`, `git clean -fd` ou force push sem autorização explícita.

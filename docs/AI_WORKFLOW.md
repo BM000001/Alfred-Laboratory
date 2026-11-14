@@ -1,4 +1,6 @@
-# Fluxo de trabalho para agentes de IA
+# Fluxo técnico do Laboratório para agentes de IA
+
+> **Processo canônico:** [PROCESSO_IAS.md](PROCESSO_IAS.md) (v2.2). Este arquivo preserva as políticas específicas de branches, revisão e proteção do Laboratório. Se houver diferenças sobre reservas, estados ou handoff, use PROCESSO_IAS.md; nenhuma proteção descrita aqui é assumida como já configurada.
 
 ## Objetivo
 Permitir que várias IAs trabalhem em paralelo no Alfred sem colocar o repositório principal em risco.
@@ -7,8 +9,9 @@ Permitir que várias IAs trabalhem em paralelo no Alfred sem colocar o repositó
 - `main`: regras e documentação estáveis do laboratório.
 - `develop-app`: integração de mudanças no código do Alfred; deriva da baseline importada.
 - `baseline/alfred-main`: snapshot de referência, somente leitura.
-- `experiment/<assunto>`: trabalho isolado por tarefa ou agente.
-- `fix/<assunto>`: correções isoladas.
+- `codex/<issue>-resumo` ou `ia/<issue>-resumo`: padrão v2.2 para trabalho novo em branch isolada.
+- `experiment/<assunto>` e `fix/<assunto>`: branches legadas que podem continuar sendo usadas para PRs existentes.
+- A origem e destino de cada tarefa devem constar na Issue; **não** assumir `develop-app` ou `main` sem conferir dependências.
 
 ## Regras
 - Confirme repositório, branch e escopo antes de editar.
@@ -34,8 +37,8 @@ Antes de abrir PR:
 Se algum teste não puder ser executado, declare isso. Nunca informe que passou sem executar.
 
 ## Integração
-1. Crie uma branch de experimento a partir de `develop-app` para mudanças incrementais no app.
-2. Abra PR da branch de experimento para `develop-app`.
+1. Registre o planejamento e a reserva na Issue; crie branch de tarefa a partir da origem expressa na Issue (frequentemente `develop-app` ou `main`).
+2. Abra Draft PR para a base de destino indicada na Issue, sem assumir `develop-app`.
 3. Aguarde revisão e resolva os comentários.
 4. Faça merge somente após aprovação e validação.
 5. A promoção para `main` do laboratório é uma etapa separada.

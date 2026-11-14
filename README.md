@@ -17,15 +17,17 @@ Ambiente independente para experimentar, testar e revisar melhorias do Alfred se
 
 A baseline foi importada. Seu commit de referência é `51c3b4fdaacbaa3a6259aecf5e480ed58257877d`.
 
-## Fluxo recomendado
+## Processo de desenvolvimento com IAs (v2.2)
 
-1. Crie uma branch `experiment/<assunto>` ou `fix/<assunto>` a partir de `baseline/alfred-main`.
-2. Faça mudanças pequenas e limitadas ao objetivo da tarefa.
-3. Execute testes e build; registre os comandos e resultados reais.
-4. Abra um Pull Request da branch de trabalho para `develop-app`.
-5. Revise o diff, os testes, os riscos e a preservação das funcionalidades existentes.
-6. Depois da validação, promova as mudanças de `develop-app` para `main` por Pull Request.
-7. Qualquer integração no repositório original deve ser uma etapa separada, por Pull Request próprio e autorização explícita.
+A referência canônica para tarefas, reservas, checkpoints, testes, PRs, aprovações e limpeza é [docs/PROCESSO_IAS.md](docs/PROCESSO_IAS.md). O ponto de entrada curto para agentes é [AGENTS.md](AGENTS.md).
+
+1. Identifique a Issue, verifique trabalhos existentes e registre plano e reserva antes de programar.
+2. Escolha **explicitamente** a branch-base na Issue; não iniciar automaticamente a partir da baseline ou da `main`. Crie branch de tarefa antes do código (`codex/<issue>-resumo` ou `ia/<issue>-resumo`).
+3. Desenvolva e teste, faça checkpoints remotos, abra Draft PR para a base indicada e registre Handoff.
+4. Aguarde testes, revisão e aprovação antes de qualquer merge. Promover o Laboratório ao [Alfred principal](https://github.com/BM000001/Alfred) é uma operação separada.
+5. Atualize somente a documentação impactada e avalie limpeza sem exclusões não autorizadas.
+
+O fluxo anterior de `experiment/` ou `fix/` continua sendo referência para branches legadas. O [fluxo técnico do Laboratório](docs/AI_WORKFLOW.md) complementa o processo v2.2. Branch/PR não gera automaticamente prévia no iPhone.
 
 ## Regras de segurança
 

@@ -27,7 +27,7 @@ Não esperar terminar um módulo inteiro.
 5. Fazer commit em branch de trabalho.
 6. Fazer `git push`.
 7. Confirmar o push e conferir novamente `git status`.
-8. Atualizar `CONTINUIDADE.md` com branch, commit, resumo, testes e próximo passo.
+8. Atualizar a Issue/PR com branch, commit, resumo, testes e próximo passo; atualizar `CONTINUIDADE.md` só se mudar o estado geral do projeto.
 
 Só declarar “salvo no GitHub” após confirmar o push.
 
@@ -49,4 +49,4 @@ O GitHub Actions executa testes e build sobre commits/pull requests já enviados
 
 ## Regra para agentes
 
-Claude e ChatGPT devem ler este protocolo no início de cada sessão e segui-lo. A documentação de continuidade deve ser atualizada em cada checkpoint relevante.
+Claude e ChatGPT devem ler este protocolo no início de cada sessão e segui-lo. A Issue/PR e seu Handoff são o registro de checkpoint; `CONTINUIDADE.md` permanece reservado a marcos gerais. Consultar também [PROCESSO_IAS.md](PROCESSO_IAS.md).
