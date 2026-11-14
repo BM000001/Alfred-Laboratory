@@ -1,7 +1,9 @@
 # Fluxo de trabalho para agentes de IA
 
+**Política canônica:** [PROCESSO_IAS.md](PROCESSO_IAS.md), com instruções rápidas em [AGENTS.md](../AGENTS.md). Este arquivo contém detalhes complementares do Laboratory; em caso de conflito, prevalece o processo v2.2. Concorrência de implementações exige autorização e reserva verificável, não apenas consulta às branches.
+
 ## Objetivo
-Permitir que várias IAs trabalhem em paralelo no Alfred sem colocar o repositório principal em risco.
+Coordenar desenvolvimento no Laboratory sem retrabalho e sem colocar `BM000001/Alfred` em risco.
 
 ## Branches
 - `main`: regras e documentação estáveis do laboratório.
@@ -24,7 +26,7 @@ Permitir que várias IAs trabalhem em paralelo no Alfred sem colocar o repositó
 
 ## Validação obrigatória
 Antes de abrir PR:
-1. Execute os testes, lint e build disponíveis.
+1. Execute os testes e build aplicáveis disponíveis (lint somente quando configurado; `package.json` atual não define `npm run lint`).
 2. Informe os comandos executados e resultados reais.
 3. Liste os arquivos alterados.
 4. Explique impacto visual e funcional.
@@ -34,12 +36,15 @@ Antes de abrir PR:
 Se algum teste não puder ser executado, declare isso. Nunca informe que passou sem executar.
 
 ## Integração
-1. Crie uma branch de experimento a partir de `develop-app` para mudanças incrementais no app.
-2. Abra PR da branch de experimento para `develop-app`.
-3. Aguarde revisão e resolva os comentários.
-4. Faça merge somente após aprovação e validação.
-5. A promoção para `main` do laboratório é uma etapa separada.
-6. A integração no Alfred original exige PR próprio e autorização explícita.
+
+1. Registre na Issue o repositório, a base real e o destino do PR. Para mudanças incrementais no app, `develop-app` pode ser a base, mas confira dependências; para documentação estável, `main` do Laboratory pode ser apropriada.
+2. Abra branch isolada antes de editar; não use `baseline/alfred-main` como destino de alterações.
+3. Abra Draft PR para a branch de destino definida na Issue, registrando SHA, testes, CI e `## Handoff`.
+4. Aguarde revisão e aprovação do proprietário; resolva ajustes preferencialmente no mesmo PR.
+5. Faça merge somente após aprovação explícita, verificações aplicáveis e checagem de dependências.
+6. Uma promoção de `develop-app` a `main` do Laboratory, quando necessária, é decisão e PR separados.
+7. A integração no `BM000001/Alfred` exige PR e autorização próprios. Nenhuma regra aqui a executa automaticamente.
+8. Limpeza de branches/arquivos somente após auditoria de dependências e aprovação para ações destrutivas.
 
 ## Proteção recomendada para `develop-app`
 Configure uma regra de branch no GitHub em **Settings → Rules → Rulesets** (ou **Settings → Branches**, conforme a interface disponível).
