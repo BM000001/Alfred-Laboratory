@@ -1,11 +1,13 @@
 # Fluxo de trabalho para agentes de IA
 
+**Política canônica:** [PROCESSO_IAS.md](PROCESSO_IAS.md), com instruções rápidas em [AGENTS.md](../AGENTS.md). Este arquivo contém detalhes complementares do Laboratory; em caso de conflito, prevalece o processo v2.2. Concorrência de implementações exige autorização e reserva verificável, não apenas consulta às branches.
+
 ## Objetivo
-Permitir que várias IAs trabalhem em paralelo no Alfred sem colocar o repositório principal em risco.
+Coordenar desenvolvimento no Laboratory sem retrabalho e sem colocar `BM000001/Alfred` em risco.
 
 ## Branches
-- `main`: regras e documentação estáveis do laboratório.
-- `develop-app`: integração de mudanças no código do Alfred; deriva da baseline importada.
+- `main`: base padrão de código, testes, regras e documentação do Laboratório.
+- `develop-app`: branch legada de integração antiga; manter para referência e migração seletiva, não iniciar novos PRs a partir dela por padrão.
 - `baseline/alfred-main`: snapshot de referência, somente leitura.
 - `experiment/<assunto>`: trabalho isolado por tarefa ou agente.
 - `fix/<assunto>`: correções isoladas.
@@ -20,11 +22,11 @@ Permitir que várias IAs trabalhem em paralelo no Alfred sem colocar o repositó
 - Não inclua tokens, chaves, certificados, cookies ou dados pessoais reais.
 - Se encontrar conflito arquitetural, documente e peça revisão em vez de apagar código.
 - Não trate a branch `baseline/alfred-main` como destino de commits ou PRs.
-- Não promova alterações de `develop-app` para `main` automaticamente.
+- Não promova alterações de `develop-app` para `main` automaticamente; seus históricos não têm ancestral comum. Porte mudanças úteis por novos PRs derivados da `main`.
 
 ## Validação obrigatória
 Antes de abrir PR:
-1. Execute os testes, lint e build disponíveis.
+1. Execute os testes e build aplicáveis disponíveis (lint somente quando configurado; `package.json` atual não define `npm run lint`).
 2. Informe os comandos executados e resultados reais.
 3. Liste os arquivos alterados.
 4. Explique impacto visual e funcional.
@@ -34,21 +36,24 @@ Antes de abrir PR:
 Se algum teste não puder ser executado, declare isso. Nunca informe que passou sem executar.
 
 ## Integração
-1. Crie uma branch de experimento a partir de `develop-app` para mudanças incrementais no app.
-2. Abra PR da branch de experimento para `develop-app`.
-3. Aguarde revisão e resolva os comentários.
-4. Faça merge somente após aprovação e validação.
-5. A promoção para `main` do laboratório é uma etapa separada.
-6. A integração no Alfred original exige PR próprio e autorização explícita.
 
-## Proteção recomendada para `develop-app`
+1. Registre na Issue o repositório, a base real e o destino do PR. Para novos trabalhos de app e documentação, o padrão é `main` do Laboratory como base e destino; exceções, como PR empilhado em dependência ainda aberta, exigem justificativa e revisão explícitas.
+2. Abra branch isolada antes de editar; não use `baseline/alfred-main` como destino de alterações.
+3. Abra Draft PR para a branch de destino definida na Issue, registrando SHA, testes, CI e `## Handoff`.
+4. Aguarde revisão e aprovação do proprietário; resolva ajustes preferencialmente no mesmo PR.
+5. Faça merge somente após aprovação explícita, verificações aplicáveis e checagem de dependências.
+6. Mudanças ainda úteis de `develop-app` devem ser comparadas ao código atual e **portadas seletivamente** em novas branches derivadas da `main`, com PR separado por comportamento; não mesclar os históricos inteiros.
+7. A integração no `BM000001/Alfred` exige PR e autorização próprios. Nenhuma regra aqui a executa automaticamente.
+8. Limpeza de branches/arquivos somente após auditoria de dependências e aprovação para ações destrutivas.
+
+## Proteção recomendada para `main` do Laboratory
 Configure uma regra de branch no GitHub em **Settings → Rules → Rulesets** (ou **Settings → Branches**, conforme a interface disponível).
 
-- Nome sugerido: `Protect develop-app`.
-- Alvo: branch `develop-app`.
+- Nome sugerido: `Protect Laboratory main`.
+- Alvo: branch `main` do `BM000001/Alfred-Laboratory`.
 - Exigir pull request antes de mesclar.
 - Exigir que as verificações passem antes de mesclar.
-- Selecionar a verificação do workflow **Validate Alfred**, job **Tests and production build**.
+- Selecionar as verificações realmente presentes no CI atual; exemplo verificado: workflow **Laboratory iPhone homologation build**, job **validate-and-package**. Confirmar o nome exato antes de tornar obrigatório.
 - Bloquear force-push.
 - Bloquear exclusão da branch.
 - Não exigir quantidade de aprovações maior que zero sem antes garantir que haverá outro revisor; em repositório individual isso pode impedir o próprio autor de integrar PRs.

@@ -4,11 +4,10 @@
 Desenvolver o Alfred, um assistente pessoal inteligente, elegante e proativo, que centraliza estudos, agenda, tarefas, projetos, arquivos e produtividade.
 
 ## Antes de começar qualquer sessão
-1. Leia este arquivo.
-2. Leia `README.md`.
-3. Leia `CONTINUIDADE.md`.
-4. Consulte os documentos relevantes em `docs/`.
-5. Verifique o estado do Git e o que já existe antes de alterar arquivos.
+1. Leia [AGENTS.md](AGENTS.md) e consulte [docs/PROCESSO_IAS.md](docs/PROCESSO_IAS.md) como política canônica.
+2. Leia a Issue acionada, os PRs e branches relacionados; confirme repositório, base, destino, reserva e autorização.
+3. Consulte `README.md`, `CONTINUIDADE.md` e apenas os documentos técnicos relevantes.
+4. Preserve o estado do Git e o que já existe antes de editar.
 
 ## Princípios obrigatórios
 - Preserve a visão do produto e as decisões documentadas.
@@ -38,13 +37,13 @@ Nunca simule que uma integração ou ação foi concluída.
 - Não considere uma tarefa concluída sem executar os testes e verificações aplicáveis.
 
 ## Fluxo de trabalho
-1. Escolha uma tarefa pequena e verificável.
-2. Inspecione os arquivos envolvidos.
-3. Implemente apenas o escopo necessário.
-4. Execute testes, lint e build disponíveis.
-5. Revise o diff e preserve alterações não relacionadas.
-6. Atualize `CONTINUIDADE.md` com o que mudou, testes e próximo passo.
-7. Faça commit com mensagem objetiva quando autorizado e quando o ambiente permitir.
+1. Consulte código, Issue, PRs e dependências para evitar duplicação.
+2. Registre objetivo/resultado esperado, reserva, módulos, base/destino e critério de aceite.
+3. Crie branch isolada antes da programação e produza mudanças pequenas e verificáveis.
+4. Execute testes, lint **somente se configurado** e build disponíveis/aplicáveis; registre resultados reais.
+5. Revise o diff, publique checkpoint remoto quando o ambiente permitir, e abra Draft PR no destino autorizado.
+6. Preserve o handoff com SHA, branch, PR, testes, código publicado ou não e próxima ação.
+7. Aguarde avaliação explícita antes de merge e limpeza; atualize somente documentação impactada.
 
 ## Comunicação de progresso
 Ao finalizar, informe:
@@ -58,18 +57,14 @@ Se não conseguir executar um teste, declare isso claramente.
 
 ## Salvamento obrigatório e prevenção de perda de trabalho
 
-**Regra crítica: nenhum trabalho pode ficar apenas na sessão do Claude, ChatGPT ou Codespace.**
+**Regra crítica: nenhum trabalho pode depender exclusivamente da memória da sessão da IA.**
 
-- Faça checkpoint no Git ao concluir cada unidade pequena de trabalho (por exemplo: uma funcionalidade, um conjunto coerente de arquivos ou uma correção). Não espere o fim da sessão.
-- Antes de iniciar uma tarefa, confira `git status` e preserve qualquer alteração preexistente.
-- Antes de cada commit, revise `git diff` e `git diff --staged`; não inclua segredos, arquivos .env, credenciais, chaves ou dados pessoais.
-- Depois de validar a unidade, faça commit com mensagem objetiva e envie imediatamente com `git push` para a branch de trabalho.
-- Confirme que o push terminou sem erro e que `git status` não mostra alterações pendentes. Só então informe que o checkpoint está salvo no GitHub.
-- Trabalhe sempre em branch própria; nunca use `main` diretamente para desenvolvimento.
-- Atualize `CONTINUIDADE.md` em cada checkpoint relevante, registrando commit, branch, arquivos, testes, pendências e próximo passo.
-- Ao perceber limite de uso, interrupção, troca de conta ou encerramento iminente, pare de iniciar funcionalidades novas. Salve o estado atual, faça commit e push, atualize a continuidade e informe claramente o que ficou sem salvar.
-- Se não for possível fazer push, NÃO diga que está salvo. Preserve o trabalho no ambiente local, gere um patch com `git diff > backup-sessao.patch` (e inclua também alterações staged com `git diff --cached`, se necessário), informe o caminho exato e instrua a não apagar o Codespace até recuperar o backup.
-- Nunca descarte alterações para limpar a árvore de trabalho. Nunca use `git reset --hard`, `git clean -fd` ou force push sem autorização explícita.
-- O workflow de CI valida o código, mas **não salva alterações locais**. Apenas commit + push enviam o trabalho ao GitHub.
-
-**Critério de conclusão de qualquer sessão:** commit enviado, push confirmado, documentação de continuidade atualizada e árvore de trabalho limpa — ou bloqueio/backup local descrito sem alegar que está salvo remotamente.
+- Faça checkpoints coerentes e commits na branch de trabalho quando o ambiente permitir. Nunca trabalhe diretamente na `main`.
+- Antes de cada commit, revise `git status`, `git diff` e `git diff --staged`; preserve alterações preexistentes e não inclua segredos nem dados pessoais.
+- **Quando houver Git/push autorizado:** confirme que o push terminou com sucesso e que o SHA remoto corresponde ao trabalho antes de afirmar que o checkpoint está salvo no GitHub.
+- **Quando a execução em nuvem não tiver push nem API GitHub:** mantenha a execução recuperável pela interface disponível, informe **não publicado** no handoff e use o fluxo de **Create PR** real se existir. Não confunda commit local, PR aberto e publicação remota.
+- Se uma sessão tiver de ser interrompida sem publicação, forneça o identificador da sessão, branch, commit local e instrução de recuperação; gere um patch local quando isso for viável e registre explicitamente a fragilidade do ambiente temporário.
+- Atualize `CONTINUIDADE.md` apenas quando uma mudança de estado relevante do projeto o exigir; o registro principal da tarefa fica na Issue/PR.
+- Nunca descarte alterações para limpar a árvore de trabalho. Não use `git reset --hard`, `git clean -fd`, force-push ou exclusão sem autorização explícita.
+- O CI valida código; não salva alterações locais. Só trate a implementação como **publicada** após evidência remota real.
+- Ao encerrar, entregue o `## Handoff` padronizado de `docs/PROCESSO_IAS.md`; distinga código finalizado, aprovado, integrado e tarefa administrativamente encerrada.

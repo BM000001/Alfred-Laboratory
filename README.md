@@ -9,23 +9,24 @@ Ambiente independente para experimentar, testar e revisar melhorias do Alfred se
 
 ## Branches
 
-- `main`: regras e documentação estáveis do laboratório.
-- `develop-app`: integração de alterações no código do Alfred; deriva da baseline importada.
+- `main`: base padrão de código, testes, regras e documentação do laboratório; não é a `main` do Alfred principal.
+- `develop-app`: base **legada** com histórico independente; manter para referência e migração seletiva, sem novos desenvolvimentos por padrão.
 - `baseline/alfred-main`: snapshot de referência importado do Alfred original. Trate como somente leitura.
 - `experiment/<assunto>`: implementação isolada de uma melhoria.
 - `fix/<assunto>`: correção isolada.
 
 A baseline foi importada. Seu commit de referência é `51c3b4fdaacbaa3a6259aecf5e480ed58257877d`.
 
-## Fluxo recomendado
+## Fluxo de desenvolvimento com IAs
 
-1. Crie uma branch `experiment/<assunto>` ou `fix/<assunto>` a partir de `baseline/alfred-main`.
-2. Faça mudanças pequenas e limitadas ao objetivo da tarefa.
-3. Execute testes e build; registre os comandos e resultados reais.
-4. Abra um Pull Request da branch de trabalho para `develop-app`.
-5. Revise o diff, os testes, os riscos e a preservação das funcionalidades existentes.
-6. Depois da validação, promova as mudanças de `develop-app` para `main` por Pull Request.
-7. Qualquer integração no repositório original deve ser uma etapa separada, por Pull Request próprio e autorização explícita.
+O processo canônico está em [AGENTS.md](AGENTS.md) e [docs/PROCESSO_IAS.md](docs/PROCESSO_IAS.md). Antes de codificar, consulte a Issue e os PRs existentes, registre a reserva de execução e a base/destino corretos. Crie branch isolada antes de editar e faça handoff verificável ao interromper.
+
+- **Documentação estável:** branch a partir de `main` do Laboratory, PR para `main` do Laboratory.
+- **Mudanças no aplicativo:** **branch a partir de `main` do Laboratory**, PR para essa `main`; exceções de PRs empilhados exigem dependência explicitamente aprovada na Issue. Não partir da baseline nem de `develop-app` por padrão.
+- **Migração de legado:** `develop-app` não compartilha ancestral Git com `main`. Nunca executar merge direto, reset ou force-push; comparar módulos e portar somente diferenças úteis em PRs pequenos criados a partir da `main`.
+- **Promoção ao Alfred original:** etapa separada com PR e aprovação explícita; aprovação de merge no Laboratory não autoriza o merge no principal.
+- Após publicação, confirmar CI e URL/commit da prévia quando existirem. Somente o proprietário aprova o destino e a integração.
+- Branches e arquivos somente são excluídos depois de verificação de dependências e autorização aplicável.
 
 ## Regras de segurança
 
@@ -39,4 +40,8 @@ A baseline foi importada. Seu commit de referência é `51c3b4fdaacbaa3a6259aecf
 
 ## Documentação
 
-Leia [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) antes de iniciar um trabalho com agentes de IA. Use o [template de Pull Request](.github/PULL_REQUEST_TEMPLATE.md) para registrar escopo, testes, riscos e plano de reversão.
+- [AGENTS.md](AGENTS.md): instruções rápidas comuns a todos os agentes.
+- [docs/PROCESSO_IAS.md](docs/PROCESSO_IAS.md): processo v2.2, estados, reserva, handoff, PR, aprovação e encerramento.
+- [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md): detalhes de branches, validação e proteções (complementar ao processo).
+- [CLAUDE.md](CLAUDE.md): instruções específicas de continuidade e segurança.
+- [Modelo de Issue](.github/ISSUE_TEMPLATE/ia-tarefa.md) e [modelo de Pull Request](.github/PULL_REQUEST_TEMPLATE.md).
