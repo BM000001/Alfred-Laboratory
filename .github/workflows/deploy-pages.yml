@@ -1,9 +1,7 @@
 name: Deploy Alfred Laboratory to GitHub Pages
 on:
   push:
-    branches:
-      - main
-      - feat/studies-gallery-exercises-20261112
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
