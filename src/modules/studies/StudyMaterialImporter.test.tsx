@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StudyMaterialImporter } from './StudyMaterialImporter';
+import { extractImageTextWithLocalOcr } from '../files/imageOcrExtractor';
 import { disciplineRepository, fileRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../../storage/repositories';
 
 vi.mock('../files/imageOcrExtractor', () => ({
@@ -41,6 +42,29 @@ describe('StudyMaterialImporter', () => {
     expect(stored).toMatchObject({ name: 'anotacao.jpg', disciplineId: 'software', extraction: { format: 'image', extractionMethod: 'ocr', confidence: 96, language: 'por', text: 'Fotossíntese: processo pelo qual as plantas convertem luz em energia química.' } });
     expect((await studyFlashcardRepository.getAll()).length).toBeGreaterThan(0);
     expect((await studyFlashcardRepository.getAll())[0].sourceFileName).toBe('anotacao.jpg');
+  });
+
+  it('keeps the original and transcription when image OCR is too uncertain to generate exercises', async () => {
+    vi.mocked(extractImageTextWithLocalOcr).mockResolvedValueOnce({
+      text: definitions, confidence: 42, language: 'por',
+    });
+    render(<StudyMaterialImporter disciplineId="software" />);
+    const photo = new File(['photo-bytes'], 'quadro-incerto.jpg', { type: 'image/jpeg' });
+    fireEvent.change(screen.getByLabelText('Escolher arquivos ou fotos'), { target: { files: [photo] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText(/Texto salvo com confiança baixa \(42%\)/)).toBeInTheDocument();
+    await waitFor(async () => {
+      expect(await fileRepository.getAll()).toHaveLength(1);
+      expect(await studyTopicRepository.getAll()).toHaveLength(1);
+      expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
+      expect(await studyQuestionRepository.getAll()).toHaveLength(0);
+    });
+    const [stored] = await fileRepository.getAll();
+    expect(stored).toMatchObject({
+      name: 'quadro-incerto.jpg', disciplineId: 'software',
+      extraction: { format: 'image', extractionMethod: 'ocr', confidence: 42, text: definitions },
+    });
   });
 
   it('saves multiple materials once, processes immediately, and persists source-linked cards and questions', async () => {
