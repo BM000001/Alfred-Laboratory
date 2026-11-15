@@ -9,8 +9,8 @@ Ambiente independente para experimentar, testar e revisar melhorias do Alfred se
 
 ## Branches
 
-- `main`: regras e documentação estáveis do laboratório.
-- `develop-app`: integração de alterações no código do Alfred; deriva da baseline importada.
+- `main`: base padrão de código, testes, regras e documentação do laboratório; não é a `main` do Alfred principal.
+- `develop-app`: base **legada** com histórico independente; manter para referência e migração seletiva, sem novos desenvolvimentos por padrão.
 - `baseline/alfred-main`: snapshot de referência importado do Alfred original. Trate como somente leitura.
 - `experiment/<assunto>`: implementação isolada de uma melhoria.
 - `fix/<assunto>`: correção isolada.
@@ -21,8 +21,9 @@ A baseline foi importada. Seu commit de referência é `51c3b4fdaacbaa3a6259aecf
 
 O processo canônico está em [AGENTS.md](AGENTS.md) e [docs/PROCESSO_IAS.md](docs/PROCESSO_IAS.md). Antes de codificar, consulte a Issue e os PRs existentes, registre a reserva de execução e a base/destino corretos. Crie branch isolada antes de editar e faça handoff verificável ao interromper.
 
-- **Documentação estável:** normalmente branch a partir de `main` do Laboratory, PR para `main` do Laboratory.
-- **Mudanças no aplicativo:** normalmente branch a partir de `develop-app` ou de uma dependência explícita, PR para o destino documentado na Issue. Não partir automaticamente da baseline.
+- **Documentação estável:** branch a partir de `main` do Laboratory, PR para `main` do Laboratory.
+- **Mudanças no aplicativo:** **branch a partir de `main` do Laboratory**, PR para essa `main`; exceções de PRs empilhados exigem dependência explicitamente aprovada na Issue. Não partir da baseline nem de `develop-app` por padrão.
+- **Migração de legado:** `develop-app` não compartilha ancestral Git com `main`. Nunca executar merge direto, reset ou force-push; comparar módulos e portar somente diferenças úteis em PRs pequenos criados a partir da `main`.
 - **Promoção ao Alfred original:** etapa separada com PR e aprovação explícita; aprovação de merge no Laboratory não autoriza o merge no principal.
 - Após publicação, confirmar CI e URL/commit da prévia quando existirem. Somente o proprietário aprova o destino e a integração.
 - Branches e arquivos somente são excluídos depois de verificação de dependências e autorização aplicável.
