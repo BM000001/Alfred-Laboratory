@@ -1,11 +1,7 @@
 name: Deploy Alfred Laboratory to GitHub Pages
 on:
   push:
-    branches:
-      - main
-      - feat/studies-gallery-exercises-20261112
-      - feat/studies-board-ocr-pipeline
-      - feat/studies-intelligent-material-controller
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
