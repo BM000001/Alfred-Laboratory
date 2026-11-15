@@ -4,3 +4,5 @@ dist/
 public/ocr/
 .env
 .env.*.local
+
+work/

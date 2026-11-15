@@ -1,3 +1,4 @@
+import type { AITask, AICentralSettings } from '../modules/aiCentral/contracts';
 import type { Project } from '../modules/projects/types';
 import type { Appointment } from '../modules/agenda/types';
 import type { CalendarSyncState, PendingGoogleCalendarCreate } from '../modules/agenda/googleCalendarTypes';
@@ -68,3 +69,6 @@ export const assistantMessageRepository = createRepository<AssistantMessage>(STO
 export const memoryRepository = createRepository<AssistantMemory>(STORE_NAMES.memories);
 export const egressAuditRepository = createRepository<EgressAuditEntry>(STORE_NAMES.egressAudit);
 export const egressSettingsRepository = createRepository<EgressSettings>(STORE_NAMES.egressSettings);
+
+export const aiTaskRepository = createRepository<AITask>(STORE_NAMES.aiTasks);
+export const aiCentralSettingsRepository = createRepository<AICentralSettings>(STORE_NAMES.aiCentralSettings);

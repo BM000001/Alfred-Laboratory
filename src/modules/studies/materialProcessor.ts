@@ -1,3 +1,4 @@
+import { aiCentral, enqueueLocalStudyTask } from '../aiCentral/taskService';
 import { fileRepository, studyTopicRepository, studyFlashcardRepository, studyQuestionRepository } from '../../storage/repositories';
 import { extractTextDocument } from '../files/documentExtractor';
 import type { StoredTextExtraction } from '../files/types';
@@ -54,14 +55,20 @@ export async function processStoredMaterial(id: string, profile: ProcessingProfi
       return state;
     }
     if (!state.structured) {
-      const definitions = extractStudyDefinitions(state.corrected);
-      state.structured = { blocks: structureMaterial(state.corrected), definitions, formulas: state.corrected.split('\n').filter(line => /[=∑∫√]/u.test(line)), summary: definitions.slice(0, 5).map(entry => entry.sourceExcerpt).join('\n') };
+      const request = await enqueueLocalStudyTask('studies.analyze', { sourceFileId: id, disciplineId: stored.disciplineId, text: state.corrected, confidence: state.assessment.score, profile });
+      const result = await aiCentral.run(request.id, signal);
+      const analysis = result.result?.analysis;
+      if (!analysis) throw new Error('A Central não devolveu a análise.');
+      state.structured = { blocks: structureMaterial(state.corrected), definitions: analysis.definitions, formulas: analysis.formulas, summary: analysis.summary };
       await checkpoint('Conteúdo estruturado e resumo extraído');
     }
     if (!state.generated) {
-      state.generated = validateMaterialResources(state.corrected, state.assessment.score, profile);
+      const request = await enqueueLocalStudyTask('studies.generate', { sourceFileId: id, disciplineId: stored.disciplineId, text: state.corrected, confidence: state.assessment.score, profile });
+      const result = await aiCentral.run(request.id, signal);
+      if (!result.result?.resources) throw new Error('A Central não devolveu recursos válidos.');
+      state.generated = result.result.resources;
       // Resource validity can lower confidence, never increase source confidence.
-      const combined = Math.min(state.assessment.score, Math.round(state.assessment.score * .9 + state.generated.validity * .1));
+      const combined = Math.min(state.assessment.score, Math.round(state.assessment.score * .9 + result.result.resources.validity * .1));
       state.assessment.score = combined;
       state.generated = validateMaterialResources(state.corrected, combined, profile);
       await checkpoint('Flashcards e questões validados');

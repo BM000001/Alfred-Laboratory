@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fileRepository, studyTopicRepository, studyFlashcardRepository, studyQuestionRepository } from '../../storage/repositories';
+import { aiTaskRepository, fileRepository, studyTopicRepository, studyFlashcardRepository, studyQuestionRepository } from '../../storage/repositories';
 import { processStoredMaterial } from './materialProcessor';
 import { extractTextDocument } from '../files/documentExtractor';
 vi.mock('../files/documentExtractor', () => ({ extractTextDocument: vi.fn() }));
@@ -9,7 +9,7 @@ async function save(id = 'f') {
 }
 beforeEach(async () => {
   vi.resetAllMocks();
-  await Promise.all([fileRepository.clear(), studyTopicRepository.clear(), studyFlashcardRepository.clear(), studyQuestionRepository.clear()]);
+  await Promise.all([aiTaskRepository.clear(), fileRepository.clear(), studyTopicRepository.clear(), studyFlashcardRepository.clear(), studyQuestionRepository.clear()]);
   vi.mocked(extractTextDocument).mockResolvedValue({ ...extraction, fileName: 'a.txt' });
 });
 describe('persistent processing', () => {
@@ -20,6 +20,9 @@ describe('persistent processing', () => {
     expect(result.structured?.definitions).toHaveLength(1); expect(result.generated?.flashcards).toHaveLength(1);
     expect((await studyFlashcardRepository.getAll())[0]).toMatchObject({ sourceFileId: 'f', disciplineId: 'd', sourceExcerpt: extraction.text });
     expect(progress).toContain('Resultados salvos');
+    const jobs = await aiTaskRepository.getAll();
+    expect(jobs.map(job => job.operation).sort()).toEqual(['studies.analyze','studies.generate']);
+    expect(jobs.every(job => job.status === 'completed' && job.provider === 'local')).toBe(true);
   });
   it('does not repeat OCR or generation after completion', async () => {
     await save();
