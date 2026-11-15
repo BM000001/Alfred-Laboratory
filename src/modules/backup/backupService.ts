@@ -1,3 +1,4 @@
+import type { AITask } from '../aiCentral/contracts';
 import { openAlfredDatabase, STORE_NAMES } from '../../storage/database';
 import type { Task } from '../tasks/types';
 import type { Project } from '../projects/types';
@@ -15,6 +16,7 @@ type BackupPayload = {
   version: typeof BACKUP_VERSION;
   createdAt: string;
   data: {
+    aiTasks?: AITask[];
     tasks: Task[];
     projects: Project[];
     appointments: Appointment[];
@@ -59,7 +61,7 @@ export async function createBackup(): Promise<string> {
     const names = [
       STORE_NAMES.tasks, STORE_NAMES.projects, STORE_NAMES.appointments,
       STORE_NAMES.disciplines, STORE_NAMES.studyTopics, STORE_NAMES.files,
-      STORE_NAMES.focusSessions, STORE_NAMES.assistantMessages, STORE_NAMES.memories,
+      STORE_NAMES.focusSessions, STORE_NAMES.assistantMessages, STORE_NAMES.memories, STORE_NAMES.aiTasks,
     ];
     const transaction = database.transaction(names, 'readonly');
     const requests = names.map((name) => new Promise<unknown[]>((resolve, reject) => {
@@ -67,18 +69,19 @@ export async function createBackup(): Promise<string> {
       request.onsuccess = () => resolve(request.result as unknown[]);
       request.onerror = () => reject(request.error ?? new Error('Falha ao ler os dados locais.'));
     }));
-    const [tasks, projects, appointments, disciplines, studyTopics, files, focusSessions, , memories] = await Promise.all(requests);
+    const [tasks, projects, appointments, disciplines, studyTopics, files, focusSessions, , memories, aiTasks] = await Promise.all(requests);
     const filePayload = await Promise.all((files as StoredFile[]).map(async (file) => ({
       id: file.id, name: file.name, type: file.type, size: file.size, createdAt: file.createdAt,
       ...(file.projectId ? { projectId: file.projectId } : {}),
       ...(file.disciplineId ? { disciplineId: file.disciplineId } : {}),
       ...(file.kind ? { kind: file.kind, noteText: file.noteText, updatedAt: file.updatedAt } : {}),
       ...(file.extraction ? { extraction: file.extraction } : {}),
+      ...(file.processing ? { processing: file.processing } : {}),
       contentBase64: toBase64(new Uint8Array(await file.blob.arrayBuffer())),
     })));
     const payload: BackupPayload = {
       format: BACKUP_FORMAT, version: BACKUP_VERSION, createdAt: new Date().toISOString(),
-      data: { tasks: tasks as Task[], projects: projects as Project[], appointments: appointments as Appointment[],
+      data: { aiTasks: aiTasks as AITask[], tasks: tasks as Task[], projects: projects as Project[], appointments: appointments as Appointment[],
         disciplines: disciplines as Discipline[], studyTopics: studyTopics as StudyTopic[], focusSessions: focusSessions as FocusSession[], memories: memories as AssistantMemory[], files: filePayload },
     };
     return JSON.stringify(payload);
@@ -96,6 +99,13 @@ export function inspectBackup(raw: string): { createdAt: string; counts: Record<
   if (data.focusSessions === undefined) data.focusSessions = [];
   if (data.memories === undefined) data.memories = [];
   for (const name of ['tasks', 'projects', 'appointments', 'disciplines', 'studyTopics', 'focusSessions', 'memories', 'files']) assertEntities(data[name], name);
+  if (data.aiTasks !== undefined) {
+    assertEntities(data.aiTasks, 'aiTasks');
+    for (const item of data.aiTasks) {
+      const task = item as unknown as Record<string, unknown>;
+      if (task.version !== 1 || !['studies.analyze', 'studies.generate'].includes(String(task.operation)) || !['local', 'gateway'].includes(String(task.provider)) || !['queued','running','completed','failed','cancelled'].includes(String(task.status)) || !isRecord(task.input) || typeof task.input.text !== 'string' || typeof task.input.sourceFileId !== 'string' || typeof task.input.disciplineId !== 'string' || typeof task.input.confidence !== 'number' || !Number.isFinite(task.input.confidence) || typeof task.createdAt !== 'string' || typeof task.updatedAt !== 'string' || !Number.isInteger(task.attempts)) throw new Error('O backup contém solicitações de IA inválidas.');
+    }
+  }
   const validCategories = ['preference', 'goal', 'project', 'routine', 'other'];
   if (!(data.memories as unknown[]).every((item) => isRecord(item) && typeof item.title === 'string' && item.title.trim().length > 0 && item.title.length <= 80 && typeof item.content === 'string' && item.content.trim().length > 0 && item.content.length <= 500 && validCategories.includes(String(item.category)) && typeof item.createdAt === 'string' && !Number.isNaN(Date.parse(item.createdAt)) && typeof item.updatedAt === 'string' && !Number.isNaN(Date.parse(item.updatedAt)))) {
     throw new Error('O backup contém memórias inválidas.');
@@ -148,6 +158,7 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
       transaction.onabort = () => reject(transaction.error ?? new Error('A restauração foi cancelada.'));
     });
     const rows: Record<string, unknown[]> = {
+      [STORE_NAMES.aiTasks]: payload.data.aiTasks ?? [],
       [STORE_NAMES.tasks]: payload.data.tasks,
       [STORE_NAMES.projects]: payload.data.projects,
       [STORE_NAMES.appointments]: payload.data.appointments,

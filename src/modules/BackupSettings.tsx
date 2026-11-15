@@ -5,7 +5,7 @@ import { decryptBackup, encryptBackup, isEncryptedBackup } from './backup/encryp
 type BackupPreview = ReturnType<typeof inspectBackup>;
 
 const labels: Record<string, string> = {
-  tasks: 'Tarefas', projects: 'Projetos', appointments: 'Compromissos',
+  aiTasks: 'Solicitações de IA', tasks: 'Tarefas', projects: 'Projetos', appointments: 'Compromissos',
   disciplines: 'Disciplinas', studyTopics: 'Conteúdos de estudo', focusSessions: 'Sessões Pomodoro', memories: 'Memórias do Alfred', files: 'Arquivos',
 };
 

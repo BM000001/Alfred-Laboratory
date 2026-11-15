@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+      - feat/studies-intelligent-material-controller
   workflow_dispatch:
 
 permissions:
