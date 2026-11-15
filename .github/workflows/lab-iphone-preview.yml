@@ -22,7 +22,9 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Test
+      - name: Test event-driven agent router
+        run: node --test .github/scripts/alfred-agent-event-router.test.mjs
+      - name: Test application
         run: npm test
       - name: Build for Laboratory Pages path
         env:
