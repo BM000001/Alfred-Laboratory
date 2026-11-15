@@ -8,6 +8,7 @@ import { validateEndpoint } from './providers';
 import { buildStudyPrompt } from './prompts';
 import { assessMaterial } from '../studies/materialReliability';
 import './aiCentral.css';
+import { VisionLab } from './VisionLab';
 
 const statuses: Record<AITask['status'], string> = { queued: 'Na fila', running: 'Interrompida ou em execução em outra aba', completed: 'Concluída', failed: 'Falhou', cancelled: 'Cancelada' };
 export function AICentral() {
@@ -56,7 +57,7 @@ export function AICentral() {
     if (!prepared || busy) return;
     setBusy(true); setNotice(''); controller.current = new AbortController();
     try {
-      const remote = prepared.provider === 'gateway' ? { endpoint: validateEndpoint(endpoint.trim()), token, consent: { taskId: prepared.id, endpoint: validateEndpoint(endpoint.trim()), includeImage: !!prepared.input.includeImage } } : undefined;
+      const remote = prepared.provider === 'gateway' ? { endpoint: validateEndpoint(endpoint.trim()), token, freeTierConsent: !!prepared.input.connection && consent, consent: { taskId: prepared.id, endpoint: validateEndpoint(endpoint.trim()), includeImage: !!prepared.input.includeImage } } : undefined;
       if (remote && !consent) throw new Error('Autorize o envio do conteúdo exibido.');
       await aiCentral.run(prepared.id, controller.current.signal, remote);
       setPrepared(null); setNotice('Tarefa concluída. Os resultados estão no histórico; propostas remotas não alteram o material original.');
@@ -78,17 +79,18 @@ export function AICentral() {
   }
   return <section className="ai-central" aria-label="Central de IAs">
     <header><span className="card-label">CENTRAL DE IAS · PRIMEIRA ETAPA</span><h2>Central de IAs</h2><p>Análise de materiais e geração de recursos, com histórico e retomada. O modo local já funciona; modelos com visão exigem um serviço configurado.</p></header>
-    <details><summary>Conectar modelo open source</summary>
+    <details><summary>Conectar serviço da Central</summary>
       <p>Informe o endereço do seu serviço da Central. Ele conecta o modelo; o GitHub Pages continua hospedando o Alfred. Nenhum serviço pago é ativado aqui.</p>
       <label>Endereço da Central<input type="url" value={endpoint} disabled={busy} placeholder="https://sua-central.exemplo" onChange={event => { setEndpoint(event.target.value); resetPreview(); }} /></label>
       <label>Token da Central<input type="password" autoComplete="off" value={token} disabled={busy} onChange={event => { setToken(event.target.value); setConsent(false); }} /></label>
       <p>O token fica somente na memória desta tela e será descartado ao sair. O serviço precisa de HTTPS para uso pelo iPhone. Localhost se refere ao dispositivo que está usando o Alfred.</p>
       <div className="ai-central-actions"><button type="button" disabled={busy} onClick={() => void saveEndpoint()}>Salvar endereço</button><button type="button" disabled={busy || !endpoint} onClick={() => void testConnection()}>Testar conexão</button></div>
     </details>
+    <VisionLab endpoint={endpoint} token={token} onChange={refresh} />
     <div className="ai-central-fields">
       <label>Material<select aria-label="Material" value={sourceId} disabled={busy} onChange={event => { setSourceId(event.target.value); setIncludeImage(false); resetPreview(); }}><option value="">Selecione um material salvo</option>{files.map(file => <option key={file.id} value={file.id}>{file.name}</option>)}</select></label>
       <label>Solicitação<select aria-label="Solicitação" value={operation} disabled={busy} onChange={event => { setOperation(event.target.value as AIOperation); setIncludeImage(false); resetPreview(); }}>{Object.entries(AI_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-      <label>Processamento<select aria-label="Processamento" value={provider} disabled={busy} onChange={event => { setProvider(event.target.value as AITask['provider']); setIncludeImage(false); resetPreview(); }}><option value="local">Local · sem modelo de IA</option><option value="gateway">Modelo open source conectado</option></select></label>
+      <label>Processamento<select aria-label="Processamento" value={provider} disabled={busy} onChange={event => { setProvider(event.target.value as AITask['provider']); setIncludeImage(false); resetPreview(); }}><option value="local">Local · sem modelo de IA</option><option value="gateway">Serviço de IA conectado</option></select></label>
     </div>
     {provider === 'gateway' && operation === 'studies.analyze' && source?.type.startsWith('image/') && <label><input type="checkbox" disabled={busy} checked={includeImage} onChange={event => { setIncludeImage(event.target.checked); resetPreview(); }} />Incluir a imagem original para reconhecimento visual</label>}
     <button type="button" className="primary-action" disabled={busy || !sourceId || (provider === 'gateway' && !endpoint)} onClick={() => void prepare()}>Preparar solicitação</button>
@@ -96,7 +98,7 @@ export function AICentral() {
       <h3>{AI_LABELS[prepared.operation]}</h3><p>{prepared.provider === 'local' ? 'Execução no dispositivo; nada será enviado.' : `Destino: ${endpoint}. Conteúdo: ${prepared.input.text.length} caracteres${prepared.input.includeImage ? ' e imagem original' : ', sem o arquivo original'}. Finalidade: ${AI_LABELS[prepared.operation].toLocaleLowerCase('pt-BR')}.`}</p>
       <details><summary>Ver instrução e texto completo</summary><pre>{buildStudyPrompt(prepared.operation)}</pre><pre>{prepared.input.text || '(somente imagem selecionada)'}</pre></details>
       {prepared.input.includeImage && <p>Imagem: {files.find(file => file.id === prepared.input.sourceFileId)?.name ?? prepared.input.sourceFileId}. O original permanece salvo no dispositivo.</p>}
-      {prepared.provider === 'gateway' && <label><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} />Autorizo enviar este conteúdo acadêmico ao destino exibido.</label>}
+      {prepared.provider === 'gateway' && <label><input type="checkbox" checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} />Autorizo enviar este conteúdo acadêmico ao destino exibido.{prepared.input.connection && ` Conexão: ${prepared.input.connection.label}, modelo ${prepared.input.connection.model}, provedor ${prepared.input.connection.provider}. Conferi que a conta não tem faturamento ativado e que este modelo possui cota gratuita.`}</label>}
       <button type="button" disabled={busy || (prepared.provider === 'gateway' && (!consent || !token))} onClick={() => void execute()}>{prepared.provider === 'local' ? 'Executar no dispositivo' : 'Enviar esta solicitação'}</button>
     </section>}
     {busy && <button type="button" onClick={() => controller.current?.abort()}>Cancelar solicitação</button>}

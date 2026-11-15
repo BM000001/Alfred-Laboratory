@@ -44,6 +44,7 @@ export function validateRemoteResult(task: AITask, value: unknown): AIResult {
 export async function remoteExecution(task: AITask, remote: RemoteExecution, signal: AbortSignal): Promise<AIResult> {
   const endpoint = validateEndpoint(remote.endpoint);
   if (remote.consent.taskId !== task.id || remote.consent.endpoint !== endpoint || remote.consent.includeImage !== !!task.input.includeImage || !remote.token.trim()) throw new Error('Revise e autorize este envio para a Central configurada.');
+  if (task.input.connection && (task.input.connection.endpoint !== endpoint || !remote.freeTierConsent)) throw new Error('Confirme o destino e a cota gratuita desta conexão.');
   if ((await egressSettingsRepository.getById('global'))?.enabled === false) throw new Error('O envio externo está desativado nas configurações de privacidade.');
   const file = await fileRepository.getById(task.input.sourceFileId);
   if (!file || file.disciplineId !== task.input.disciplineId) throw new Error('Arquivo de origem indisponível ou movido para outra disciplina.');
@@ -51,12 +52,24 @@ export async function remoteExecution(task: AITask, remote: RemoteExecution, sig
   const image = remote.consent.includeImage ? await imageData(file.blob) : undefined;
   signal.throwIfAborted();
   await egressAuditRepository.save(createEgressAuditEntry({ classes: ['academic'], itemCount: 1, characterCount: task.input.text.length, action: 'sent_to_ai' }));
-  const response = await fetch(`${endpoint}/v1/tasks`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${remote.token}` }, signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]), redirect: 'error', body: JSON.stringify({ version: 1, id: task.id, operation: task.operation, sourceFileId: task.input.sourceFileId, promptVersion: PROMPT_VERSION, instruction: buildStudyPrompt(task.operation), text: task.input.text, ...(image ? { image } : {}) }) });
-  if (!response.ok) throw new Error(`A Central recusou a tarefa (HTTP ${response.status}).`);
+  // Recover a server-completed task before uploading the photo again after interruption.
+  let response: Response | undefined;
+  if (task.attempts > 1 && task.input.connection) {
+    response = await fetch(`${endpoint}/v1/tasks/${encodeURIComponent(task.id)}`, { headers: { Authorization: `Bearer ${remote.token}` }, signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]), redirect: 'error' });
+    if (response.status === 404) response = undefined;
+  }
+  if (!response) {
+  response = await fetch(`${endpoint}/v1/tasks`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${remote.token}` }, signal: AbortSignal.any([signal, AbortSignal.timeout(120_000)]), redirect: 'error', body: JSON.stringify({ version: 1, id: task.id, operation: task.operation, sourceFileId: task.input.sourceFileId, promptVersion: PROMPT_VERSION, instruction: buildStudyPrompt(task.operation), text: task.input.text, ...(task.input.connection ? { connectionId: task.input.connection.id, connectionRevision: task.input.connection.revision, freeTierConsent: remote.freeTierConsent === true } : {}), ...(image ? { image } : {}) }) });
+  }
+  if (!response.ok) {
+    const failure = await response.json().catch(() => null);
+    throw new Error(record(failure) && record(failure.error) && typeof failure.error.message === 'string' ? failure.error.message.slice(0, 500) : `A Central recusou a tarefa (HTTP ${response.status}).`);
+  }
   const text = await response.text();
   if (text.length > 1_000_000) throw new Error('A resposta da Central excedeu o limite.');
   const envelope: unknown = JSON.parse(text);
   if (!record(envelope) || envelope.id !== task.id || envelope.version !== 1) throw new Error('Resposta não corresponde à tarefa enviada.');
+  if (task.input.connection && (envelope.connectionId !== task.input.connection.id || envelope.connectionRevision !== task.input.connection.revision || envelope.model !== task.input.connection.model || envelope.provider !== task.input.connection.provider)) throw new Error('Resposta pertence a outra conexão ou modelo.');
   const result = validateRemoteResult(task, envelope.result);
   result.execution = { provider: 'gateway', endpoint, promptVersion: PROMPT_VERSION, ...(typeof envelope.model === 'string' && envelope.model.length <= 256 ? { model: envelope.model } : {}) };
   if (record(envelope.usage) && Number.isSafeInteger(envelope.usage.inputTokens) && Number.isSafeInteger(envelope.usage.outputTokens) && Number(envelope.usage.inputTokens) >= 0 && Number(envelope.usage.outputTokens) >= 0) result.usage = { inputTokens: Number(envelope.usage.inputTokens), outputTokens: Number(envelope.usage.outputTokens) };

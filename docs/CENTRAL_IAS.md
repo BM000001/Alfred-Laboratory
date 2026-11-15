@@ -38,3 +38,65 @@ Consulte [instruções do serviço](../services/ai-central/README.md). Nenhum to
 6. Só depois ampliar validação semântica e habilitar aplicação de resultados e mais tipos de tarefas.
 
 Não estão incluídos: sincronização entre dispositivos, múltiplos usuários, precificação monetária, download de pesos, GPU provisionada ou homologação em Safari físico. O serviço registra tokens informados pelo endpoint, mas ainda não estima custo de infraestrutura. Novas operações devem declarar contrato, limites, validação e regra de saída de dados antes de serem registradas.
+
+## Gemini e Groq: configurar e comparar fotos
+
+A seção **Configurações → Central de IAs → Gemini e Groq** configura conexões de
+API no serviço da Central. Não é login nas contas dos aplicativos de chat.
+Esta implementação está no PR #52; não basta abrir a versão pública anterior.
+
+1. Inicie o serviço Node conforme `services/ai-central/README.md`. Para o celular,
+   ele precisa estar acessível por HTTPS, com a origem do Alfred autorizada. Não
+   exponha a porta sem autenticação/TLS. Nenhum servidor remoto é provisionado
+   automaticamente e o GitHub Pages não executa este backend.
+2. No [Google AI Studio](https://aistudio.google.com/apikey) e no
+   [console Groq](https://console.groq.com/keys), crie as chaves de contas Free,
+   sem ativar faturamento. Não publique nem envie as chaves pelo chat/GitHub.
+   Confira as [condições Gemini](https://ai.google.dev/gemini-api/docs/billing),
+   as [condições Groq](https://console.groq.com/docs/billing-faqs), limites e
+   políticas de tratamento de material acadêmico antes de enviar suas fotos.
+3. Informe endereço e token da Central na tela. O token dura somente nessa tela;
+   o endereço é salvo no dispositivo. Em “Adicionar conexão”, selecione provedor,
+   nome e chave e confirme as condições da conta. A consulta inicial apenas lista
+   modelos; não faz uma análise. A chave é enviada ao backend e removida do campo.
+4. Escolha no catálogo um modelo que aceite imagens **e tenha cota gratuita na
+   sua conta**, verificando no painel do provedor; confirme a seleção. Catálogo
+   não comprova preço, suporte a visão ou saldo. A confirmação é sua declaração,
+   não uma garantia técnica de custo zero. Não ative faturamento se quer custo
+   zero; o Alfred não ativa cobrança nem escolhe alternativa paga.
+5. Crie uma disciplina em Estudos. Selecione uma conexão Gemini e outra Groq,
+   a disciplina e uma foto JPG/PNG/WebP de até 8 MB. HEIC precisa de conversão.
+   Revise a instrução e autorize o envio aos dois provedores. O original é salvo
+   localmente antes das duas tarefas; ambas ficam registradas antes do primeiro
+   envio. Não é necessário transcrever o quadro.
+6. Compare as propostas lado a lado (empilhadas no celular). Os modelos recebem
+   a mesma foto e instrução; transcrição e incertezas ficam separadas. Não há
+   nota de qualidade inventada nem geração/salvamento automático de cartões.
+   Dois modelos concordarem não demonstra fidelidade ao quadro.
+7. Após recarga, os resultados continuam no IndexedDB. Para uma tarefa pendente,
+   informe de novo o token, revise o provedor/modelo exibido e autorize a retomada.
+   A Central busca a resposta pronta na caixa privada antes de repetir o envio.
+   Cota esgotada/erro não elimina a resposta válida do outro provedor. Não existe
+   fallback automático, repetição automática de inferência ou troca de modelo.
+
+O backend guarda as chaves com AES-256-GCM em `CENTRAL_DATA_DIR/.connections/`;
+metadados públicos não incluem segredos. A chave mestra fica no mesmo servidor:
+proteja a pasta, backups e permissões/ACL do Windows. Isso não protege contra um
+servidor comprometido. Remover uma conexão apaga-a do cofre, não revoga a chave
+no provedor nem remove cópias antigas de backups. Revogue no painel se necessário.
+Os resultados da caixa privada são arquivos de dados autenticados, não commits
+nem issues públicos do GitHub. A instalação é de usuário único, com um processo
+por diretório; não oferece isolamento entre múltiplos usuários com o mesmo token.
+
+Cancelar interrompe a espera/envio no navegador; o provedor pode concluir uma
+inferência iniciada. Se a resposta já foi persistida pelo backend, a retomada a
+recupera sem inferência. Uma queda do backend antes da gravação pode exigir nova
+inferência: não há promessa de execução exatamente uma vez nesse intervalo.
+Não limpar dados do navegador se pretende preservar os originais/resultados locais.
+
+### Limite da validação desta entrega
+
+Os testes automatizados usam provedores controlados para verificar autenticação,
+contratos, imagem, cofre, cota, retomada e conservação de resultados. Não são
+medição da qualidade de Gemini/Groq em manuscritos. Nenhuma chave real foi
+configurada e nenhuma foto real foi enviada aos provedores nesta implementação.
