@@ -1,14 +1,5 @@
 # Continuidade do Alfred
 
-## Marco — teste de mensagens longas do assistente (2026-11-09)
-
-- Escopo: prioridade 3 do backlog (mensagens longas da interface conversacional), independente dos arquivos de código dos PRs #20–#28.
-- Implementação: commit `34f2086086fb5809b35d27f28797bbaff8978cea`, arquivo `src/modules/AssistantLongMessage.test.tsx`. Testa envio de mensagem entre 400 e 500 caracteres, renderização exata, persistência no IndexedDB simulado e limpeza do campo.
-- Papéis: exploração, implementação, QA por inspeção e revisão estática aplicados manualmente pelo coordenador; nenhum subagente delegado, nenhum carregamento nativo ECC.
-- Evidência: leitura do código `src/modules/Assistant.tsx`, `src/modules/Assistant.test.tsx`, `package.json`, PRs abertos e diffs. `npm test` e `npm run build:pages` não executados neste ambiente; CI ainda a verificar, não afirmar sucesso. Safari/iPhone não testado.
-- Riscos: o workflow de PRs recentes apresentou falhas antes da criação de jobs; não atribuir tais falhas ao teste sem logs. Próxima ação: conferir execução de testes/build e revisar o PR sem merge.
-
-
 ## Estado atual — 2026-11-04 (atualizado após PR #63)
 - PR #58 — remoção da dependência da Vercel e manutenção da arquitetura local-first — integrada à `main` por squash merge; commit `ad5b47feb357bdf92a08df3b4e5af26e8c50c40d`.
 - PR #59 — atualização deste documento após a remoção da Vercel — integrada; CI aprovado.
@@ -104,9 +95,16 @@
 - Atualizar este documento em cada marco confirmado.
 - Não criar registros fictícios nem incluir segredos ou dados pessoais.
 
-## Marco — PR #29: correção do teste de mensagem longa (2026-11-10)
-- Correção real: commit `3b28295dff1ffc134d4c2240779bd6e6c8130339` em `src/modules/AssistantLongMessage.test.tsx`; o teste agora compara o texto exibido e persistido com `message.trim()`, coerente com `submit()` em `src/modules/Assistant.tsx`.
-- Evidência: CI anterior, workflow `42681067195`, job `129375406285`, falhou no passo `Test` porque a mensagem de entrada terminava com espaço e o componente remove espaços nas extremidades. Log confirmou que a mensagem estava visível, sem o espaço final.
-- Papéis: explorer, implementer, QA e reviewer aplicados manualmente; nenhum subagente executado nem carregamento nativo ECC.
-- Comandos/validação: consulta aos logs do job e inspeção dos arquivos pelo conector GitHub; testes e build pós-correção ainda não executados nesta sessão. Diff limitado ao teste e este marco.
-- PR: https://github.com/BM000001/Alfred-Laboratory/pull/29 (base `main`). Risco: regressões de suíte não verificadas até novo CI. Próxima ação: conferir o CI do novo SHA e corrigir apenas falhas concretas. Sem merge/deploy.
+## 2026-11-11 — Espaços integrados e identidade Alfred
+- Branch: `feat/alfred-workspace-design`; sem merge na main.
+- Navegação agrupada em Hoje, Organização, Estudos, Projetos, Alfred e Configurações. Calendário, tarefas e foco continuam acessíveis dentro de Organização.
+- Calendário com grades de dia/semana/mês/ano, navegação de período, abertura de eventos e integração/importação preservadas em seção recolhível.
+- Projetos abrem seu próprio espaço com tarefas editáveis, arquivos vinculados e caderno de anotações persistentes. Campos opcionais nos registros existentes evitam migração destrutiva. Arquivos antigos continuam acessíveis na biblioteca de materiais em Estudos.
+- Disciplinas separadas em conteúdos, materiais, anotações e prática, preservando flashcards, questões, importação e desempenho.
+- Mascote e fontes locais reutilizados do protótipo aprovado. Movimento suave, reação ao apontar/clicar e respeito a movimento reduzido. Clicar abre o assistente existente, sem ativar provedores remotos.
+- Aparência Cotidiano/Técnico com seleção explícita e persistência, disponível somente na inicial e em Configurações.
+- Backup preserva vínculos de projeto/disciplina, texto de notas e extrações de arquivos. Testes de escopo, edição, navegação com rascunho e restauração adicionados.
+- Build para GitHub Pages passou localmente; aviso existente de bundle acima de 500 kB permanece. Verificação visual pendente: Chromium local não inicia por bloqueio de socket; navegador compartilhado não alcança a prévia local (ERR_CONNECTION_REFUSED). Não foi validado em Safari/iPhone.
+- Próximo passo: CI da PR e revisão visual dos seis espaços em desktop e Safari antes de integrar.
+- Validação local final: `npm test -- --maxWorkers=2` — 41 arquivos, 240 testes aprovados; `npm run build:pages` — aprovado. Uma execução concorrente ao build excedeu o prazo de consultas de dois testes de interface; a execução isolada e a suíte completa com dois workers passaram. A validação oficial da PR será feita pelo GitHub Actions.
+- Checkpoint local: `470f386055255e0b72463a010f4e3ea25ed30f43`. Push bloqueado pela revisão automática: exige autorização explícita para transmitir o código a BM000001/Alfred. Não há PR nem publicação desta implementação. Patch completo preservado em `/workspace/alfred-workspace-design.patch`; retomar pelo push da branch após autorização. Não apagar o checkout antes de confirmar o envio.
