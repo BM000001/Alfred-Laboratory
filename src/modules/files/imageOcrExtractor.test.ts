@@ -19,4 +19,18 @@ describe('image OCR candidate selection', () => {
   it('returns an empty result when all OCR passes are empty', () => {
     expect(chooseBestOcrCandidate([])).toEqual({ text: '', confidence: 0 });
   });
+
+  it('does not prefer a blank OCR pass with high confidence to a short readable result', () => {
+    expect(chooseBestOcrCandidate([
+      { text: '  ', confidence: 99 },
+      { text: 'ATP', confidence: 72 },
+    ])).toEqual({ text: 'ATP', confidence: 72 });
+  });
+
+  it('normalizes all blank OCR passes to a zero-confidence result', () => {
+    expect(chooseBestOcrCandidate([
+      { text: '', confidence: 98 },
+      { text: '\n  ', confidence: 75 },
+    ])).toEqual({ text: '', confidence: 0 });
+  });
 });
