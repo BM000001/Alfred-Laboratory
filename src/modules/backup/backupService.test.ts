@@ -29,7 +29,7 @@ const attempt = {
 };
 const progress = {
   id: 'backup-progress-59', disciplineId: 'software', lessonId: 'lesson-59',
-  completedAt: '2026-11-15T12:03:00.000Z', context: 'technical',
+  completedAt: '2026-11-15T12:03:00.000Z', context: 'technical' as const,
 };
 
 async function progressRequest<T>(mode: IDBTransactionMode, operation: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
