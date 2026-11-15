@@ -1,3 +1,4 @@
+import { AICentral } from '../modules/aiCentral/AICentral';
 import mascotImage from '../assets/alfred.png';
 import { useEffect, useState, type ReactNode } from 'react';
 import { PersonalOrganization } from '../modules/PersonalOrganization';
@@ -153,7 +154,7 @@ function App() {
           ) : activeSection === 'estudos' ? (
             <Studies />
           ) : activeSection === 'configuracoes' ? (
-            <BackupSettings />
+            <><BackupSettings /><AICentral /></>
           ) : activeSection === 'projetos' ? (
             <ProjectWorkspace />
           ) : null}

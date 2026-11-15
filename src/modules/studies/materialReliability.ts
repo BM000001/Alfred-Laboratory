@@ -112,3 +112,5 @@ export function structureMaterial(source: string) {
   }
   return blocks;
 }
+
+export type MaterialResources = ReturnType<typeof validateMaterialResources>;

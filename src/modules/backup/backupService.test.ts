@@ -92,3 +92,13 @@ describe('backupService', () => {
     expect(inspectBackup(JSON.stringify(valid)).counts.files).toBe(1);
   });
 });
+
+it('preserves AI task history when restoring a new backup', async () => {
+  const { aiTaskRepository } = await import('../../storage/repositories');
+  const task: import('../aiCentral/contracts').AITask = { id: 'ai-backup', version: 1, operation: 'studies.analyze', provider: 'local', input: { sourceFileId: 'file', disciplineId: 'discipline', text: 'Material acadêmico.', confidence: 80, profile: 'prose' }, status: 'queued', attempts: 0, createdAt: '2026-11-15T00:00:00Z', updatedAt: '2026-11-15T00:00:00Z' };
+  await aiTaskRepository.save(task);
+  const backup = inspectBackup(await createBackup());
+  await aiTaskRepository.clear();
+  await restoreBackup(backup.payload);
+  expect(await aiTaskRepository.getById(task.id)).toEqual(task);
+});
