@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b0f14">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; object-src 'none'; form-action 'none'">
+  <title>Central de Comando Alfred — Protótipo</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b0f14;color:#edf0f2;font-synthesis:none}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;line-height:1.5}
+    button,input,select{font:inherit}button,a,select,input{-webkit-tap-highlight-color:transparent}
+    button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #d5bb7e;outline-offset:3px}
+    a{color:#dfc58d;text-underline-offset:4px}a:hover{text-decoration-thickness:2px}
+    .shell{width:min(1040px,calc(100% - 36px));margin-inline:auto}
+    .topbar{border-bottom:1px solid #28303b;background:#0d1218}
+    .top{min-height:80px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .identity{display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit}
+    .crest{display:grid;place-items:center;width:44px;height:44px;border:1px solid #a98f5d;border-radius:12px;color:#ddbe7f;font-size:24px;font-family:Georgia,serif;font-weight:700}
+    .wordmark{display:block;font-size:13px;font-weight:800;letter-spacing:.18em}.subtitle{display:block;color:#9fa8b6;font-size:12px}
+    .outline-link{border:1px solid #36404c;border-radius:10px;padding:9px 12px;text-decoration:none;color:#d4d9de;font-size:13px;white-space:nowrap}
+    .demo-notice{margin:24px 0 12px;border:1px solid #63563f;background:#1b1a18;border-radius:12px;padding:12px 15px;font-size:13px;color:#e0d0aa}
+    .eyebrow{margin:0 0 10px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;font-size:11px;color:#d1b779}
+    .hero{padding:28px 0 28px;border-bottom:1px solid #2b333d}
+    h1{margin:0;max-width:750px;font-size:clamp(29px,5vw,49px);font-weight:750;line-height:1.16;letter-spacing:-.045em}
+    .lead{margin:16px 0 0;max-width:700px;font-size:15px;color:#afbac6}
+    .time{margin-top:16px;font-size:12px;color:#919ba8}
+    h2{font-size:19px;letter-spacing:-.02em;margin:0}h3{font-size:17px;letter-spacing:-.02em;margin:0}
+    .heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:30px 0 14px}
+    .muted{font-size:13px;color:#a1acb8}.priority{border:1px solid #a78952;border-radius:17px;padding:21px;background:linear-gradient(130deg,#1b1a19,#121820 70%);display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center}
+    .priority h3{font-size:21px;margin-bottom:8px}.priority p{margin:0 0 10px;color:#bfbdba;font-size:14px}
+    .priority small{font-size:12px;color:#b0a897}.priority .eyebrow{margin-bottom:8px}
+    .action{border:1px solid #b3955c;border-radius:10px;background:#c8a869;color:#161719;font-size:13px;font-weight:800;padding:11px 16px;cursor:pointer;min-height:44px}
+    .action:hover{background:#dfc48b}
+    .workspace{margin-top:35px}.tabs{display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #2b333d;padding-bottom:12px}
+    .tab{border:1px solid transparent;background:transparent;border-radius:10px;color:#a7b0bd;font-size:14px;padding:11px 14px;cursor:pointer;min-height:44px}
+    .tab[aria-selected=true]{border-color:#75664e;background:#25231f;color:#e7d0a1;font-weight:700}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:20px 0}
+    .toolbar p{margin:0;color:#aeb6c1;font-size:13px}
+    .search{flex:1;max-width:310px;min-width:170px;padding:11px 13px;border:1px solid #394451;border-radius:9px;background:#151b23;color:#e9edf0;font-size:14px}
+    .filter{border:1px solid #394451;border-radius:9px;background:#151b23;color:#e9edf0;padding:10px 12px;font-size:13px}
+    .cards{display:grid;gap:11px}
+    .task{border:1px solid #2f3945;border-radius:14px;background:#131a22;padding:18px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px}
+    .meta{font-size:12px;color:#a7b2bf;display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+    .dot{width:5px;height:5px;background:#768395;border-radius:50%}
+    .task h3{margin-bottom:6px}.task p{margin:0;color:#aab6c3;font-size:13px}
+    .milestone{display:flex;align-items:center;gap:6px;margin-top:13px}
+    .track{width:22px;height:5px;border-radius:5px;background:#394452}
+    .track.done{background:#c3ad7c}
+    .progress-label{font-size:12px;color:#acb5bf;margin-left:6px}
+    .view{background:transparent;border:1px solid #485362;border-radius:10px;padding:10px 13px;min-height:44px;color:#e1e6ed;cursor:pointer;white-space:nowrap;font-size:13px}
+    .view:hover{border-color:#cab080;color:#f2d8a4}
+    .empty{border:1px dashed #46505b;border-radius:13px;padding:30px 18px;text-align:center;color:#bbc4cc;font-size:14px}
+    .notes{margin:42px 0 35px;padding-top:18px;border-top:1px solid #2c343f}
+    .notes p{font-size:14px;color:#abb5c2;margin:8px 0}
+    .notes .source{display:flex;gap:12px 22px;flex-wrap:wrap;margin-top:13px;font-size:13px}
+    footer{padding:15px 0 34px;color:#82909f;font-size:12px}
+    dialog{padding:0;border:1px solid #58606b;border-radius:17px;background:#141b23;color:#eef1f4;box-shadow:0 20px 80px #000b;width:min(560px,calc(100% - 24px));max-height:min(85vh,760px)}
+    dialog::backdrop{background:#04070bbd}
+    .dialog-body{padding:25px;overflow:auto;max-height:85vh}
+    .dialog-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+    .close{border:1px solid #525f6b;background:#222c35;color:#fff;border-radius:9px;cursor:pointer;font-size:19px;width:39px;height:39px}
+    .dialog-body h2{font-size:23px;margin:0}.dialog-body h3{margin:22px 0 9px;font-size:15px}
+    .dialog-body p{color:#bac4ce;font-size:14px}
+    .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
+    .detail-box{border:1px solid #34404b;border-radius:10px;padding:12px}
+    .detail-box span{font-size:11px;color:#a1aebc;display:block}
+    .detail-box strong{display:block;font-size:13px;margin-top:6px;font-weight:600}
+    .step-list{list-style:none;padding:0;margin:0;display:grid;gap:9px}
+    .step-list li{font-size:13px;color:#c2ccd5;display:flex;align-items:center;gap:10px}
+    .step-list span{display:grid;place-items:center;width:22px;height:22px;border:1px solid #59626e;border-radius:50%;font-size:12px}
+    .step-list .ok span{border-color:#ab9164;color:#efce8c}
+    .visual-placeholder{border:1px dashed #53606d;border-radius:11px;min-height:92px;display:grid;place-items:center;text-align:center;color:#abb6c3;font-size:13px;padding:15px}
+    @media(max-width:620px){
+      .shell{width:min(100% - 28px,1040px)}.top{min-height:72px}.outline-link{font-size:12px;padding:8px}
+      .hero{padding-top:22px}.priority,.task{grid-template-columns:1fr}.priority .action{width:100%}
+      .task .view{justify-self:start}.toolbar{align-items:stretch}.search{max-width:none;width:100%}
+      .toolbar p{width:100%}.detail-grid{grid-template-columns:1fr}
+      .dialog-body{padding:20px}
+    }
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell top">
+      <a class="identity" href="#inicio" aria-label="Central de Comando, voltar ao início">
+        <span class="crest" aria-hidden="true">A</span>
+        <span><span class="wordmark">ALFRED</span><span class="subtitle">Central de Comando</span></span>
+      </a>
+      <a class="outline-link" href="https://github.com/BM000001/Alfred-Laboratory/issues/44" target="_blank" rel="noopener noreferrer">Especificação oficial</a>
+    </div>
+  </header>
+  <main id="inicio" class="shell">
+    <div class="demo-notice" role="status"><strong>PROTÓTIPO · DADOS FICTÍCIOS.</strong> Nenhum cartão representa o estado real do projeto. Sem login, conexão ao GitHub ou operações de escrita.</div>
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="eyebrow">Visão geral de exemplo</p>
+      <h1 id="hero-title">O que mudou, o que falta e o que precisa de você.</h1>
+      <p class="lead">Uma única página para acompanhar entregas, pendências, evidências e decisões — sem misturar código em revisão com trabalho realmente concluído.</p>
+      <p class="time">Fonte nesta versão: exemplos locais ilustrativos · sincronização indisponível</p>
+    </section>
+    <section aria-labelledby="priority-title">
+      <div class="heading"><h2 id="priority-title">Próxima decisão sugerida</h2><span class="muted">Apenas demonstração</span></div>
+      <div class="priority">
+        <div>
+          <p class="eyebrow">Tarefa em foco · EX-101</p>
+          <h3>Consolidar entregas de estudos antes de começar outra funcionalidade</h3>
+          <p>Exemplo de recomendação: comparar implementações já existentes, eliminar duplicações e então validar a versão escolhida no iPhone.</p>
+          <small>Decisão não registrada · nenhuma execução será iniciada por este painel</small>
+        </div>
+        <button class="action" type="button" id="focus-detail">Examinar detalhes</button>
+      </div>
+    </section>
+    <section class="workspace" aria-labelledby="work-title">
+      <div class="heading"><h2 id="work-title">Acompanhamento</h2><span class="muted">Exemplos navegáveis</span></div>
+      <div class="tabs" role="tablist" aria-label="Filtrar tarefas por fase">
+        <button class="tab" role="tab" id="tab-ativas" aria-controls="task-list" aria-selected="true" data-lane="ativas" type="button">Ativas</button>
+        <button class="tab" role="tab" id="tab-futuras" aria-controls="task-list" aria-selected="false" data-lane="futuras" type="button">Ideias futuras</button>
+        <button class="tab" role="tab" id="tab-arquivados" aria-controls="task-list" aria-selected="false" data-lane="arquivados" type="button">Arquivados</button>
+      </div>
+      <div class="toolbar">
+        <p id="result-count" aria-live="polite"></p>
+        <input class="search" id="search" aria-label="Buscar tarefa demonstrativa" type="search" placeholder="Buscar tarefa ou próximo passo">
+        <select class="filter" id="history-filter" aria-label="Filtrar histórico" hidden>
+          <option value="todas">Todo o histórico</option>
+          <option value="concluida">Concluídas</option>
+          <option value="arquivada">Arquivadas sem implementação</option>
+        </select>
+      </div>
+      <div class="cards" id="task-list" role="tabpanel" aria-labelledby="tab-ativas"></div>
+    </section>
+    <section class="notes" aria-labelledby="notes-title">
+      <h2 id="notes-title">Como a versão real funcionará</h2>
+      <p>O GitHub será a fonte verificável de Issues, PRs, commits e testes. Os marcos de cada entrega serão separados: definido, código publicado, CI, teste no iPhone e aprovação. <strong>Uma PR aberta nunca será mostrada como concluída.</strong></p>
+      <p>Acesso privado via Google, sincronização automática, capturas reais, alertas e controle de agentes dependem de uma arquitetura autenticada e ainda não estão disponíveis. Este protótipo não solicita senhas nem tokens.</p>
+      <div class="source">
+        <a href="https://github.com/BM000001/Alfred-Laboratory/issues/44" target="_blank" rel="noopener noreferrer">Decisões da Central (#44)</a>
+        <a href="https://github.com/BM000001/Alfred-Laboratory/blob/main/docs/PROCESSO_IAS.md" target="_blank" rel="noopener noreferrer">Processo dos agentes</a>
+        <a href="https://github.com/BM000001/Alfred-Laboratory/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap documentado</a>
+      </div>
+    </section>
+  </main>
+  <footer class="shell">Central de Comando Alfred · Protótipo sem dados reais · Nenhuma alteração no projeto principal</footer>
+  <dialog id="detail" aria-labelledby="detail-title">
+    <div class="dialog-body">
+      <div class="dialog-top"><div><p class="eyebrow" id="detail-id"></p><h2 id="detail-title"></h2></div><button class="close" id="close" type="button" aria-label="Fechar detalhes">×</button></div>
+      <p id="detail-desc"></p>
+      <div class="detail-grid">
+        <div class="detail-box"><span>Estado ilustrativo</span><strong id="detail-status"></strong></div>
+        <div class="detail-box"><span>Etapas confirmadas neste exemplo</span><strong id="detail-progress"></strong></div>
+      </div>
+      <h3>Etapas de entrega</h3><ul class="step-list" id="detail-steps"></ul>
+      <h3>Visual · antes e depois</h3><div class="visual-placeholder">Captura real indisponível neste protótipo. A versão futura vinculará imagens ao commit correto.</div>
+      <h3>O que mudou por dentro</h3><p id="detail-code"></p>
+      <h3>Próximo passo</h3><p id="detail-next"></p>
+      <p class="muted">Sem PR, commit ou CI reais vinculados a este exemplo. Nenhum agente em execução foi verificado.</p>
+    </div>
+  </dialog>
+  <script>
+    "use strict";
+    const STAGES = ["Escopo definido", "Código publicado", "CI verificado", "Testado no iPhone", "Aprovado e integrado"];
+    const tasks = [
+      {id:"EX-101",lane:"ativas",title:"Consolidar entregas de estudos",status:"Em revisão",steps:2,desc:"Exemplo: há alternativas de implementação que precisam de comparação antes de integrar.",code:"Comparação entre fluxos de OCR, persistência e estudos; nenhum resultado real verificado neste exemplo.",next:"Comparar branches, escolher partes reutilizáveis e preparar validação móvel."},
+      {id:"EX-102",lane:"ativas",title:"Validar navegação no iPhone",status:"Pronta para testar",steps:3,desc:"Exemplo de entrega que passou por código e verificações, mas ainda depende de teste no dispositivo.",code:"Ajustes de navegação responsiva e foco dos controles, descritos apenas para demonstrar o formato.",next:"Executar o roteiro no Safari e registrar evidência do teste."},
+      {id:"EX-103",lane:"ativas",title:"Revisar integração de calendário",status:"Bloqueada",steps:1,desc:"Exemplo de dependência de infraestrutura que impede concluir uma integração.",code:"Nenhuma mudança de produção demonstrada.",next:"Resolver a dependência e registrar novo checkpoint verificável."},
+      {id:"EX-104",lane:"futuras",title:"Sugerir tarefas por impacto",status:"Proposta",steps:0,desc:"Exemplo de recomendação de prioridade baseada em utilidade, risco e trabalho reaproveitável.",code:"Ideia não implementada neste cenário.",next:"Especificar critérios e obter autorização antes de executar."},
+      {id:"EX-105",lane:"futuras",title:"Avisar quando uma entrega estiver testável",status:"Planejada",steps:1,desc:"Exemplo de aviso no celular apenas quando houver entrega comprovada ou bloqueio importante.",code:"Nenhum serviço de notificações implementado neste exemplo.",next:"Validar permissão do usuário e infraestrutura de envio."},
+      {id:"EX-106",lane:"arquivados",title:"Alternativa antiga de navegação",status:"Arquivada",steps:1,desc:"Exemplo de ideia descartada sem apagar seu histórico de decisões.",code:"Rascunho preservado somente para consulta.",next:"Nenhuma ação planejada."},
+      {id:"EX-107",lane:"arquivados",title:"Padronizar um checklist de entrega",status:"Concluída",steps:5,desc:"Exemplo de como uma tarefa aprovada e integrada aparece no histórico.",code:"Checklist fictício utilizado para demonstrar o estado final.",next:"Nenhuma ação: histórico ilustrativo."}
+    ];
+    let activeLane = "ativas";
+    const list = document.getElementById("task-list");
+    const search = document.getElementById("search");
+    const historyFilter = document.getElementById("history-filter");
+    const dialog = document.getElementById("detail");
+    const $ = id => document.getElementById(id);
+    const set = (id,value) => {$(id).textContent=value;};
+    function progressRow(task){
+      const line=document.createElement("div");line.className="milestone";
+      for(let i=0;i<STAGES.length;i++){const seg=document.createElement("span");seg.className="track"+(i<task.steps?" done":"");seg.setAttribute("aria-hidden","true");line.append(seg);}
+      const label=document.createElement("span");label.className="progress-label";label.textContent=task.steps+" de "+STAGES.length+" etapas";line.append(label);return line;
+    }
+    function showTask(task){
+      set("detail-id",task.id+" · EXEMPLO FICTÍCIO");
+      set("detail-title",task.title);
+      set("detail-desc",task.desc);
+      set("detail-status",task.status);
+      set("detail-progress",task.steps+" de "+STAGES.length);
+      set("detail-code",task.code);
+      set("detail-next",task.next);
+      const steps=$("detail-steps");steps.replaceChildren();
+      STAGES.forEach((step,i)=>{const li=document.createElement("li");if(i<task.steps)li.className="ok";const mark=document.createElement("span");mark.textContent=i<task.steps?"✓":"–";const title=document.createElement("span");title.style.display="inline";title.style.width="auto";title.style.height="auto";title.style.border="0";title.textContent=step+(i<task.steps?" · exemplo confirmado":" · pendente");li.append(mark,title);steps.append(li);});
+      dialog.showModal();
+    }
+    function render(){
+      const query=search.value.trim().toLocaleLowerCase("pt-BR");
+      const type=historyFilter.value;
+      const selected=tasks.filter(t=>t.lane===activeLane&&(!query||(t.title+" "+t.next+" "+t.status).toLocaleLowerCase("pt-BR").includes(query))&&(activeLane!=="arquivados"||type==="todas"||(type==="concluida"?t.status==="Concluída":t.status==="Arquivada")));
+      list.replaceChildren();
+      set("result-count",selected.length+" tarefa"+(selected.length===1?"":"s")+" fictícia"+(selected.length===1?"":"s")+" nesta visão");
+      if(!selected.length){const empty=document.createElement("p");empty.className="empty";empty.textContent="Nenhuma tarefa ilustrativa corresponde ao filtro.";list.append(empty);return;}
+      selected.forEach(t=>{
+        const card=document.createElement("article");card.className="task";
+        const content=document.createElement("div");
+        const meta=document.createElement("div");meta.className="meta";
+        const code=document.createElement("span");code.textContent=t.id;
+        const dot=document.createElement("span");dot.className="dot";dot.setAttribute("aria-hidden","true");
+        const status=document.createElement("span");status.textContent=t.status+" · simulado";
+        meta.append(code,dot,status);
+        const title=document.createElement("h3");title.textContent=t.title;
+        const description=document.createElement("p");description.textContent="Próximo passo: "+t.next;
+        content.append(meta,title,description,progressRow(t));
+        const button=document.createElement("button");button.type="button";button.className="view";button.textContent="Ver detalhes";button.setAttribute("aria-label","Ver detalhes de "+t.title);button.addEventListener("click",()=>showTask(t));
+        card.append(content,button);list.append(card);
+      });
+    }
+    document.querySelectorAll(".tab").forEach(tab=>tab.addEventListener("click",()=>{
+      activeLane=tab.dataset.lane;
+      document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b===tab)));
+      list.setAttribute("aria-labelledby",tab.id);
+      historyFilter.hidden=activeLane!=="arquivados";
+      search.value="";historyFilter.value="todas";render();
+    }));
+    search.addEventListener("input",render);
+    historyFilter.addEventListener("change",render);
+    $("focus-detail").addEventListener("click",()=>showTask(tasks[0]));
+    $("close").addEventListener("click",()=>dialog.close());
+    dialog.addEventListener("click",event=>{if(event.target===dialog)dialog.close();});
+    render();
+  </script>
+</body>
+</html>
