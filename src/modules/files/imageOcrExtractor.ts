@@ -21,7 +21,9 @@ interface OcrCandidate {
 
 /** Keeps OCR selection deterministic and avoids preferring a long garbage result. */
 export function chooseBestOcrCandidate(candidates: OcrCandidate[]): OcrCandidate {
-  return [...candidates].sort((left, right) => {
+  // A blank OCR result must never outrank a usable transcription based on confidence alone.
+  const withText = candidates.filter((candidate) => candidate.text.trim().length > 0);
+  return [...withText].sort((left, right) => {
     const confidenceDelta = right.confidence - left.confidence;
     if (Math.abs(confidenceDelta) > 2) return confidenceDelta;
     return right.text.trim().length - left.text.trim().length;
