@@ -58,3 +58,21 @@ npm test
 npm run build
 npm run build:pages
 ```
+
+### Conexões Gemini/Groq e caixa privada
+
+Além do modelo próprio opcional, esta versão oferece `/v1/connections` autenticado
+(GET metadados, POST chave+catálogo), `/v1/connections/:id` (PATCH modelo confirmado,
+DELETE conexão) e `GET /v1/tasks/:id` (resposta já concluída). As URLs dos provedores
+são fixas no servidor. Não há OAuth nem reaproveitamento de assinatura de chat.
+Chaves ficam no cofre AES-256-GCM dentro de `CENTRAL_DATA_DIR/.connections` com
+chave mestra local. Proteja toda a pasta e os backups (ACL no Windows); o cofre
+não protege contra comprometimento do servidor. Não utilize múltiplos processos
+com o mesmo diretório. O token da Central dá acesso a todas as conexões/respostas.
+
+Cada tarefa de API fixa conexão, revisão e modelo e exige `freeTierConsent:true`.
+Conexão/modelo alterados exigem nova preparação; respostas prontas podem ser
+recuperadas na caixa autenticada mesmo depois de remover a conexão. Confirmação
+Free não consulta faturamento: use contas sem billing e valide modelo/cota no
+painel. Nenhuma alternativa paga é escolhida e 429 não dispara retry automático.
+Veja o passo a passo em `docs/CENTRAL_IAS.md`.
