@@ -89,3 +89,40 @@ Quando houver VM e autorização, o primeiro operador deverá:
 - [OpenCode CLI — execução não interativa](https://opencode.ai/docs/cli)
 - [Processo interno](../docs/PROCESSO_IAS.md)
 - [PR #20](https://github.com/BM000001/Alfred-Laboratory/pull/20), [PR #23](https://github.com/BM000001/Alfred-Laboratory/pull/23), [PR #33](https://github.com/BM000001/Alfred-Laboratory/pull/33)
+
+
+## 8. Acionamento desacoplado: automação horária agora, Central de IA depois
+
+**Decisão de 15/11/2026:** não esperar pela Oracle nem pela interface da Central de IA para melhorar as rodadas já agendadas. A automação existente **Equipe de desenvolvimento Alfred** continua executando de hora em hora e recebeu instruções de continuidade por objetivo, critérios de aceite, checkpoints e vedação de merge. **Isso modifica a instrução, não instala um executor persistente**: a execução real depende das ferramentas e permissões de cada rodada.
+
+**Não confundir componentes existentes:**
+- [PR #52](https://github.com/BM000001/Alfred-Laboratory/pull/52): fundação da Central de IAs para **Estudos** (`studies.analyze` e `studies.generate`, com fila IndexedDB no navegador). **Não é** um coordenador de agentes de desenvolvimento, não opera em background fora do navegador e ainda depende de PRs de Estudos.
+- [Issue #44](https://github.com/BM000001/Alfred-Laboratory/issues/44): plano da Central de Comando, sem site de coordenação implementado.
+- Esta Issue #56/PR #58: infraestrutura proposta para **executor de desenvolvimento** independente do navegador, ainda não instalado.
+
+### Contrato de execução futura (a implementar e testar, não API já disponível)
+
+Separar o **gatilho** do **processamento**. Gatilhos candidatos: agendamento atual, evento GitHub autorizado ou solicitação autenticada da Central de IA. Todos devem produzir a mesma entrada normalizada, sem permitir que texto externo vire comando de shell:
+
+```json
+{
+  "version": 1,
+  "trigger": "schedule|central|github_event",
+  "repository": "BM000001/Alfred-Laboratory",
+  "issue": 0,
+  "approved_scope_id": "issue-or-approval-reference",
+  "idempotency_key": "stable-nonsecret-work-identifier"
+}
+```
+
+O futuro executor deve oferecer operações equivalentes a **consultar estado**, **iniciar/retomar uma tarefa aprovada** e **solicitar pausa**, com autorização conferida pelo servidor; nenhuma delas implica aprovar merge. Resposta/checkpoint padronizado: issue, objetivo, estado, branch/HEAD, PR, etapa e teste pendentes, prazo da reserva, cota consumida, erro/bloqueio e próxima ação. A fila durável e os locks pertencem ao executor, **não à página da Central**.
+
+**Plano de transição sem trabalhos duplicados:**
+1. **Agora:** manter uma única automação horária ativa; usar Issue/PR com handoff para retomar o mesmo objetivo; medir entregas com código + testes, não quantidade de execuções. Nunca abrir um segundo processo horário só para simular continuidade.
+2. **Piloto sem nuvem:** provar por testes locais que o mesmo contrato aceita duas fontes de gatilho simuladas, mantém idempotência, recupera checkpoints e recusa tarefas sem aprovação; nenhuma inferência nem escrita no GitHub no dry-run.
+3. **Quando houver servidor e provedor autorizados:** integrar um único executor real que recebe o gatilho da Central ou do agendador, mantendo limite de um escritor por área e sem fallback pago.
+4. **Migração final:** só depois de validar autenticação, execução efetiva, entrega e recuperação, desativar o agendamento horário antigo. **Não manter dois disparadores capazes de iniciar a mesma tarefa sem chave de idempotência/lock comprovado.**
+
+**Risco conhecido:** o PR [#60](https://github.com/BM000001/Alfred-Laboratory/pull/60) constava com restrição de aprovação antes de merge e aparece integrado à main do Laboratory. O executor não pode tratar CI verde, PR aberto, silêncio ou resultado de automação como aprovação de merge. Registrar anomalias e pedir avaliação humana; jamais reverter ou repetir integração automaticamente.
+
+**Métricas para comparar antes/depois:** execuções com código validado, metas funcionais entregues para revisão, número de rodadas repetindo diagnóstico, tempo entre primeiro commit e PR testável, falhas e retomadas sem duplicata, alterações/merges não autorizados (=0). As métricas só são preenchidas quando houver evidência real, sem simular 24h produtivas.
