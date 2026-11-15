@@ -6,8 +6,8 @@ Este arquivo é o ponto de entrada. A política canônica está em [docs/PROCESS
 1. Identifique **repositório, issue, branch de origem, branch de destino e autorização**. `BM000001/Alfred-Laboratory` e `BM000001/Alfred` são repositórios diferentes.
 2. Consulte a issue, os PRs/branches relacionados, a documentação relevante e o código existente. Parta do que já está implementado; não duplique trabalho.
 3. Registre escopo, critérios de aceite, dependências, módulos e responsável na issue. Confira reserva/conflitos de execução conforme `docs/PROCESSO_IAS.md`; sem reserva confirmada, não inicie trabalho concorrente.
-4. Crie/use branch isolada **antes** da primeira edição. Para app, verifique se a base correta é `develop-app` ou outra indicada; para documentação estável, geralmente `main`. Não use `baseline/alfred-main` como destino.
-5. Mudanças estruturais de alto risco exigem plano técnico aprovado antes de codificar.
+4. Crie/use branch isolada **antes** da primeira edição. **Padrão atual (15/11/2026): novos trabalhos do aplicativo e documentação partem da `main` do `BM000001/Alfred-Laboratory` e abrem PR para essa mesma `main`**. Exceções (como PRs empilhados) exigem dependência e destino explícitos na Issue. `develop-app` é legado de consulta/migração seletiva, não base padrão; nunca use `baseline/alfred-main` como destino.
+5. Mudanças estruturais de alto risco exigem plano técnico aprovado antes de codificar. Não tente mesclar `develop-app` diretamente na `main`: os históricos não possuem ancestral comum; preserve o legado e porte somente mudanças necessárias via novas branches originadas da `main`.
 
 ## Durante a execução
 - Limite-se ao escopo autorizado; preserve funcionalidades e dados existentes. Commits pequenos, reversíveis e com mensagem clara.

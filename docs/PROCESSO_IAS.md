@@ -48,9 +48,10 @@ Antes de editar:
 
 - Divida por comportamento independente e revisão viável no iPhone. Mais de cerca de **400 linhas alteradas** é alerta de revisão, **não proibição**; registre justificativa quando não dividir.
 - Mudanças de schema, migração de dados, contratos de API, permissões/segredos ou alteração de mais de cinco arquivos centrais exigem plano técnico breve e aprovação antes de implementar, salvo autorização prévia explícita já abrangendo o plano.
-- A issue informa **repositório de trabalho, ref de origem e branch de PR/destino**. Não presuma sempre `main`.
-  - Docs estáveis do Laboratory: normalmente base/destino `main` do **Laboratory**.
-  - Experimentos de app: avaliar `develop-app` do Laboratory; seguir a base real e as dependências descritas na issue.
+- A issue informa **repositório de trabalho, ref de origem e branch de PR/destino**. **Para novos trabalhos do Laboratory, o padrão aprovado em 15/11/2026 é base/destino `main` do Laboratory**, não a `main` do Alfred original.
+  - Documentação e aplicativo: criar branch de trabalho a partir da `main` do **Laboratory**, com PR para a `main`.
+  - Exceção: PR empilhado sobre dependência explícita ainda aberta, com base/destino documentados e integração ordenada.
+  - Legado `develop-app`: preservar como referência. Não possui ancestral comum com `main`; portar somente diferenças úteis em novas branches de `main`, nunca tentar merge direto de históricos.
   - Promoção ao `BM000001/Alfred`: PR/autorização **separados**.
 - Criar a branch **antes** do primeiro código. Prefixo recomendado `codex/<issue>-resumo` ou `ia/<issue>-resumo`. Não editar diretamente `main` nem a `baseline/alfred-main`.
 
