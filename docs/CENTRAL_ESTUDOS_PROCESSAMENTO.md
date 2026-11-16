@@ -17,7 +17,7 @@
 
 ## Geração e precisão
 
-Não há provedor de IA conectado neste fluxo e nenhum documento é enviado pela rede. O gerador local é determinístico e conservador: só transforma declarações explícitas `termo: definição` ou `termo é/são/significa/...` em cartões; só cria questão objetiva se houver pelo menos quatro definições distintas e cada alternativa vier do texto extraído. A explicação registra o trecho de origem. Se o material não tiver esse formato, o texto fica disponível na biblioteca e a interface informa que nenhum recurso automático confiável foi encontrado. A geração semântica geral permanece dependente de um provedor de IA futuramente autorizado.
+Não há provedor de IA conectado neste fluxo e nenhum documento é enviado pela rede. O gerador local é determinístico, baseado em regras e conservador: só transforma declarações explícitas `termo: definição` ou `termo é/são/significa/...` em cartões; ignora rótulos genéricos de seção; só cria questão objetiva se houver pelo menos quatro definições distintas e usa como alternativas conceitos explícitos do mesmo material. A questão apresenta a definição extraída, pede o conceito correspondente e registra o trecho de origem. Isso é geração extrativa por regras, não compreensão semântica de IA. Se o material não tiver estrutura adequada, o texto fica disponível na biblioteca e nenhum recurso automático confiável é anunciado. Geração semântica mais ampla requer um provedor de IA intercambiável, com consentimento antes de qualquer envio externo.
 
 Flashcards, respostas, intervalos de revisão, questões e tentativas usam os repositórios IndexedDB atuais. Questões geradas ficam vinculadas ao tópico do arquivo, e materiais e cartões guardam metadados de origem.
 

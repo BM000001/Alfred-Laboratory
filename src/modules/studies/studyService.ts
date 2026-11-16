@@ -1,10 +1,17 @@
 import type { EntityRepository } from '../../storage/repositories';
 import type { Discipline, CreateDisciplineInput, UpdateDisciplineInput, StudyTopic, CreateStudyTopicInput, UpdateStudyTopicInput } from './types';
 import { validateDisciplineName, validateStudyTopic } from './studyRules';
+import type { StudyFlashcard } from './flashcardTypes';
+import type { StudyQuestion } from './questionTypes';
 
 type Options = { createId?: () => string; now?: () => Date };
 
-export function createStudyService(disciplines: EntityRepository<Discipline>, topics: EntityRepository<StudyTopic>, options: Options = {}) {
+export function createStudyService(
+  disciplines: EntityRepository<Discipline>,
+  topics: EntityRepository<StudyTopic>,
+  options: Options = {},
+  linkedResources?: { flashcards?: EntityRepository<StudyFlashcard>; questions?: EntityRepository<StudyQuestion> },
+) {
   const createId = options.createId ?? (() => crypto.randomUUID());
   const now = options.now ?? (() => new Date());
 
@@ -63,6 +70,24 @@ export function createStudyService(disciplines: EntityRepository<Discipline>, to
     },
     async deleteTopic(id: string) {
       if (!(await topics.getById(id))) throw new Error('Conteúdo não encontrado.');
+      // Topics are labels/organization. Removing one must not orphan a learner's
+      // cards or questions, so keep those resources and detach the topic link.
+      const [cards, questions] = await Promise.all([
+        linkedResources?.flashcards?.getAll() ?? Promise.resolve([]),
+        linkedResources?.questions?.getAll() ?? Promise.resolve([]),
+      ]);
+      for (const card of cards) {
+        if (card.topicId !== id) continue;
+        const unlinked = { ...card };
+        delete unlinked.topicId;
+        await linkedResources?.flashcards?.save(unlinked);
+      }
+      for (const question of questions) {
+        if (question.topicId !== id) continue;
+        const unlinked = { ...question };
+        delete unlinked.topicId;
+        await linkedResources?.questions?.save(unlinked);
+      }
       await topics.delete(id);
     },
   };
