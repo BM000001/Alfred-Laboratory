@@ -44,14 +44,36 @@ let readyResolve: (() => void) | null = null;
 let readyReject: ((error: Error) => void) | null = null;
 const pending = new Map<string, PendingRequest>();
 
-export function isGoogleCalendarConfigured(): boolean {
-  if (!APP_SCRIPT_URL) return false;
-  try {
-    const url = new URL(APP_SCRIPT_URL);
-    return url.protocol === 'https:' && url.hostname === 'script.google.com' && url.pathname.includes('/macros/s/') && url.pathname.endsWith('/exec');
-  } catch {
-    return false;
+const INVALID_APPS_SCRIPT_URL_MESSAGE = 'A URL do Google Apps Script não é válida. Copie a URL HTTPS de implantação Web App terminada em /exec.';
+
+/** Check the deployment URL before opening a popup; this does not verify Google account authorization. */
+export function googleAppsScriptConfigurationError(configuredUrl: string): string | null {
+  if (!configuredUrl.trim()) {
+    return 'A integração Google não foi configurada. Defina VITE_GOOGLE_APPS_SCRIPT_URL com a URL /exec da implantação Web App.';
   }
+  try {
+    const url = new URL(configuredUrl.trim());
+    const match = /^\\/macros\\/s\\/([A-Za-z0-9_-]+)\\/exec$/.exec(url.pathname);
+    if (url.protocol !== 'https:' || url.hostname !== 'script.google.com' ||
+        url.port || url.username || url.password || url.search || url.hash || !match) {
+      return INVALID_APPS_SCRIPT_URL_MESSAGE;
+    }
+    const deploymentId = match[1];
+    if (deploymentId.length < 30 || /(?:ID_DA_IMPLANTACAO|ID_DE_IMPLANTACAO|YOUR_DEPLOYMENT_ID|PLACEHOLDER|EXEMPLO|SEU_ID)/i.test(deploymentId)) {
+      return 'A URL configurada contém um ID de implantação de exemplo, não um Web App real. No Google Apps Script, abra Implantar → Gerenciar implantações, copie a URL /exec e substitua VITE_GOOGLE_APPS_SCRIPT_URL nas variáveis do GitHub Actions; depois publique novamente.';
+    }
+    return null;
+  } catch {
+    return INVALID_APPS_SCRIPT_URL_MESSAGE;
+  }
+}
+
+export function getGoogleCalendarConfigurationError(): string | null {
+  return googleAppsScriptConfigurationError(APP_SCRIPT_URL);
+}
+
+export function isGoogleCalendarConfigured(): boolean {
+  return getGoogleCalendarConfigurationError() === null;
 }
 
 function createNonce(): string {
@@ -117,12 +139,8 @@ function handleBridgeMessage(event: MessageEvent): void {
 }
 
 function ensureBridge(): void {
-  if (!APP_SCRIPT_URL) {
-    throw new Error("A integração Google ainda não foi configurada. Falta definir VITE_GOOGLE_APPS_SCRIPT_URL.");
-  }
-  if (!isGoogleCalendarConfigured()) {
-    throw new Error("A URL do Google Apps Script não é válida. Use a URL HTTPS de implantação /exec.");
-  }
+  const configurationError = getGoogleCalendarConfigurationError();
+  if (configurationError) throw new Error(configurationError);
 }
 
 export function beginGoogleCalendarConnection(): Promise<void> {
