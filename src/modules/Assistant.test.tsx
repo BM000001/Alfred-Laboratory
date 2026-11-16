@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Assistant } from './Assistant';
 import { assistantMessageRepository, taskRepository } from '../storage/repositories';
 import type { Task } from './tasks/types';
@@ -23,6 +23,10 @@ beforeEach(async () => {
   const existing = await taskRepository.getAll();
   await Promise.all(existing.map((item) => taskRepository.delete(item.id)));
   await taskRepository.save(task);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 async function renderAssistant() {
@@ -112,6 +116,32 @@ describe('Assistant task approval UI', () => {
       title: 'Revisar capítulo', status: 'pending', priority: 'medium',
     }));
   });
+  it('mostra erro de leitura local e permite tentar novamente sem alterar tarefas', async () => {
+    const user = userEvent.setup();
+    await renderAssistant();
+    const readTasks = vi.spyOn(taskRepository, 'getAll')
+      .mockRejectedValueOnce(new Error('Falha simulada do IndexedDB'));
+
+    await user.type(screen.getByLabelText('Mensagem para Alfred'), 'Quais tarefas estão pendentes?');
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não consegui acessar seus dados locais. Tente novamente.',
+    );
+    await waitFor(() => expect(screen.getByLabelText('Mensagem para Alfred')).toBeEnabled());
+    expect(screen.queryByRole('button', { name: 'Confirmar alteração' })).not.toBeInTheDocument();
+    expect(await taskRepository.getById(task.id)).toMatchObject({ status: 'pending' });
+
+    await user.type(screen.getByLabelText('Mensagem para Alfred'), 'Quais tarefas estão pendentes?');
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+
+    expect(await within(screen.getByRole('log')).findByText(/1 tarefa\(s\) pendente\(s\) encontrada\(s\)/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Mensagem para Alfred')).toBeEnabled();
+    expect(readTasks).toHaveBeenCalledTimes(2);
+    expect(await taskRepository.getById(task.id)).toMatchObject({ status: 'pending' });
+  });
+
   it('recupera o histórico após remontar e permite apagá-lo com confirmação', async () => {
     const user = userEvent.setup();
     const view = await renderAssistant();
