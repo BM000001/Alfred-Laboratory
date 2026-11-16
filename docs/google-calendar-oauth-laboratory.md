@@ -5,7 +5,7 @@ A implementação é uma adaptação do PR #120 do repositório BM000001/Alfred.
 ## Como funciona
 - O navegador carrega a biblioteca Google Identity Services apenas após a ação explícita de conectar.
 - Token OAuth mantido somente na memória da página, não salvo em IndexedDB/localStorage nem enviado ao nosso servidor.
-- Escopos: `calendar.calendarlist.readonly` e `calendar.events.readonly`; o Alfredo **não cria, atualiza nem exclui eventos no Google** por este modo.
+- Escopos: `calendar.calendarlist.readonly` e `calendar.events.readonly`; o Alfred **não cria, atualiza nem exclui eventos no Google** por este modo.
 - Importa eventos para a agenda local (próximos 90 dias), incluindo eventos recorrentes expandidos e de dia inteiro.
 - A leitura integral dos calendários selecionados precisa terminar antes de qualquer atualização local. Registros ausentes no intervalo podem ser arquivados localmente na sincronização.
 - Não sincroniza automaticamente em segundo plano. Requer reconectar após expiração ou recarregamento.
