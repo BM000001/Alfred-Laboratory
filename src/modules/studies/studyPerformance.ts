@@ -32,7 +32,26 @@ export function summarizeStudyPerformance(
 ): TopicPerformance[] {
   const questionsByTopic = new Map<string, StudyQuestion[]>();
   const questionById = new Map(questions.map(question => [question.id, question]));
-  for (const question of questions) {
+  for (const attempt of attempts) {
+    for (const answer of attempt.answers) {
+      const snapshot = answer.questionSnapshot;
+      if (questionById.has(answer.questionId) || !snapshot?.topicId) continue;
+      questionById.set(answer.questionId, {
+        id: answer.questionId,
+        disciplineId: attempt.disciplineId,
+        topicId: snapshot.topicId,
+        prompt: snapshot.prompt,
+        options: [...snapshot.options],
+        correctOptionIndex: snapshot.correctOptionIndex,
+        ...(snapshot.explanation ? { explanation: snapshot.explanation } : {}),
+        difficulty: snapshot.difficulty,
+        createdAt: attempt.startedAt,
+        ...(snapshot.sourceFileName ? { sourceFileName: snapshot.sourceFileName } : {}),
+        ...(snapshot.subject ? { subject: snapshot.subject } : {}),
+      });
+    }
+  }
+  for (const question of questionById.values()) {
     if (!question.topicId) continue;
     const group = questionsByTopic.get(question.topicId) ?? [];
     group.push(question);

@@ -3,6 +3,8 @@ import type { FlashcardRating, StudyFlashcard, CreateFlashcardInput } from './fl
 
 type Options = { createId?: () => string; now?: () => Date };
 const DAY = 24 * 60 * 60 * 1000;
+const MAX_REVIEW_HISTORY = 200;
+const MAX_INTERVAL_DAYS = 365;
 
 export function createFlashcardService(repository: EntityRepository<StudyFlashcard>, options: Options = {}) {
   const createId = options.createId ?? (() => crypto.randomUUID());
@@ -27,13 +29,23 @@ export function createFlashcardService(repository: EntityRepository<StudyFlashca
       const previous = card.intervalDays;
       const intervals: Record<FlashcardRating, number> = {
         again: 0,
-        hard: Math.max(1, Math.round(previous ? previous * 1.2 : 1)),
-        good: previous ? Math.max(3, Math.round(previous * 2)) : 3,
-        easy: previous ? Math.max(7, Math.round(previous * 2.5)) : 7,
+        hard: Math.min(MAX_INTERVAL_DAYS, Math.max(1, Math.round(previous ? previous * 1.2 : 1))),
+        good: Math.min(MAX_INTERVAL_DAYS, previous ? Math.max(3, Math.round(previous * 2)) : 3),
+        easy: Math.min(MAX_INTERVAL_DAYS, previous ? Math.max(7, Math.round(previous * 2.5)) : 7),
       };
       const intervalDays = intervals[rating];
       const nextReview = new Date(reviewedAt.getTime() + (rating === 'again' ? 10 * 60 * 1000 : intervalDays * DAY));
-      const updated: StudyFlashcard = { ...card, lastReviewedAt: reviewedAt.toISOString(), nextReviewAt: nextReview.toISOString(), intervalDays, reviewCount: card.reviewCount + 1 };
+      const ratedAt = reviewedAt.toISOString();
+      const nextReviewAt = nextReview.toISOString();
+      const reviewEvent = { ratedAt, rating, intervalDays, nextReviewAt };
+      const updated: StudyFlashcard = {
+        ...card,
+        lastReviewedAt: ratedAt,
+        nextReviewAt,
+        intervalDays,
+        reviewCount: card.reviewCount + 1,
+        reviewHistory: [...(card.reviewHistory ?? []), reviewEvent].slice(-MAX_REVIEW_HISTORY),
+      };
       await repository.save(updated);
       return updated;
     },

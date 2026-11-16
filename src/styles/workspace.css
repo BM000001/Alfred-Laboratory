@@ -119,6 +119,7 @@ html #root .main-content .study-flashcards,
 html #root .main-content .study-question-bank,
 html #root .main-content .study-material-importer,
 html #root .main-content .study-performance,
+html #root .main-content .study-learning,
 html #root .main-content .apple-calendar-panel{
   color:var(--ink);
   background:var(--sheet);
@@ -132,6 +133,15 @@ html #root .main-content .study-flashcards :is(h3,h4,strong,label,legend,summary
 html #root .main-content .study-question-bank :is(h3,h4,strong,label,legend,summary),
 html #root .main-content .study-material-importer :is(h3,h4,strong,label,legend),
 html #root .main-content .study-performance :is(h3,h4,strong,label){color:var(--ink)}
+html #root .main-content .study-learning :is(h3,h4,strong,.study-learning-context-label){color:var(--ink)}
+html #root .main-content .study-learning :is(p,.study-learning-context-description,.study-learning-source,.study-learning-reason,.study-learning-count span){color:var(--quiet)}
+html #root .main-content .study-learning :is(.study-learning-contexts,.study-learning-card,.study-learning-count){background:var(--paper);border-color:var(--line)}
+html #root .main-content .study-learning-contexts button{color:var(--quiet);border-color:var(--line)}
+html #root .main-content .study-learning-contexts button.selected{color:#29271f;background:var(--gold);border-color:#b89a62}
+html #root .main-content .study-learning-card.completed{border-color:color-mix(in srgb,var(--success) 50%,var(--line))}
+html #root .main-content .study-learning-analogy{background:color-mix(in srgb,var(--gold) 12%,var(--paper))}
+html #root .main-content .study-learning-focus{color:var(--ink);background:color-mix(in srgb,var(--gold) 12%,var(--paper));border-left-color:var(--accent)}
+html #root .main-content .study-learning-body{border-top-color:var(--line)}
 html #root .main-content :is(.field-label,.entry-panel label,.study-content p,.study-content small,.discipline-list p,.discipline-list small,.study-flashcards p,.study-flashcards small,.study-question-bank p,.study-question-bank small,.study-material-importer p,.study-material-importer small,.study-performance p,.study-performance small){color:var(--quiet)}
 html #root .main-content :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea){
   color:var(--ink);

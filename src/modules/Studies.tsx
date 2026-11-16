@@ -6,11 +6,17 @@ import { StudyFlashcards } from './studies/StudyFlashcards';
 import { QuestionBank } from './studies/QuestionBank';
 import { StudyMaterialImporter } from './studies/StudyMaterialImporter';
 import { StudyPerformance } from './studies/StudyPerformance';
+import { StudyLearning } from './studies/StudyLearning';
 import { createStudyService } from './studies/studyService';
 import { summarizeStudyProgress } from './studies/studyRules';
-import { disciplineRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../storage/repositories';
+import { disciplineRepository, fileRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../storage/repositories';
+import { createFileService } from './files/fileService';
 
-const studies = createStudyService(disciplineRepository, studyTopicRepository);
+const studyFiles = createFileService(fileRepository);
+const studies = createStudyService(disciplineRepository, studyTopicRepository, {}, {
+  flashcards: studyFlashcardRepository,
+  questions: studyQuestionRepository,
+});
 
 export function Studies() {
   const [studyView, setStudyView] = useState('conteudos');
@@ -24,6 +30,7 @@ export function Studies() {
   const [editingDisciplineId, setEditingDisciplineId] = useState<string | null>(null);
   const [selectedDiscipline, setSelectedDiscipline] = useState('');
   const [studyRefreshVersion, setStudyRefreshVersion] = useState(0);
+  const [performanceRefreshVersion, setPerformanceRefreshVersion] = useState(0);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -102,19 +109,22 @@ export function Studies() {
   }
 
   async function deleteTopic(topic: StudyTopic) {
-    if (!window.confirm(`Excluir "${topic.title}"?`)) return;
+    if (!window.confirm(`Excluir o tópico "${topic.title}"? Os flashcards e as questões serão preservados e ficarão sem este tópico.`)) return;
     try { await studies.deleteTopic(topic.id); await refresh(); }
     catch { setError('Não foi possível excluir o conteúdo.'); }
   }
 
   async function deleteDiscipline(discipline: Discipline) {
-    if (!window.confirm(`Excluir "${discipline.name}" e todos os conteúdos vinculados? Essa ação não pode ser desfeita.`)) return;
+    if (!window.confirm(`Excluir "${discipline.name}" e os flashcards, questões e tentativas vinculados? Os arquivos originais serão preservados na biblioteca, sem esta disciplina. Essa ação não pode ser desfeita.`)) return;
     try {
-      const [cards, questions, attempts] = await Promise.all([studyFlashcardRepository.getAll(), studyQuestionRepository.getAll(), studyQuizAttemptRepository.getAll()]);
+      const [cards, questions, attempts, storedFiles] = await Promise.all([studyFlashcardRepository.getAll(), studyQuestionRepository.getAll(), studyQuizAttemptRepository.getAll(), fileRepository.getAll()]);
+      await Promise.all(storedFiles.filter((item) => item.disciplineId === discipline.id).map((item) => studyFiles.setDiscipline(item.id)));
       await Promise.all(cards.filter((item) => item.disciplineId === discipline.id).map((item) => studyFlashcardRepository.delete(item.id)));
       await Promise.all(questions.filter((item) => item.disciplineId === discipline.id).map((item) => studyQuestionRepository.delete(item.id)));
       await Promise.all(attempts.filter((item) => item.disciplineId === discipline.id).map((item) => studyQuizAttemptRepository.delete(item.id)));
-      await studies.deleteDiscipline(discipline.id); await refresh();
+      await studies.deleteDiscipline(discipline.id);
+      setSelectedDiscipline((current) => current === discipline.id ? '' : current);
+      await refresh();
     }
     catch { setError('Não foi possível excluir a disciplina.'); }
   }
@@ -150,7 +160,7 @@ export function Studies() {
         </aside>
         <div className="study-content">
           <div className="list-heading study-content-heading"><div><span className="card-label">CONTEÚDOS</span><h2>{disciplines.find((item) => item.id === selectedDiscipline)?.name}</h2></div><div><button className="text-action" type="button" onClick={() => { const item = disciplines.find((entry) => entry.id === selectedDiscipline); if (item) editDiscipline(item); }}>Editar disciplina</button><button className="text-action" type="button" onClick={() => { const item = disciplines.find((entry) => entry.id === selectedDiscipline); if (item) void deleteDiscipline(item); }}>Excluir disciplina</button></div></div>
-          <nav className="workspace-tabs" aria-label="Conteúdo da disciplina">{[['conteudos', 'Conteúdos'], ['materiais', 'Materiais'], ['notas', 'Anotações'], ['praticar', 'Praticar']].map(([key, label]) => <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) setStudyView(key); }}>{label}</button>)}</nav>
+          <nav className="workspace-tabs" aria-label="Conteúdo da disciplina">{[['conteudos', 'Conteúdos'], ['materiais', 'Materiais'], ['notas', 'Anotações'], ['aprender', 'Aprender'], ['praticar', 'Praticar']].map(([key, label]) => <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) setStudyView(key); }}>{label}</button>)}</nav>
           <div hidden={studyView !== 'conteudos'}>
           {studyView === 'conteudos' && <>
           <form className="entry-panel topic-form" onSubmit={createTopic}>
@@ -170,7 +180,8 @@ export function Studies() {
           </div>
           {studyView === 'materiais' && <><StudyMaterialImporter key={`import-${selectedDiscipline}`} disciplineId={selectedDiscipline} onProcessed={refreshAfterMaterialImport} /><Files key={`files-${selectedDiscipline}`} disciplineId={selectedDiscipline} allowUpload={false} /></>}
           {studyView === 'notas' && <Notes key={selectedDiscipline} disciplineId={selectedDiscipline} />}
-          {studyView === 'praticar' && <><StudyFlashcards disciplineId={selectedDiscipline} refreshToken={studyRefreshVersion} /><QuestionBank disciplineId={selectedDiscipline} topics={topics.filter((topic) => topic.disciplineId === selectedDiscipline)} refreshToken={studyRefreshVersion} /><StudyPerformance disciplineId={selectedDiscipline} topics={topics} /></>}
+          {studyView === 'aprender' && <StudyLearning disciplineId={selectedDiscipline} topics={topics} refreshToken={studyRefreshVersion + performanceRefreshVersion} />}
+          {studyView === 'praticar' && <><StudyFlashcards disciplineId={selectedDiscipline} refreshToken={studyRefreshVersion} /><QuestionBank disciplineId={selectedDiscipline} topics={topics.filter((topic) => topic.disciplineId === selectedDiscipline)} refreshToken={studyRefreshVersion} onAttemptSaved={() => setPerformanceRefreshVersion((version) => version + 1)} /><StudyPerformance disciplineId={selectedDiscipline} topics={topics} refreshToken={studyRefreshVersion + performanceRefreshVersion} onResourcesChanged={() => setStudyRefreshVersion((version) => version + 1)} /></>}
         </div>
       </div>
     </>}
