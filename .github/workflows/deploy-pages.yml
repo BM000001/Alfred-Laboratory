@@ -26,6 +26,7 @@ jobs:
         env:
           ALFRED_PAGES_BASE: /Alfred-Laboratory/
           VITE_GOOGLE_APPS_SCRIPT_URL: ${{ vars.VITE_GOOGLE_APPS_SCRIPT_URL }}
+          VITE_GOOGLE_CALENDAR_CLIENT_ID: ${{ vars.VITE_GOOGLE_CALENDAR_CLIENT_ID }}
         run: npm run build:pages
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
