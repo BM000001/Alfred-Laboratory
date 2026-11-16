@@ -53,7 +53,7 @@ export function googleAppsScriptConfigurationError(configuredUrl: string): strin
   }
   try {
     const url = new URL(configuredUrl.trim());
-    const match = /^\\/macros\\/s\\/([A-Za-z0-9_-]+)\\/exec$/.exec(url.pathname);
+    const match = /^\/macros\/s\/([A-Za-z0-9_-]+)\/exec$/.exec(url.pathname);
     if (url.protocol !== 'https:' || url.hostname !== 'script.google.com' ||
         url.port || url.username || url.password || url.search || url.hash || !match) {
       return INVALID_APPS_SCRIPT_URL_MESSAGE;
