@@ -7,6 +7,7 @@ const service = createFlashcardService(studyFlashcardRepository);
 const ratingLabels: Array<{ value: FlashcardRating; label: string }> = [
   { value: 'again', label: 'Errei' }, { value: 'hard', label: 'Difícil' }, { value: 'good', label: 'Bom' }, { value: 'easy', label: 'Fácil' },
 ];
+const ratingLabel = (rating: FlashcardRating) => ratingLabels.find((item) => item.value === rating)?.label ?? rating;
 
 export function StudyFlashcards({ disciplineId, refreshToken = 0 }: { disciplineId: string; refreshToken?: number }) {
   const [cards, setCards] = useState<StudyFlashcard[]>([]);
@@ -88,7 +89,11 @@ export function StudyFlashcards({ disciplineId, refreshToken = 0 }: { discipline
     </article> : <div className="study-flashcard-empty">{cards.length === 0 ? 'Crie seu primeiro cartão acima. Pergunta na frente, resposta no verso.' : 'Excelente. Você revisou todos os cartões vencidos desta disciplina. Os próximos retornam na data programada.'}</div>}
     {cards.length > 0 && <div className="study-flashcard-list" aria-label="Todos os flashcards desta disciplina">
       <strong>Cartões da disciplina</strong>
-      {cards.map((card) => <article key={card.id}><div><span>{card.subject ?? card.sourceFileName ?? 'Criado manualmente'}</span><strong>{card.front}</strong></div><div>
+      {cards.map((card) => <article key={card.id}><div><span>{card.subject ?? card.sourceFileName ?? 'Criado manualmente'}</span><strong>{card.front}</strong>
+        {card.reviewHistory?.length ? <details className="study-flashcard-history"><summary>Histórico de revisão · {card.reviewCount}</summary><ol>{[...card.reviewHistory].reverse().slice(0, 20).map((event, index) => <li key={`${event.ratedAt}:${index}`}>
+          {new Date(event.ratedAt).toLocaleString('pt-BR')} · {ratingLabel(event.rating)} · próxima revisão {new Date(event.nextReviewAt).toLocaleDateString('pt-BR')}
+        </li>)}</ol></details> : card.reviewCount > 0 ? <small>Revisado {card.reviewCount} vez(es) antes do registro detalhado de histórico.</small> : <small>Ainda não revisado.</small>}
+      </div><div>
         <button className="text-action" type="button" onClick={() => { setEditingId(card.id); setEditingFront(card.front); setEditingBack(card.back); }}>Editar</button>
         <button className="text-action" type="button" onClick={() => { if (window.confirm('Excluir este flashcard?')) void service.delete(card.id).then(refresh); }}>Excluir</button>
       </div></article>)}

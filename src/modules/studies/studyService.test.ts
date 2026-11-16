@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { EntityRepository } from '../../storage/repositories';
 import type { Discipline, StudyTopic } from './types';
+import type { StudyFlashcard } from './flashcardTypes';
+import type { StudyQuestion } from './questionTypes';
 import { createStudyService } from './studyService';
 import { summarizeStudyProgress, validateDisciplineName, validateStudyTopic } from './studyRules';
 
@@ -58,5 +60,24 @@ describe('studyService', () => {
   it('rejects topics linked to unknown disciplines', async () => {
     const service = createStudyService(memoryRepository<Discipline>(), memoryRepository<StudyTopic>());
     await expect(service.createTopic({ disciplineId: 'missing', title: 'Tópico' })).rejects.toThrow('disciplina');
+  });
+
+  it('preserves cards and questions when deleting their topic', async () => {
+    const disciplines = memoryRepository<Discipline>();
+    const topics = memoryRepository<StudyTopic>();
+    const cards = memoryRepository<StudyFlashcard>();
+    const questions = memoryRepository<StudyQuestion>();
+    const service = createStudyService(disciplines, topics, {}, { flashcards: cards, questions });
+    const discipline = await service.createDiscipline({ name: 'Biologia' });
+    const topic = await service.createTopic({ disciplineId: discipline.id, title: 'Células' });
+    await cards.save({ id: 'card', disciplineId: discipline.id, topicId: topic.id, front: 'Pergunta', back: 'Resposta', createdAt: '', nextReviewAt: '', intervalDays: 0, reviewCount: 0 });
+    await questions.save({ id: 'question', disciplineId: discipline.id, topicId: topic.id, prompt: 'Questão', options: ['A', 'B'], correctOptionIndex: 0, difficulty: 'easy', createdAt: '' });
+
+    await service.deleteTopic(topic.id);
+
+    expect(await topics.getById(topic.id)).toBeUndefined();
+    expect(await cards.getById('card')).toMatchObject({ id: 'card', disciplineId: discipline.id });
+    expect((await cards.getById('card'))?.topicId).toBeUndefined();
+    expect((await questions.getById('question'))?.topicId).toBeUndefined();
   });
 });

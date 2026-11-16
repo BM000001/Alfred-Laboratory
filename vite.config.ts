@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    maxWorkers: 2,
     setupFiles: './src/test/setup.ts',
     css: true,
     // A Etapa 1 mantém testes Node próprios na raiz; Vitest valida somente o app React.

@@ -11,7 +11,7 @@ function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
 }
 
-export function StudyPerformance({ disciplineId, topics }: { disciplineId: string; topics: StudyTopic[] }) {
+export function StudyPerformance({ disciplineId, topics, refreshToken = 0, onResourcesChanged }: { disciplineId: string; topics: StudyTopic[]; refreshToken?: number; onResourcesChanged?: () => void }) {
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [attempts, setAttempts] = useState<StudyQuizAttempt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ export function StudyPerformance({ disciplineId, topics }: { disciplineId: strin
       .catch(() => { if (active) setError('Não foi possível calcular o desempenho desta disciplina.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [disciplineId]);
+  }, [disciplineId, refreshToken]);
 
   const performance = useMemo(
     () => summarizeStudyPerformance(topics.filter(topic => topic.disciplineId === disciplineId), questions, attempts),
@@ -56,6 +56,7 @@ export function StudyPerformance({ disciplineId, topics }: { disciplineId: strin
       const back = `Resposta correta: ${question.correctAnswer}${question.explanation ? `\n\nExplicação: ${question.explanation}` : ''}`;
       await flashcards.create({ disciplineId, front, back });
       setFeedback('Flashcard de revisão criado. Ele já está disponível na fila de memorização.');
+      onResourcesChanged?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível criar o flashcard de revisão.');
     }
