@@ -63,8 +63,8 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   }
 
   return <section className="entry-panel apple-calendar-panel" aria-labelledby="google-calendar-title">
-    <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM GOOGLE</span><h3 id="google-calendar-title">Google Agenda — OAuth (somente leitura)</h3></div><span>{connected ? 'Sessão conectada' : 'Desconectado'}</span></div>
-    <p>Traga os próximos 90 dias de eventos, incluindo hoje. O Alfred consulta o Google com sua autorização e salva os eventos neste aparelho. Não cria nem altera eventos no Google.</p>
+    <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM GOOGLE</span><h3 id="google-calendar-title">Google Calendar</h3></div><span>{connected ? 'Sessão conectada' : 'Desconectado'}</span></div>
+    <p>Conexão direta por OAuth, somente leitura. Traga os próximos 90 dias de eventos, incluindo hoje. O Alfred consulta o Google com sua autorização e salva os eventos neste aparelho. Não cria nem altera eventos no Google.</p>
     <p className="apple-calendar-note">Alterações feitas aqui nos eventos importados afetam apenas a cópia local e podem ser substituídas na próxima sincronização.</p>
     <p className="apple-calendar-note">A conexão funciona enquanto esta página estiver aberta e a autorização estiver válida. Ao recarregar ou quando a sessão expirar, conecte novamente. Os eventos importados continuam disponíveis.</p>
     {!configuredClientId && <details><summary>Configurar conexão Google</summary>
