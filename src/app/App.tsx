@@ -81,7 +81,8 @@ function App() {
 
   const navigate = (id: SectionId) => {
     if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
-    if (['tarefas', 'agenda', 'produtividade'].includes(id)) { setOrganizationTab(id); setActiveSection('organizacao'); }
+    if (id === 'organizacao') { setOrganizationTab('agenda'); setActiveSection('organizacao'); }
+    else if (['tarefas', 'agenda', 'produtividade'].includes(id)) { setOrganizationTab(id); setActiveSection('organizacao'); }
     else if (id === 'arquivos') setActiveSection('estudos');
     else setActiveSection(id);
     setMobileMoreOpen(false);

@@ -46,6 +46,17 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Salvar compromisso' })).toBeInTheDocument();
   });
 
+  it('abre Organização diretamente no Calendário e deixa as integrações visíveis', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
+    expect(await screen.findByText('CALENDÁRIO CENTRAL')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Calendário' })).toHaveAttribute('aria-current', 'page');
+    const integrations = screen.getByText(/Conectar calendários · Google, iPhone ou arquivo \.ics/).closest('details');
+    expect(integrations).toHaveProperty('open', true);
+    expect(screen.getByRole('heading', { name: 'Google Calendar' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Conectar Calendário Apple' })).toBeInTheDocument();
+  });
+
   it('abre a área funcional de tarefas', async () => {
     render(<App />);
 
