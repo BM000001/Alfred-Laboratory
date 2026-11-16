@@ -9,7 +9,7 @@ import type { Task } from './tasks/types';
 import type { Project } from './projects/types';
 import { getAlfredLocalStorageKey } from '../storage/namespace';
 import { ICalendarImport } from './ICalendarImport';
-import { GoogleCalendarPanel } from './GoogleCalendarPanel';
+import { GoogleCalendarOAuthPanel } from './GoogleCalendarOAuthPanel';
 import { connectAppleCalendar, isNativeAppleCalendarAvailable, syncAppleCalendar, type NativeCalendarInfo } from './agenda/nativeCalendarBridge';
 
 const agenda = createAgendaService(appointmentRepository);
@@ -398,7 +398,7 @@ export function Agenda() {
           <p className="apple-calendar-note">A conexão direta está em preparação e ainda não pode ser ativada nesta página. Enquanto isso, você pode importar um arquivo .ics na seção abaixo.</p>
         </>}
       </section>
-      <GoogleCalendarPanel appointments={items} onChanged={refresh} />
+      <GoogleCalendarOAuthPanel onImported={refresh} />
       <ICalendarImport existing={items} onImported={refresh} />
       </details>
 
