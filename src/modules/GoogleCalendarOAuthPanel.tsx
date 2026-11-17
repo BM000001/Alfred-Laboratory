@@ -157,7 +157,15 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
         }
         else await client.createEvent(targetCalendar, changes);
         setEventId(''); setEventTitle(''); setEventStart(''); setEventEnd('');
-        setMessage('Operação concluída no Google. Sincronize os calendários selecionados para atualizar a cópia local.');
+        // The Google write succeeded. Refresh the local copy only when the destination
+        // is among the calendars selected for import; never imply local sync otherwise.
+        if (selected.includes(targetCalendar)) {
+          try { await synchronize(); }
+          catch { setMessage('Evento salvo no Google, mas a atualização local falhou. Use “Sincronizar selecionados” para tentar novamente.'); return; }
+          setMessage('Evento salvo no Google e Agenda local atualizada.');
+        } else {
+          setMessage('Evento salvo no Google. Selecione o calendário de destino e sincronize para vê-lo no Alfred.');
+        }
       }); }}>
         <label className="field-label" htmlFor="google-write-calendar">Calendário de destino</label>
         <select id="google-write-calendar" value={targetCalendar} onChange={event => setTargetCalendar(event.target.value)} required>{calendars.map(calendar => <option key={calendar.id} value={calendar.id}>{calendar.summary}</option>)}</select>
