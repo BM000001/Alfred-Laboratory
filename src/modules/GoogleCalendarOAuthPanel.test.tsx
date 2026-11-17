@@ -13,7 +13,7 @@ vi.mock('./agenda/googleCalendar', () => ({ createGoogleCalendarClient: () => mo
 vi.mock('./agenda/agendaService', () => ({ createAgendaService: () => mocks.agenda }));
 
 beforeEach(() => {
-  vi.clearAllMocks(); mocks.authorized = false;
+  vi.clearAllMocks(); window.localStorage.clear(); mocks.authorized = false;
   mocks.client.connected.mockImplementation(() => mocks.authorized);
   mocks.client.canWrite.mockReturnValue(false);
   mocks.client.connect.mockImplementation(async () => { mocks.authorized = true; });
@@ -38,6 +38,18 @@ describe('Google Calendar panel', () => {
     fireEvent.click(refresh);
     await screen.findByLabelText('Estudos');
     expect(mocks.client.connect).toHaveBeenCalledTimes(1);
+  });
+  it('remembers selected calendar IDs across remounts without saving a token', async () => {
+    const first = render(<GoogleCalendarOAuthPanel onImported={vi.fn()} />);
+    await connect();
+    fireEvent.click(screen.getByLabelText('Estudos'));
+    await waitFor(() => expect(window.localStorage.getItem('alfred.googleCalendarIds')).toContain('calendar'));
+    first.unmount();
+    render(<GoogleCalendarOAuthPanel onImported={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Atualizar lista de calendários' }));
+    await screen.findByLabelText('Estudos');
+    expect(screen.getByLabelText('Estudos')).toBeChecked();
+    expect(JSON.stringify(window.localStorage)).not.toContain('test-token');
   });
   it('preserves selected calendars when refreshing the list', async () => {
     render(<GoogleCalendarOAuthPanel onImported={vi.fn()} />);
