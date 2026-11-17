@@ -14,7 +14,7 @@ afterEach(() => { delete window.google; vi.useRealTimers(); vi.restoreAllMocks()
 
 describe('Google Calendar web client', () => {
   it('requires separate write consent and never sends an event before permission', async () => {
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ id: 'created' }));
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => json({ id: 'created' }));
     const client = createGoogleCalendarClient(fetcher);
     await authorize(client);
     expect(client.canWrite()).toBe(false);
