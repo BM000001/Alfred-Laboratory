@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createGoogleCalendarClient, loadGoogleIdentity, type GoogleCalendar, type GoogleImportedEvent } from './agenda/googleCalendar';
 import { createAgendaService } from './agenda/agendaService';
 import { appointmentRepository } from '../storage/repositories';
-import { getAlfredLocalStorageKey } from '../storage/storageKeys';
+import { getAlfredLocalStorageKey } from '../storage/namespace';
 
 const client = createGoogleCalendarClient();
 const agenda = createAgendaService(appointmentRepository);
