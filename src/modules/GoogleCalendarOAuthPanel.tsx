@@ -140,8 +140,10 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
         if (eventId.trim()) {
           const chosen = syncedEvents.find(item => item.importedUid === eventId);
           if (!chosen) throw new Error('Sincronize novamente e selecione o evento a editar.');
+          const sourceCalendar = chosen.importedCalendarId.slice('google:'.length);
+          if (targetCalendar !== sourceCalendar) throw new Error('Para editar, mantenha o calendário de origem do evento.');
           const actualId = decodeURIComponent(chosen.importedUid.split(':').slice(2).join(':'));
-          await client.updateEvent(targetCalendar, actualId, changes);
+          await client.updateEvent(sourceCalendar, actualId, changes);
         }
         else await client.createEvent(targetCalendar, changes);
         setEventId(''); setEventTitle(''); setEventStart(''); setEventEnd('');
