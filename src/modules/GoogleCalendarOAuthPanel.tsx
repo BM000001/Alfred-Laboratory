@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createGoogleCalendarClient, loadGoogleIdentity, type GoogleCalendar } from './agenda/googleCalendar';
+import { createGoogleCalendarClient, loadGoogleIdentity, type GoogleCalendar, type GoogleImportedEvent } from './agenda/googleCalendar';
 import { createAgendaService } from './agenda/agendaService';
 import { appointmentRepository } from '../storage/repositories';
 
@@ -24,6 +24,7 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   const [eventStart, setEventStart] = useState('');
   const [eventEnd, setEventEnd] = useState('');
   const [eventId, setEventId] = useState('');
+  const [syncedEvents, setSyncedEvents] = useState<GoogleImportedEvent[]>([]);
   const [targetCalendar, setTargetCalendar] = useState('');
   const lastAttempt = useRef(0);
   const active = useRef(true);
@@ -55,6 +56,7 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
     const snapshot = await client.snapshot(calendars.filter(calendar => selected.includes(calendar.id)));
     // Read and validate every selected calendar before changing local records.
     if (!active.current) return;
+    setSyncedEvents(snapshot.events);
     for (const event of snapshot.events) await agenda.upsertImported(event);
     let archived = 0;
     for (const calendarId of snapshot.calendarIds) {
@@ -84,7 +86,7 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   }, [autoSync, connected, lastSync, selected, calendars]);
 
   async function disconnect() {
-    setCalendars([]); setSelected([]); setLastSync(null); setWriteEnabled(false); lastAttempt.current = 0;
+    setCalendars([]); setSelected([]); setSyncedEvents([]); setLastSync(null); setWriteEnabled(false); lastAttempt.current = 0;
     await client.disconnect();
     if (active.current) setMessage('Google desconectado. Os eventos já importados foram mantidos na Agenda.');
   }
@@ -135,15 +137,29 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
         if (!targetCalendar) throw new Error('Escolha um calendário.');
         if (!window.confirm(eventId.trim() ? 'Confirmar alteração deste evento no Google Calendar?' : 'Confirmar criação de evento no Google Calendar?')) return;
         const changes = { title: eventTitle, startsAt: eventStart, endsAt: eventEnd };
-        if (eventId.trim()) await client.updateEvent(targetCalendar, eventId.trim(), changes);
+        if (eventId.trim()) {
+          const chosen = syncedEvents.find(item => item.importedUid === eventId);
+          if (!chosen) throw new Error('Sincronize novamente e selecione o evento a editar.');
+          const actualId = decodeURIComponent(chosen.importedUid.split(':').slice(2).join(':'));
+          await client.updateEvent(targetCalendar, actualId, changes);
+        }
         else await client.createEvent(targetCalendar, changes);
         setEventId(''); setEventTitle(''); setEventStart(''); setEventEnd('');
         setMessage('Operação concluída no Google. Sincronize os calendários selecionados para atualizar a cópia local.');
       }); }}>
         <label className="field-label" htmlFor="google-write-calendar">Calendário de destino</label>
         <select id="google-write-calendar" value={targetCalendar} onChange={event => setTargetCalendar(event.target.value)} required>{calendars.map(calendar => <option key={calendar.id} value={calendar.id}>{calendar.summary}</option>)}</select>
-        <label className="field-label" htmlFor="google-write-event-id">ID do evento (opcional; somente para editar um evento existente)</label>
-        <input id="google-write-event-id" value={eventId} onChange={event => setEventId(event.target.value)} placeholder="Deixe vazio para criar" />
+        <label className="field-label" htmlFor="google-write-event-id">Evento existente (opcional; selecione para editar)</label>
+        <select id="google-write-event-id" value={eventId} onChange={event => {
+          const selectedEvent = syncedEvents.find(item => item.importedUid === event.target.value);
+          setEventId(event.target.value);
+          if (selectedEvent) {
+            setTargetCalendar(selectedEvent.importedCalendarId.slice('google:'.length));
+            setEventTitle(selectedEvent.title);
+            const toLocal = (iso: string) => { const d = new Date(iso); const offset = d.getTimezoneOffset() * 60_000; return new Date(d.getTime() - offset).toISOString().slice(0, 16); };
+            setEventStart(toLocal(selectedEvent.startsAt)); setEventEnd(toLocal(selectedEvent.endsAt));
+          }
+        }}><option value="">Criar novo evento</option>{syncedEvents.filter(item => !item.isRecurring && !item.isAllDay).map(item => <option key={item.importedUid} value={item.importedUid}>{item.title} · {new Date(item.startsAt).toLocaleString('pt-BR')}</option>)}</select>
         <label className="field-label" htmlFor="google-write-title">Título</label>
         <input id="google-write-title" value={eventTitle} onChange={event => setEventTitle(event.target.value)} required maxLength={120} />
         <label className="field-label" htmlFor="google-write-start">Início</label>
