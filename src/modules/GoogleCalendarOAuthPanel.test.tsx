@@ -46,6 +46,21 @@ describe('Google Calendar panel', () => {
     await waitFor(() => expect(mocks.client.calendars).toHaveBeenCalledTimes(2));
     expect(screen.getByLabelText('Estudos')).toBeChecked();
   });
+  it('offers foreground-only auto sync without reconnecting or making Google writes', async () => {
+    mocks.client.snapshot.mockResolvedValue({ events: [], calendarIds: ['google:calendar'], from: '2026-11-17T00:00:00.000Z', to: '2027-02-15T00:00:00.000Z' });
+    mocks.agenda.reconcileImportedCalendar.mockResolvedValue(0);
+    render(<GoogleCalendarOAuthPanel onImported={vi.fn()} />);
+    await connect();
+    expect(screen.getByLabelText(/Atualizar automaticamente enquanto o Alfred estiver aberto/)).toBeChecked();
+    fireEvent.click(screen.getByLabelText('Estudos'));
+    fireEvent.click(screen.getByRole('button', { name: 'Sincronizar selecionados' }));
+    await waitFor(() => expect(mocks.client.snapshot).toHaveBeenCalledTimes(1));
+    await screen.findByText(/Última sincronização Google/);
+    expect(mocks.client.connect).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/Não funciona com o app fechado/)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/Atualizar automaticamente enquanto o Alfred estiver aberto/));
+    expect(screen.getByLabelText(/Atualizar automaticamente enquanto o Alfred estiver aberto/)).not.toBeChecked();
+  });
   it('does not write or archive local events if reading the selected calendars fails', async () => {
     mocks.client.snapshot.mockRejectedValueOnce(new Error('Leitura incompleta'));
     const onImported = vi.fn();
