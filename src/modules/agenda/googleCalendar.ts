@@ -2,6 +2,7 @@ import { classifyImportedAppointment } from './agendaRules';
 import type { CreateAppointmentInput } from './types';
 
 export const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.events.readonly';
+export const GOOGLE_WRITE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 interface TokenResponse { access_token?: string; expires_in?: number; error?: string; scope?: string }
 interface GoogleIdentity {
   accounts: { oauth2: {
@@ -67,8 +68,10 @@ export function normalizeGoogleEvent(event: GoogleEvent, calendar: GoogleCalenda
 export function createGoogleCalendarClient(fetcher: typeof fetch = fetch) {
   let token: string | undefined;
   let expiresAt = 0;
+  let grantedScopes = new Set<string>();
   let generation = 0;
-  function clear() { token = undefined; expiresAt = 0; generation += 1; }
+  function clear() { token = undefined; expiresAt = 0; grantedScopes = new Set(); generation += 1; }
+  function canWrite() { return connected() && grantedScopes.has(GOOGLE_WRITE_SCOPE); }
   function connected() { return Boolean(token && Date.now() < expiresAt); }
   async function page<T>(path: string, params: URLSearchParams): Promise<T> {
     if (!connected()) { clear(); throw new Error('A sessão do Google expirou. Conecte novamente.'); }
@@ -96,7 +99,8 @@ export function createGoogleCalendarClient(fetcher: typeof fetch = fetch) {
   }
   return {
     connected,
-    async connect(clientId: string) {
+    canWrite,
+    async connect(clientId: string, requestWrite = false) {
       if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId.trim())) throw new Error('Configure um Client ID OAuth válido do Google.');
       await loadGoogleIdentity();
       clear();
@@ -108,20 +112,45 @@ export function createGoogleCalendarClient(fetcher: typeof fetch = fetch) {
           if (error) { if (current === generation) generation += 1; reject(new Error(error)); } else resolve();
         };
         window.google!.accounts.oauth2.initTokenClient({
-          client_id: clientId.trim(), scope: GOOGLE_SCOPES,
+          client_id: clientId.trim(), scope: requestWrite ? `${GOOGLE_SCOPES} ${GOOGLE_WRITE_SCOPE}` : GOOGLE_SCOPES,
           callback: (response) => {
             if (current !== generation) { finish('Conexão cancelada. Tente novamente.'); return; }
             const granted = new Set(response.scope?.split(' ') ?? []);
-            if (response.error || !response.access_token || !GOOGLE_SCOPES.split(' ').every(scope => granted.has(scope))) {
+            if (response.error || !response.access_token || !(requestWrite ? [...GOOGLE_SCOPES.split(' '), GOOGLE_WRITE_SCOPE] : GOOGLE_SCOPES.split(' ')).every(scope => granted.has(scope))) {
               finish('Autorize a leitura dos calendários e eventos para conectar.'); return;
             }
             token = response.access_token;
+            grantedScopes = granted;
             expiresAt = Date.now() + Math.max(0, (response.expires_in ?? 3600) - 60) * 1000;
             finish();
           },
           error_callback: () => finish('A janela do Google foi fechada ou bloqueada. Permita pop-ups e tente novamente.'),
         }).requestAccessToken({ prompt: 'select_account' });
       });
+    },
+    async createEvent(calendarId: string, event: { title: string; startsAt: string; endsAt: string; location?: string }) {
+      if (!canWrite()) throw new Error('Autorize a edição de eventos do Google antes de continuar.');
+      if (!calendarId || !event.title.trim() || !Number.isFinite(Date.parse(event.startsAt)) || !Number.isFinite(Date.parse(event.endsAt)) || Date.parse(event.endsAt) <= Date.parse(event.startsAt)) throw new Error('Informe título, início e fim válidos.');
+      const response = await fetcher(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary: event.title.trim(), start: { dateTime: new Date(event.startsAt).toISOString() }, end: { dateTime: new Date(event.endsAt).toISOString() }, ...(event.location?.trim() ? { location: event.location.trim() } : {}) }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (response.status === 401) { clear(); throw new Error('Sessão expirada. Reconecte ao Google.'); }
+      if (!response.ok) throw new Error('O Google não permitiu criar o evento. Confira o calendário e as permissões.');
+      return response.json() as Promise<{ id: string }>;
+    },
+    async updateEvent(calendarId: string, eventId: string, changes: { title: string; startsAt: string; endsAt: string }) {
+      if (!canWrite()) throw new Error('Autorize a edição de eventos do Google antes de continuar.');
+      if (!calendarId || !eventId || !changes.title.trim() || !Number.isFinite(Date.parse(changes.startsAt)) || !Number.isFinite(Date.parse(changes.endsAt)) || Date.parse(changes.endsAt) <= Date.parse(changes.startsAt)) throw new Error('Informe evento, título e horários válidos.');
+      const response = await fetcher(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary: changes.title.trim(), start: { dateTime: new Date(changes.startsAt).toISOString() }, end: { dateTime: new Date(changes.endsAt).toISOString() } }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (response.status === 401) { clear(); throw new Error('Sessão expirada. Reconecte ao Google.'); }
+      if (!response.ok) throw new Error('O Google não permitiu editar o evento. Confira as permissões.');
+      return response.json() as Promise<{ id: string }>;
     },
     async disconnect() {
       const previous = token;
