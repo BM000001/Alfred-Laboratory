@@ -5,7 +5,7 @@ import { GoogleCalendarOAuthPanel } from './GoogleCalendarOAuthPanel';
 const mocks = vi.hoisted(() => ({
   authorized: false,
   client: {
-    connected: vi.fn(), connect: vi.fn(), calendars: vi.fn(), snapshot: vi.fn(), disconnect: vi.fn(),
+    connected: vi.fn(), canWrite: vi.fn(), connect: vi.fn(), calendars: vi.fn(), snapshot: vi.fn(), disconnect: vi.fn(), createEvent: vi.fn(), updateEvent: vi.fn(),
   },
   agenda: { upsertImported: vi.fn(), reconcileImportedCalendar: vi.fn() },
 }));
@@ -15,6 +15,7 @@ vi.mock('./agenda/agendaService', () => ({ createAgendaService: () => mocks.agen
 beforeEach(() => {
   vi.clearAllMocks(); mocks.authorized = false;
   mocks.client.connected.mockImplementation(() => mocks.authorized);
+  mocks.client.canWrite.mockReturnValue(false);
   mocks.client.connect.mockImplementation(async () => { mocks.authorized = true; });
   mocks.client.calendars.mockResolvedValue([{ id: 'calendar', summary: 'Estudos' }]);
   window.google = { accounts: { oauth2: { initTokenClient: vi.fn(), revoke: vi.fn() } } };
@@ -60,6 +61,14 @@ describe('Google Calendar panel', () => {
     expect(screen.getByText(/Não funciona com o app fechado/)).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText(/Atualizar automaticamente enquanto o Alfred estiver aberto/));
     expect(screen.getByLabelText(/Atualizar automaticamente enquanto o Alfred estiver aberto/)).not.toBeChecked();
+  });
+  it('keeps write permission optional and separate from read-only connection', async () => {
+    render(<GoogleCalendarOAuthPanel onImported={vi.fn()} />);
+    await connect();
+    fireEvent.click(screen.getByText('Gerenciar eventos no Google (opcional)'));
+    expect(screen.getByRole('button', { name: 'Autorizar criação e edição no Google' })).toBeEnabled();
+    expect(mocks.client.createEvent).not.toHaveBeenCalled();
+    expect(mocks.client.updateEvent).not.toHaveBeenCalled();
   });
   it('does not write or archive local events if reading the selected calendars fails', async () => {
     mocks.client.snapshot.mockRejectedValueOnce(new Error('Leitura incompleta'));
