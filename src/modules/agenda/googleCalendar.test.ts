@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createGoogleCalendarClient, GOOGLE_SCOPES, normalizeGoogleEvent } from './googleCalendar';
+import { createGoogleCalendarClient, GOOGLE_SCOPES, GOOGLE_WRITE_SCOPE, normalizeGoogleEvent } from './googleCalendar';
 
 const calendar = { id: 'calendar@example.invalid', summary: 'Estudos' };
 function authorize(client: ReturnType<typeof createGoogleCalendarClient>) {
@@ -13,6 +13,21 @@ function json(value: unknown, status = 200) { return new Response(JSON.stringify
 afterEach(() => { delete window.google; vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('Google Calendar web client', () => {
+  it('requires separate write consent and never sends an event before permission', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ id: 'created' }));
+    const client = createGoogleCalendarClient(fetcher);
+    await authorize(client);
+    expect(client.canWrite()).toBe(false);
+    await expect(client.createEvent(calendar.id, { title: 'Aula', startsAt: '2026-11-17T10:00:00-03:00', endsAt: '2026-11-17T11:00:00-03:00' })).rejects.toThrow('Autorize');
+    expect(fetcher).not.toHaveBeenCalled();
+    window.google!.accounts.oauth2.initTokenClient = config => ({ requestAccessToken: () => config.callback({ access_token: 'write-token', expires_in: 3600, scope: `${GOOGLE_SCOPES} ${GOOGLE_WRITE_SCOPE}` }) });
+    await client.connect('public-client.apps.googleusercontent.com', true);
+    expect(client.canWrite()).toBe(true);
+    await client.createEvent(calendar.id, { title: 'Aula', startsAt: '2026-11-17T10:00:00-03:00', endsAt: '2026-11-17T11:00:00-03:00' });
+    expect(fetcher.mock.calls[0][1]?.method).toBe('POST');
+    await client.updateEvent(calendar.id, 'event-1', { title: 'Aula alterada', startsAt: '2026-11-17T10:00:00-03:00', endsAt: '2026-11-17T12:00:00-03:00' });
+    expect(fetcher.mock.calls[1][1]?.method).toBe('PATCH');
+  });
   it('keeps calendar copies distinct and expands recurrence metadata without private notes', () => {
     const event = { id: 'occurrence-1', summary: 'Aula', description: 'private', recurringEventId: 'series', start: { dateTime: '2026-11-12T10:00:00-03:00' }, end: { dateTime: '2026-11-12T11:00:00-03:00' } };
     const first = normalizeGoogleEvent(event, calendar)!;
