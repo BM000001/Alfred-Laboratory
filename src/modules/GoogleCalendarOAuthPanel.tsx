@@ -19,6 +19,12 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   const [error, setError] = useState('');
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [autoSync, setAutoSync] = useState(true);
+  const [writeEnabled, setWriteEnabled] = useState(client.canWrite());
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventStart, setEventStart] = useState('');
+  const [eventEnd, setEventEnd] = useState('');
+  const [eventId, setEventId] = useState('');
+  const [targetCalendar, setTargetCalendar] = useState('');
   const lastAttempt = useRef(0);
   const active = useRef(true);
   const inFlight = useRef(false);
@@ -33,13 +39,14 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
       if (active.current) setError(cause instanceof Error ? cause.message : 'Não foi possível acessar o Google Agenda.');
     } finally {
       inFlight.current = false;
-      if (active.current) { setBusy(false); setConnected(client.connected()); }
+      if (active.current) { setBusy(false); setConnected(client.connected()); setWriteEnabled(client.canWrite()); }
     }
   }
   async function listCalendars() {
     const available = await client.calendars();
     if (!active.current) return;
     setCalendars(available);
+    setTargetCalendar(current => available.some(calendar => calendar.id === current) ? current : (available[0]?.id ?? ''));
     setSelected(current => current.filter(id => available.some(calendar => calendar.id === id)));
     setMessage(available.length ? 'Escolha os calendários e toque em “Sincronizar selecionados”.' : 'Nenhum calendário disponível para leitura.');
   }
@@ -77,15 +84,15 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   }, [autoSync, connected, lastSync, selected, calendars]);
 
   async function disconnect() {
-    setCalendars([]); setSelected([]); setLastSync(null); lastAttempt.current = 0;
+    setCalendars([]); setSelected([]); setLastSync(null); setWriteEnabled(false); lastAttempt.current = 0;
     await client.disconnect();
     if (active.current) setMessage('Google desconectado. Os eventos já importados foram mantidos na Agenda.');
   }
 
   return <section className="entry-panel apple-calendar-panel" aria-labelledby="google-calendar-title">
     <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM GOOGLE</span><h3 id="google-calendar-title">Google Calendar</h3></div><span>{connected ? 'Sessão conectada' : 'Desconectado'}</span></div>
-    <p>Conexão direta por OAuth, somente leitura. Traga os próximos 90 dias de eventos, incluindo hoje. O Alfred consulta o Google com sua autorização e salva os eventos neste aparelho. Não cria nem altera eventos no Google.</p>
-    <p className="apple-calendar-note">Alterações feitas aqui nos eventos importados afetam apenas a cópia local e podem ser substituídas na próxima sincronização.</p>
+    <p>Conexão inicial somente leitura: importa os próximos 90 dias. Criar e editar eventos no Google exige uma autorização adicional, separada e opcional.</p>
+    <p className="apple-calendar-note">Alterações na Agenda local não são enviadas automaticamente ao Google. Apenas as ações explícitas abaixo podem criar ou editar eventos na conta Google.</p>
     <p className="apple-calendar-note">A conexão funciona enquanto esta página estiver aberta e a autorização estiver válida. Ao recarregar ou quando a sessão expirar, conecte novamente. Os eventos importados continuam disponíveis.</p>
     {!configuredClientId && <details><summary>Configurar conexão Google</summary>
       <p>Informe o Client ID público de um aplicativo web com a Google Calendar API habilitada. Não informe senha, token ou Client Secret.</p>
@@ -117,6 +124,35 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
       </label>)}
     </fieldset>}
     {connected && <label className="apple-calendar-option"><input type="checkbox" checked={autoSync} onChange={event => setAutoSync(event.target.checked)} /> Atualizar automaticamente enquanto o Alfred estiver aberto (a cada 5 minutos, após a primeira sincronização)</label>}
+    {connected && <details><summary>Gerenciar eventos no Google (opcional)</summary>
+      <p className="apple-calendar-note">Acesso de edição é opcional. Antes de enviar, confira o calendário, título e horários. Não há exclusão automática.</p>
+      {!writeEnabled && <button type="button" className="text-action" disabled={busy} onClick={() => void run(async () => {
+        await client.connect(clientId, true);
+        await listCalendars();
+        setMessage('Permissão de edição concedida. Escolha o calendário e confirme cada operação.');
+      })}>Autorizar criação e edição no Google</button>}
+      {writeEnabled && <form onSubmit={event => { event.preventDefault(); void run(async () => {
+        if (!targetCalendar) throw new Error('Escolha um calendário.');
+        if (!window.confirm(eventId.trim() ? 'Confirmar alteração deste evento no Google Calendar?' : 'Confirmar criação de evento no Google Calendar?')) return;
+        const changes = { title: eventTitle, startsAt: eventStart, endsAt: eventEnd };
+        if (eventId.trim()) await client.updateEvent(targetCalendar, eventId.trim(), changes);
+        else await client.createEvent(targetCalendar, changes);
+        setEventId(''); setEventTitle(''); setEventStart(''); setEventEnd('');
+        setMessage('Operação concluída no Google. Sincronize os calendários selecionados para atualizar a cópia local.');
+      }); }}>
+        <label className="field-label" htmlFor="google-write-calendar">Calendário de destino</label>
+        <select id="google-write-calendar" value={targetCalendar} onChange={event => setTargetCalendar(event.target.value)} required>{calendars.map(calendar => <option key={calendar.id} value={calendar.id}>{calendar.summary}</option>)}</select>
+        <label className="field-label" htmlFor="google-write-event-id">ID do evento (opcional; somente para editar um evento existente)</label>
+        <input id="google-write-event-id" value={eventId} onChange={event => setEventId(event.target.value)} placeholder="Deixe vazio para criar" />
+        <label className="field-label" htmlFor="google-write-title">Título</label>
+        <input id="google-write-title" value={eventTitle} onChange={event => setEventTitle(event.target.value)} required maxLength={120} />
+        <label className="field-label" htmlFor="google-write-start">Início</label>
+        <input id="google-write-start" type="datetime-local" value={eventStart} onChange={event => setEventStart(event.target.value)} required />
+        <label className="field-label" htmlFor="google-write-end">Fim</label>
+        <input id="google-write-end" type="datetime-local" value={eventEnd} onChange={event => setEventEnd(event.target.value)} required />
+        <button type="submit" className="primary-action" disabled={busy || !calendars.length}>{eventId.trim() ? 'Confirmar edição no Google' : 'Criar evento no Google'}</button>
+      </form>}
+    </details>}
     {lastSync && <small>Última sincronização Google: {new Date(lastSync).toLocaleString('pt-BR')}</small>}
     <p className="apple-calendar-note">A atualização automática funciona apenas com a página visível e a sessão Google válida. Ao reabrir o Alfred, reconecte-se e sincronize uma vez para reativá-la. Não funciona com o app fechado.</p>
     {message && <p className="module-feedback" role="status">{message}</p>}
