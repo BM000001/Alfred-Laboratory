@@ -18,6 +18,8 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [autoSync, setAutoSync] = useState(true);
+  const lastAttempt = useRef(0);
   const active = useRef(true);
   const inFlight = useRef(false);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
@@ -42,6 +44,7 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
     setMessage(available.length ? 'Escolha os calendários e toque em “Sincronizar selecionados”.' : 'Nenhum calendário disponível para leitura.');
   }
   async function synchronize() {
+    lastAttempt.current = Date.now();
     const snapshot = await client.snapshot(calendars.filter(calendar => selected.includes(calendar.id)));
     // Read and validate every selected calendar before changing local records.
     if (!active.current) return;
@@ -56,8 +59,25 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
       setMessage(`${snapshot.events.length} evento(s) sincronizado(s); ${archived} removido(s) da origem foram arquivados. Compromissos manuais e Apple foram preservados.`);
     }
   }
+  // Poll only while the page is visible, a token is valid and a calendar has been
+  // successfully imported once. Never open OAuth popups from an interval or persist tokens.
+  useEffect(() => {
+    if (!autoSync || !lastSync || !connected || !selected.length) return;
+    const refreshIfDue = () => {
+      if (document.visibilityState !== 'visible' || !client.connected()) return;
+      if (Date.now() - lastAttempt.current < 5 * 60_000) return;
+      void run(synchronize);
+    };
+    const timer = window.setInterval(refreshIfDue, 60_000);
+    document.addEventListener('visibilitychange', refreshIfDue);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshIfDue);
+    };
+  }, [autoSync, connected, lastSync, selected, calendars]);
+
   async function disconnect() {
-    setCalendars([]); setSelected([]); setLastSync(null);
+    setCalendars([]); setSelected([]); setLastSync(null); lastAttempt.current = 0;
     await client.disconnect();
     if (active.current) setMessage('Google desconectado. Os eventos já importados foram mantidos na Agenda.');
   }
@@ -96,7 +116,9 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
         <span>{calendar.summary}{calendar.primary ? ' · Principal' : ''}</span>
       </label>)}
     </fieldset>}
+    {connected && <label className="apple-calendar-option"><input type="checkbox" checked={autoSync} onChange={event => setAutoSync(event.target.checked)} /> Atualizar automaticamente enquanto o Alfred estiver aberto (a cada 5 minutos, após a primeira sincronização)</label>}
     {lastSync && <small>Última sincronização Google: {new Date(lastSync).toLocaleString('pt-BR')}</small>}
+    <p className="apple-calendar-note">A atualização automática funciona apenas com a página visível e a sessão Google válida. Ao reabrir o Alfred, reconecte-se e sincronize uma vez para reativá-la. Não funciona com o app fechado.</p>
     {message && <p className="module-feedback" role="status">{message}</p>}
     {error && <p className="module-error" role="alert">{error}</p>}
   </section>;
