@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createGoogleCalendarClient, loadGoogleIdentity, type GoogleCalendar, type GoogleImportedEvent } from './agenda/googleCalendar';
 import { createAgendaService } from './agenda/agendaService';
 import { appointmentRepository } from '../storage/repositories';
+import { getAlfredLocalStorageKey } from '../storage/storageKeys';
 
 const client = createGoogleCalendarClient();
 const agenda = createAgendaService(appointmentRepository);
@@ -13,7 +14,12 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   const [identityReady, setIdentityReady] = useState(Boolean(window.google?.accounts.oauth2));
   const [connected, setConnected] = useState(client.connected());
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() => {
+    try {
+      const stored: unknown = JSON.parse(window.localStorage.getItem(getAlfredLocalStorageKey('alfred.googleCalendarIds')) ?? '[]');
+      return Array.isArray(stored) && stored.every((id): id is string => typeof id === 'string') ? stored : [];
+    } catch { return []; }
+  });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -30,6 +36,9 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   const active = useRef(true);
   const inFlight = useRef(false);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  useEffect(() => {
+    window.localStorage.setItem(getAlfredLocalStorageKey('alfred.googleCalendarIds'), JSON.stringify(selected));
+  }, [selected]);
 
   async function run(action: () => Promise<void>) {
     if (inFlight.current) return;
@@ -86,6 +95,7 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   }, [autoSync, connected, lastSync, selected, calendars]);
 
   async function disconnect() {
+    window.localStorage.removeItem(getAlfredLocalStorageKey('alfred.googleCalendarIds'));
     setCalendars([]); setSelected([]); setSyncedEvents([]); setLastSync(null); setWriteEnabled(false); lastAttempt.current = 0;
     await client.disconnect();
     if (active.current) setMessage('Google desconectado. Os eventos já importados foram mantidos na Agenda.');
@@ -95,7 +105,7 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
     <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM GOOGLE</span><h3 id="google-calendar-title">Google Calendar</h3></div><span>{connected ? 'Sessão conectada' : 'Desconectado'}</span></div>
     <p>Conexão inicial somente leitura: importa os próximos 90 dias. Criar e editar eventos no Google exige uma autorização adicional, separada e opcional.</p>
     <p className="apple-calendar-note">Alterações na Agenda local não são enviadas automaticamente ao Google. Apenas as ações explícitas abaixo podem criar ou editar eventos na conta Google.</p>
-    <p className="apple-calendar-note">A conexão funciona enquanto esta página estiver aberta e a autorização estiver válida. Ao recarregar ou quando a sessão expirar, conecte novamente. Os eventos importados continuam disponíveis.</p>
+    <p className="apple-calendar-note">Ao recarregar, conecte novamente pelo botão Google. Sua seleção de calendários fica salva neste dispositivo, mas o token de acesso não. Os eventos já importados continuam disponíveis.</p>
     {!configuredClientId && <details><summary>Configurar conexão Google</summary>
       <p>Informe o Client ID público de um aplicativo web com a Google Calendar API habilitada. Não informe senha, token ou Client Secret.</p>
       <label className="field-label" htmlFor="google-calendar-client-id">Client ID público</label>
