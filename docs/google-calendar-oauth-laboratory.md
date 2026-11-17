@@ -33,3 +33,13 @@ A implementação é uma adaptação do PR #120 do repositório BM000001/Alfred.
 O OAuth exige um Client ID próprio do Google Cloud, mesmo com GitHub Pages. O Client ID não é senha; **não** inserir Client Secret, tokens ou credenciais na variável. A funcionalidade de escrita do Apps Script não foi migrada; primeiro liberamos apenas leitura comprovada.
 
 Documentação: https://developers.google.com/workspace/calendar/api/quickstart/js e https://developers.google.com/identity/oauth2/web/guides/use-token-model
+
+
+## Homologação agrupada — PR #64
+
+- Sincronização automática: depois da primeira importação manual, atualizar a cada 5 minutos enquanto a página estiver visível e o token válido. Não opera com app fechado.
+- A conexão padrão continua somente leitura. Para escrever, abrir **Gerenciar eventos no Google** e autorizar o escopo adicional `https://www.googleapis.com/auth/calendar.events`.
+- Criar: escolher calendário, título, início e fim, confirmar a operação. Editar: sincronizar primeiro, selecionar um evento simples (não recorrente, não dia inteiro), alterar os dados e confirmar. Alterações locais da Agenda não são automaticamente enviadas ao Google.
+- Verificar no iPhone Safari: consentimento adicional, evento criado no Google, evento editado no Google, atualização após nova sincronização, ausência de duplicação e manutenção de eventos locais.
+- O Google pode exigir ajuste dos escopos no Google Cloud Auth Platform (Data Access). Não publicar em produção nem fazer merge antes de validar.
+- **Limites conhecidos:** token mantido só na memória; é necessário conectar novamente após recarregar ou expirar; não há exclusão de eventos, edição de recorrências/dia inteiro ou sincronização com app fechado.
