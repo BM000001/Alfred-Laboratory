@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { StudyTopic } from './types';
 import type { StudyQuestion, StudyQuizAttempt } from './questionTypes';
-import { summarizeStudyPerformance, type TopicPerformance, type QuestionPerformance } from './studyPerformance';
+import { summarizeStudyPerformance, type TopicPerformance, type QuestionPerformance } from './studyPerformanceRules';
 import { studyQuestionRepository, studyQuizAttemptRepository, studyFlashcardRepository } from '../../storage/repositories';
 import { createFlashcardService } from './flashcardService';
 

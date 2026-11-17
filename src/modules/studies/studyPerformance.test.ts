@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { summarizeStudyPerformance } from './studyPerformance';
+import { summarizeStudyPerformance } from './studyPerformanceRules';
 import type { StudyQuestion, StudyQuizAttempt } from './questionTypes';
 import type { StudyTopic } from './types';
 
