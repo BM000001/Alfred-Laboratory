@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { TodayWeather } from './TodayWeather';
-import { FORECAST_TTL } from './todayWeatherData';
+import { FORECAST_TTL, storeForecast } from './todayWeatherData';
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   localStorage.clear();
@@ -22,13 +23,13 @@ function mockLocation(state: PermissionState = 'granted') {
 }
 
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
-const activate = () => click('Ativar previsão local');
+const activate = () => click('Localização automática');
 
 it('só acessa a localização após consentimento e guarda previsão sem coordenadas', async () => {
   const locate = mockLocation();
   const fetcher = vi.fn().mockResolvedValueOnce(forecast(24));
   vi.stubGlobal('fetch', fetcher);
-  const view = render(<TodayWeather />);
+  const view = render(<TodayWeather settings />);
   expect(locate).not.toHaveBeenCalled();
   expect(fetcher).not.toHaveBeenCalled();
   activate();
@@ -42,7 +43,7 @@ it('só acessa a localização após consentimento e guarda previsão sem coorde
 
   view.unmount();
   render(<TodayWeather />);
-  expect(await screen.findByText('24° · Nublado')).toBeVisible();
+  expect(screen.getByText('24° · Nublado')).toBeVisible();
   expect(locate).toHaveBeenCalledTimes(1);
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
@@ -53,7 +54,7 @@ it('atualiza automaticamente o cache vencido e permite atualização manual com 
   time.mockReturnValue(1_000_000);
   const fetcher = vi.fn().mockResolvedValueOnce(forecast(24)).mockResolvedValueOnce(forecast(27)).mockResolvedValueOnce(forecast(29));
   vi.stubGlobal('fetch', fetcher);
-  const view = render(<TodayWeather />);
+  const view = render(<TodayWeather settings />);
   activate();
   await screen.findByText('24° · Nublado');
 
@@ -76,17 +77,17 @@ it('respeita a recusa após reabrir e usa cidade somente por escolha', async () 
     .mockResolvedValueOnce(new Response(JSON.stringify({ results: [{ name: 'Recife', latitude: -8, longitude: -34 }] })))
     .mockResolvedValueOnce(forecast(26));
   vi.stubGlobal('fetch', fetcher);
-  const view = render(<TodayWeather />);
+  const view = render(<TodayWeather settings />);
   activate();
   expect(await screen.findByText(/localização não foi autorizada/)).toBeVisible();
   view.unmount();
-  render(<TodayWeather />);
+  render(<TodayWeather settings />);
   await screen.findByText(/localização não foi autorizada/);
   expect(locate).toHaveBeenCalledTimes(1);
   expect(fetcher).not.toHaveBeenCalled();
-  click('Usar cidade');
+  click('Cidade fixa');
   fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Recife' } });
-  click('Consultar');
+  click('Salvar cidade');
   expect(await screen.findByText('26° · Nublado')).toBeVisible();
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
@@ -96,30 +97,35 @@ it('mantém a última previsão identificada quando a API falha com o cache venc
   const time = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
   const fetcher = vi.fn().mockResolvedValueOnce(forecast(24)).mockResolvedValueOnce(new Response('', { status: 502 }));
   vi.stubGlobal('fetch', fetcher);
-  const view = render(<TodayWeather />);
+  const view = render(<TodayWeather settings />);
   activate();
   await screen.findByText('24° · Nublado');
 
   view.unmount();
-  time.mockReturnValue(1_000_000 + FORECAST_TTL + 1);
+  time.mockReturnValue(1_000_000 + 2 * 24 * 60 * 60_000);
   render(<TodayWeather />);
   expect(await screen.findByText('Não foi possível consultar a previsão.')).toBeVisible();
   expect(screen.getByText('24° · Nublado')).toBeVisible();
-  expect(screen.getByText('Última previsão salva')).toBeVisible();
+  expect(screen.getByText(/Última previsão salva/)).toBeVisible();
 });
 
 it('evita nova solicitação automática se o navegador exige confirmação ou não informa permissão', async () => {
   const locate = mockLocation();
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ current: { temperature_2m: 24 } }))));
-  const view = render(<TodayWeather />);
+  const view = render(<TodayWeather settings />);
   activate();
   expect(await screen.findByText('24°')).toBeVisible();
   view.unmount();
 
   const withPrompt = mockLocation('prompt');
+  const fresh = render(<TodayWeather />);
+  await waitFor(() => expect(screen.queryByText('Consultando o tempo…')).not.toBeInTheDocument());
+  expect(screen.queryByText(/Toque em Atualizar/)).not.toBeInTheDocument();
+  fresh.unmount();
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + FORECAST_TTL + 1);
   const reopened = render(<TodayWeather />);
   expect(await screen.findByText(/Toque em Atualizar/)).toBeVisible();
-  expect(screen.queryByText('24°')).not.toBeInTheDocument();
+  expect(screen.getByText('24°')).toBeVisible();
   expect(withPrompt).not.toHaveBeenCalled();
   reopened.unmount();
 
@@ -132,7 +138,7 @@ it('evita nova solicitação automática se o navegador exige confirmação ou n
 it('descarta a previsão local quando o navegador revoga a autorização', async () => {
   mockLocation();
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(forecast(24)));
-  const view = render(<TodayWeather />);
+  const view = render(<TodayWeather settings />);
   activate();
   await screen.findByText('24° · Nublado');
   view.unmount();
@@ -142,4 +148,33 @@ it('descarta a previsão local quando o navegador revoga a autorização', async
   expect(await screen.findByText(/localização não foi autorizada/)).toBeVisible();
   expect(screen.queryByText('24° · Nublado')).not.toBeInTheDocument();
   expect(denied).not.toHaveBeenCalled();
+});
+
+it('reutiliza a cidade fixa após recarga e atualiza quando o prazo do cache expira em Hoje', async () => {
+  const locate = mockLocation();
+  const fetcher = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ results: [{ name: 'Recife', latitude: -8, longitude: -34 }] })))
+    .mockResolvedValueOnce(forecast(26));
+  vi.stubGlobal('fetch', fetcher);
+  const view = render(<TodayWeather settings />);
+  click('Cidade fixa');
+  fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: 'Recife' } });
+  click('Salvar cidade');
+  await screen.findByText('26° · Nublado');
+  view.unmount();
+
+  vi.useFakeTimers();
+  const savedAt = Date.now();
+  storeForecast({ source: 'city:recife', savedAt, name: 'Recife', weather: { temperature: 26, code: 3 } });
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ results: [{ name: 'Recife', latitude: -8, longitude: -34 }] })))
+    .mockResolvedValueOnce(forecast(28));
+  render(<TodayWeather />);
+  expect(screen.getByText('26° · Nublado')).toBeVisible();
+  expect(fetcher).toHaveBeenCalledTimes(2);
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(FORECAST_TTL); });
+  expect(screen.getByText('28° · Nublado')).toBeVisible();
+  expect(fetcher).toHaveBeenCalledTimes(4);
+  expect(locate).not.toHaveBeenCalled();
+  expect(screen.queryByRole('button', { name: 'Cidade fixa' })).not.toBeInTheDocument();
 });

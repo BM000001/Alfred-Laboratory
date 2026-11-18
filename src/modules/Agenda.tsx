@@ -36,8 +36,8 @@ function sourceLabel(item: Appointment): string | null {
   return null;
 }
 
-export function Agenda({ revision = 0, onDateChanged, integrationsOnly, initialDate }: {
-  revision?: number; onDateChanged?: (date: string) => void; integrationsOnly?: boolean; initialDate?: string;
+export function Agenda({ revision = 0, onDateChanged, integrationsOnly, initialDate, focusGoogle }: {
+  revision?: number; onDateChanged?: (date: string) => void; integrationsOnly?: boolean; initialDate?: string; focusGoogle?: boolean;
 } = {}) {
   const [items, setItems] = useState<Appointment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -293,7 +293,7 @@ export function Agenda({ revision = 0, onDateChanged, integrationsOnly, initialD
           <p className="apple-calendar-note">A conexão direta está em preparação e ainda não pode ser ativada nesta página. Enquanto isso, você pode importar um arquivo .ics na seção abaixo.</p>
         </>}
       </section>
-      <GoogleCalendarOAuthPanel onImported={refresh} />
+      <GoogleCalendarOAuthPanel onImported={refresh} focusOnMount={focusGoogle} />
       <ICalendarImport existing={items} onImported={refresh} />
     </section>
   );
@@ -335,28 +335,31 @@ export function Agenda({ revision = 0, onDateChanged, integrationsOnly, initialD
       </div>}
 
       {error && <p className="module-error" role="alert">{error}</p>}
-      <h3>Compromissos de {fullDate(selected)}</h3>
+      <section className="calendar-day-section" aria-labelledby="calendar-appointments">
+        <h3 id="calendar-appointments">Compromissos de {fullDate(selected)}</h3>
 
-      {loading ? <p className="module-feedback">Carregando sua Agenda...</p> : visibleItems.length === 0 ? (
-        <div className="empty-state"><strong>Nenhum compromisso neste período.</strong><p>Quando você adicionar aulas, provas e outros eventos, eles aparecerão aqui.</p></div>
-      ) : (
-        <div className="appointment-list">
-          {visibleItems.map((item) => (
-            <article className="appointment-card" key={item.id}>
-              <div className="appointment-time">{item.isAllDay ? <strong>Dia inteiro</strong> : <><strong>{formatTime(item.startsAt)}</strong><span>{formatTime(item.endsAt)}</span></>}</div>
-              <div className="appointment-details">
-                <span className={`appointment-type type-${item.type}`}>{typeLabel(item.type)}</span>{sourceLabel(item) && <span className="appointment-source-tag">{sourceLabel(item)}</span>}{item.isRecurring && <span className="appointment-origin-tag">Recorrente</span>}{item.importedCalendarName && <span className="appointment-source-tag">{item.importedCalendarName}</span>}
-                <h3>{item.title}</h3>
-                <p>{new Date(item.startsAt).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}{item.location ? ` · ${item.location}` : ''}</p>
-                {item.description && <p>{item.description}</p>}
-              </div>
-              <div className="appointment-actions"><button className="text-action" type="button" onClick={() => setEditing(item)}>Editar</button><button className="text-action" type="button" onClick={() => void cancelAppointment(item)}>Cancelar</button></div>
-            </article>
-          ))}
-        </div>
-      )}
-      <PersonalOrganization key={selectedDate} section="tarefas" date={selectedDate} revision={revision} onChanged={() => { void refresh(); }} />
-
+        {loading ? <p className="module-feedback">Carregando sua Agenda...</p> : visibleItems.length === 0 ? (
+          <div className="empty-state"><strong>Nenhum compromisso neste período.</strong><p>Quando você adicionar aulas, provas e outros eventos, eles aparecerão aqui.</p></div>
+        ) : (
+          <div className="appointment-list">
+            {visibleItems.map((item) => (
+              <article className="appointment-card" key={item.id}>
+                <div className="appointment-time">{item.isAllDay ? <strong>Dia inteiro</strong> : <><strong>{formatTime(item.startsAt)}</strong><span>{formatTime(item.endsAt)}</span></>}</div>
+                <div className="appointment-details">
+                  <span className={`appointment-type type-${item.type}`}>{typeLabel(item.type)}</span>{sourceLabel(item) && <span className="appointment-source-tag">{sourceLabel(item)}</span>}{item.isRecurring && <span className="appointment-origin-tag">Recorrente</span>}{item.importedCalendarName && <span className="appointment-source-tag">{item.importedCalendarName}</span>}
+                  <h3>{item.title}</h3>
+                  <p>{new Date(item.startsAt).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}{item.location ? ` · ${item.location}` : ''}</p>
+                  {item.description && <p>{item.description}</p>}
+                </div>
+                <div className="appointment-actions"><button className="text-action" type="button" onClick={() => setEditing(item)}>Editar</button><button className="text-action" type="button" onClick={() => void cancelAppointment(item)}>Cancelar</button></div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+      <div className="calendar-day-section calendar-day-tasks">
+        <PersonalOrganization key={selectedDate} section="tarefas" date={selectedDate} revision={revision} onChanged={() => { void refresh(); }} />
+      </div>
     </section>
   );
 }

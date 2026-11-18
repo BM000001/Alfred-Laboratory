@@ -17,6 +17,11 @@ function initialPreference(): { mode: Mode; city: string } {
   } catch { return { city: '', mode: 'idle' }; }
 }
 
+function weatherSource(mode: Mode, city: string): WeatherSource | undefined {
+  if (mode === 'local') return localSource;
+  if (mode === 'city' && city) return { kind: 'city', city };
+}
+
 function weatherText(code: number) {
   if (code === 0) return 'Céu limpo';
   if (code <= 2) return 'Parcialmente nublado';
@@ -29,13 +34,16 @@ function weatherText(code: number) {
   return 'Condição variável';
 }
 
-export function TodayWeather() {
+export function TodayWeather({ settings = false, onSettings }: { settings?: boolean; onSettings?: () => void } = {}) {
   const [initial] = useState(initialPreference);
   const [mode, setMode] = useState(initial.mode);
   const [city, setCity] = useState(initial.city);
   const [draft, setDraft] = useState('');
   const [edit, setEdit] = useState(false);
-  const [forecast, setForecast] = useState<SavedForecast>();
+  const [forecast, setForecast] = useState<SavedForecast | undefined>(() => {
+    const source = weatherSource(initial.mode, initial.city);
+    return source ? readForecast(source) : undefined;
+  });
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
   const request = useRef<AbortController | null>(null);
@@ -56,6 +64,7 @@ export function TodayWeather() {
     setLoading(true);
     setNotice('');
     const cached = readForecast(source);
+    setForecast(cached);
     try {
       if (!manual && source.kind === 'local') {
         // Em navegadores sem Permissions API, usar somente o cache até um gesto explícito.
@@ -63,8 +72,8 @@ export function TodayWeather() {
         if (signal.aborted) return;
         if (permission?.state === 'denied') { denyLocation(); return; }
         if (permission?.state !== 'granted') {
-          setForecast(permission ? undefined : cached);
-          if (permission || !cached || Date.now() - cached.savedAt >= FORECAST_TTL) {
+
+          if (!cached || Date.now() - cached.savedAt >= FORECAST_TTL) {
             setNotice('Toque em Atualizar para confirmar a localização neste navegador.');
           }
           return;
@@ -75,7 +84,10 @@ export function TodayWeather() {
         return;
       }
 
-      setForecast(cached);
+      if (navigator.onLine === false) {
+        setNotice('Sem conexão para atualizar a previsão.');
+        return;
+      }
       const updated = await fetchForecast(source, signal, manual);
       if (signal.aborted) return;
       storeForecast(updated);
@@ -101,11 +113,26 @@ export function TodayWeather() {
   }, [load]);
 
   useEffect(() => {
-    if (initial.mode === 'local') start(localSource, false);
-    else if (initial.mode === 'city') start({ kind: 'city', city: initial.city }, false);
+    const source = weatherSource(initial.mode, initial.city);
+    if (source) start(source, false);
     else if (initial.mode === 'denied') setNotice('A localização não foi autorizada. Você pode consultar pela cidade.');
     return () => request.current?.abort();
   }, [initial, start]);
+
+  useEffect(() => {
+    const source = weatherSource(mode, city);
+    if (settings || !source || !forecast || loading) return;
+    const refresh = () => {
+      if (!document.hidden && Date.now() - forecast.savedAt >= FORECAST_TTL) start(source, false);
+    };
+    const remaining = forecast.savedAt + FORECAST_TTL - Date.now();
+    const timer = remaining > 0 ? window.setTimeout(refresh, remaining) : undefined;
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [city, forecast, loading, mode, settings, start]);
 
   function activateLocation() {
     rememberMode('local');
@@ -131,20 +158,25 @@ export function TodayWeather() {
   return <div className="today-weather" aria-label="Previsão do tempo">
     {forecast && <p>{current && <strong>{current}</strong>}
       <small>{[forecast.name, range].filter(Boolean).join(' · ')}</small>
-      {Date.now() - forecast.savedAt >= FORECAST_TTL && <small>Última previsão salva</small>}
+      {Date.now() - forecast.savedAt >= FORECAST_TTL && <small>Última previsão salva · <time>
+        {new Date(forecast.savedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+      </time></small>}
     </p>}
-    {mode === 'idle' && <small>Ative a previsão para consultar sua região no Open-Meteo.</small>}
-    {loading ? <p role="status">Consultando o tempo…</p> : <div className="weather-actions">
-      {mode === 'local' && <button className="text-action" type="button" onClick={() => start(localSource, true)}>Atualizar previsão</button>}
-      {mode === 'city' && <button className="text-action" type="button" onClick={() => start({ kind: 'city', city }, true)}>Atualizar previsão</button>}
-      {(mode === 'idle' || mode === 'city') && <button className="text-action" type="button" onClick={activateLocation}>Ativar previsão local</button>}
-      <button className="text-action" type="button" onClick={() => { setDraft(city); setEdit(true); }}>{mode === 'city' ? 'Alterar cidade' : 'Usar cidade'}</button>
+    {!settings && (mode === 'idle' || mode === 'denied') && <button className="text-action" type="button" onClick={onSettings}>Configurar previsão</button>}
+    {settings && <div className="weather-actions" role="group" aria-label="Origem da previsão">
+      <button type="button" aria-pressed={mode === 'local'} onClick={activateLocation} disabled={loading}>Localização automática</button>
+      <button type="button" aria-pressed={mode === 'city'} onClick={() => { setDraft(city); setEdit(true); }} disabled={loading}>Cidade fixa</button>
     </div>}
-    {notice && <p role="status">{notice}</p>}
+    {settings && <p><small>{mode === 'city' ? 'Cidade cadastrada: ' + city : 'Escolha uma cidade ou autorize a localização para a previsão em Hoje.'}</small></p>}
+    {loading ? <small role="status">Consultando o tempo…</small> : (mode === 'local' || mode === 'city') && <button className="text-action" type="button" onClick={() => {
+      const source = weatherSource(mode, city);
+      if (source) start(source, true);
+    }}>Atualizar previsão</button>}
+    {notice && <small role="status">{notice}</small>}
     {edit && <EditDialog title="Previsão por cidade" onClose={() => setEdit(false)}>
       <form className="dialog-form" onSubmit={(event) => { event.preventDefault(); selectCity(); }}>
         <label htmlFor="weather-city">Cidade</label><input id="weather-city" required maxLength={80} value={draft} onChange={(event) => setDraft(event.target.value)} />
-        <button className="primary-action" type="submit">Consultar</button>
+        <button className="primary-action" type="submit">Salvar cidade</button>
       </form>
     </EditDialog>}
   </div>;

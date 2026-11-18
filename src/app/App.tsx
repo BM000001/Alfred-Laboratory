@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Agenda } from '../modules/Agenda';
 import { AgendaEditor } from '../modules/AgendaEditor';
+import { TodayWeather } from '../modules/TodayWeather';
+import { hasGoogleCalendarSession } from '../modules/GoogleCalendarOAuthPanel';
 import { Overview } from '../modules/Overview';
 import { Studies, type StudyAction, type StudyStart } from '../modules/Studies';
 import { BackupSettings } from '../modules/BackupSettings';
@@ -21,6 +23,7 @@ type Theme = 'system' | 'light' | 'dark';
 
 const appearanceKey = getAlfredLocalStorageKey('appearance');
 const mascotKey = getAlfredLocalStorageKey('mascot-hidden');
+const googleInviteKey = getAlfredLocalStorageKey('google-calendar-invite-dismissed');
 const nameKey = getAlfredLocalStorageKey('account-name');
 const navigation = [
   { id: 'inicio', label: 'Hoje', icon: 'home' },
@@ -67,6 +70,10 @@ function App() {
   const [calendarStart, setCalendarStart] = useState<string>();
   const [selectedDate, setSelectedDate] = useState<string>();
   const [calendarSetup, setCalendarSetup] = useState(false);
+  const [settingsTarget, setSettingsTarget] = useState<'google' | 'weather'>();
+  const [inviteDismissed, setInviteDismissed] = useState(() => readPreference(googleInviteKey) === 'true');
+  const weatherHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (settingsTarget === 'weather') weatherHeading.current?.focus(); }, [settingsTarget]);
   const [name, setName] = useState(() => readPreference(nameKey) ?? '');
   const [nameDraft, setNameDraft] = useState('');
   const studyActions = useRef<StudyAction[]>([]);
@@ -97,11 +104,12 @@ function App() {
     catch { setPreferenceError('A preferência foi aplicada nesta sessão.'); }
   }
 
-  function navigate(target: Page, context?: { study?: StudyStart; calendarDate?: string }) {
+  function navigate(target: Page, context?: { study?: StudyStart; calendarDate?: string; settings?: 'google' | 'weather' }) {
     setPage(target);
     setStudyStart(context?.study);
     setCalendarStart(context?.calendarDate);
-    setCalendarSetup(false);
+    setSettingsTarget(context?.settings);
+    setCalendarSetup(context?.settings === 'google');
     setStatus('');
     setMenu(undefined);
     content.current?.focus({ preventScroll: true });
@@ -153,7 +161,12 @@ function App() {
       {status && <p className="save-notice" role="status">{status}</p>}
       {page === 'inicio' && <Overview greeting={greeting + (name ? ', ' + name : '') + '.'}
         onCalendar={(calendarDate) => navigate('organizacao', { calendarDate })} onAssistant={() => navigate('assistente')}
-        onResumeStudy={(study) => navigate('estudos', { study })} revision={revision} />}
+        onResumeStudy={(study) => navigate('estudos', { study })}
+        onWeatherSettings={() => navigate('configuracoes', { settings: 'weather' })}
+        googleInvite={inviteDismissed || hasGoogleCalendarSession() ? undefined : {
+          connect: () => navigate('configuracoes', { settings: 'google' }),
+          dismiss: () => { setInviteDismissed(true); remember(googleInviteKey, 'true'); },
+        }} revision={revision} />}
       {page !== 'inicio' && page !== 'assistente' && <header className="page-heading">
         <h1>{pages[page][0]}</h1>{pages[page][1] && <p>{pages[page][1]}</p>}
       </header>}
@@ -163,7 +176,7 @@ function App() {
         onCreate={(kind, projectId) => setEditor({ kind, projectId })} />}
       {page === 'organizacao' && <div className="calendar-workbench">
         <Agenda initialDate={calendarStart} revision={revision} onDateChanged={setSelectedDate} />
-        <details className="interface-disclosure"><summary>Notas gerais</summary><Notes revision={revision} /></details>
+        <details className="interface-disclosure calendar-general-notes"><summary>Notas gerais</summary><Notes revision={revision} /></details>
       </div>}
       {page === 'configuracoes' && <div className="settings-workbench">
           <section className="entry-panel" aria-label="Conta">
@@ -184,9 +197,13 @@ function App() {
             }} /> Mostrar mascote Alfred</label>
             {preferenceError && <p role="status">{preferenceError}</p>}
           </section>
+          <section className="entry-panel" aria-labelledby="settings-weather-title">
+            <h2 id="settings-weather-title" ref={weatherHeading} tabIndex={-1}>Previsão do tempo</h2>
+            <TodayWeather settings />
+          </section>
           <section className={calendarSetup ? "entry-panel settings-integrations expanded" : "entry-panel settings-integrations"}><h2>Integrações</h2>
             <button type="button" aria-expanded={calendarSetup} onClick={() => setCalendarSetup(!calendarSetup)}>Conexões de calendário</button>
-            {calendarSetup && <Agenda integrationsOnly />}
+            {calendarSetup && <Agenda integrationsOnly focusGoogle={settingsTarget === 'google'} />}
           </section>
           <details className="interface-disclosure"><summary>Arquivos gerais</summary><Files /></details>
           <details className="interface-disclosure"><summary>Memória e exportação do Alfred</summary>
