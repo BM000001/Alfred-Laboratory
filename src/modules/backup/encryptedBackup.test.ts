@@ -24,4 +24,16 @@ describe('encryptedBackup', () => {
     await expect(decryptBackup('{"format":"outro"}', 'senha-correta-123')).rejects.toThrow('não compatível');
     expect(isEncryptedBackup('{')).toBe(false);
   });
+  it('rejeita backup com ciphertext adulterado sem revelar conteúdo', async () => {
+    const password = 'senha-segura-123';
+    const original = await encryptBackup('anotações privadas', password);
+    const envelope = JSON.parse(original) as { ciphertext: string };
+    const bytes = Uint8Array.from(atob(envelope.ciphertext), (character) => character.charCodeAt(0));
+    bytes[0] ^= 1;
+    envelope.ciphertext = btoa(String.fromCharCode(...bytes));
+
+    await expect(decryptBackup(JSON.stringify(envelope), password))
+      .rejects.toThrow('Senha incorreta ou backup criptografado danificado');
+  });
+
 });
