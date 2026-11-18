@@ -21,7 +21,7 @@ async function cacheAppShell() {
   const response = await fetch(new Request(scope.href, { cache: 'reload' }));
   if (!response.ok) throw new Error('Não foi possível atualizar o shell.');
   const html = await response.clone().text();
-  const servedBuild = html.match(/<meta name="alfred-build" content="[a-f0-9]{7} · ([a-f0-9]{16})"\s*\/>/)?.[1];
+  const servedBuild = html.match(/<meta name="alfred-build" content="(?:[a-f0-9]{7}|local) · ([a-f0-9]{16})"\s*\/>/)?.[1];
   if (servedBuild !== SHELL_BUILD) throw new Error('O HTML publicado ainda pertence a outra versão.');
   const assetUrls = [...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)]
     .map((match) => new URL(match[1], scope))
