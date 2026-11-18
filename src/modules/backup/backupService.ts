@@ -3,9 +3,12 @@ import type { Task } from '../tasks/types';
 import type { Project } from '../projects/types';
 import type { Appointment } from '../agenda/types';
 import type { Discipline, StudyTopic } from '../studies/types';
-import type { StoredFile } from '../files/types';
+import { PROCESSING_PROFILES, type ProcessingProfile } from '../studies/materialReliability';
+import type { MaterialProcessingState } from '../studies/materialProcessor';
+import type { StoredFile, StoredTextExtraction } from '../files/types';
 import type { FocusSession } from '../productivity/types';
 import type { AssistantMemory } from '../memory/types';
+import type { StudyLearningProgress } from '../studies/learningTypes';
 import type { StudyFlashcard } from '../studies/flashcardTypes';
 import type { StudyQuestion, StudyQuizAttempt } from '../studies/questionTypes';
 import { base64ByteLength, decodeBase64, encodeBase64 } from './backupBase64';
@@ -13,16 +16,8 @@ import { base64ByteLength, decodeBase64, encodeBase64 } from './backupBase64';
 const BACKUP_FORMAT = 'alfred-local-backup';
 // Version 2 includes the complete study state. Version 1 remains readable.
 const BACKUP_VERSION = 2;
-const CHECKPOINT_ERROR = 'O backup não pode ser criado ou restaurado com checkpoints de processamento. Use a versão que criou esses checkpoints para preservar o trabalho.';
+const CHECKPOINT_ERROR = 'O backup contém checkpoints de processamento inválidos ou incompatíveis.';
 const STUDY_BACKUP_KEYS = ['studyFlashcards', 'studyQuestions', 'studyQuizAttempts', 'studyLearningProgress'] as const;
-
-type StudyLearningProgressBackup = {
-  id: string;
-  disciplineId: string;
-  lessonId: string;
-  completedAt: string;
-  context: 'technical' | 'football' | 'sports' | 'series' | 'games' | 'daily';
-};
 
 type BackupPayload = {
   format: typeof BACKUP_FORMAT;
@@ -38,7 +33,7 @@ type BackupPayload = {
     studyFlashcards?: StudyFlashcard[];
     studyQuestions?: StudyQuestion[];
     studyQuizAttempts?: StudyQuizAttempt[];
-    studyLearningProgress?: StudyLearningProgressBackup[];
+    studyLearningProgress?: StudyLearningProgress[];
     focusSessions?: FocusSession[];
     memories?: AssistantMemory[];
     files: Array<Omit<StoredFile, 'blob'> & { contentBase64: string }>;
@@ -60,10 +55,6 @@ function assertEntities(value: unknown, label: string): void {
   }
 }
 
-function assertPortableFile(file: object): void {
-  if ('processing' in file && file.processing !== undefined) throw new Error(CHECKPOINT_ERROR);
-}
-
 export async function createBackup(): Promise<string> {
   const database = await openAlfredDatabase();
   try {
@@ -80,13 +71,13 @@ export async function createBackup(): Promise<string> {
       request.onerror = () => reject(request.error ?? new Error('Falha ao ler os dados locais.'));
     }));
     const [tasks, projects, appointments, disciplines, studyTopics, studyFlashcards, studyQuestions, studyQuizAttempts, studyLearningProgress, files, focusSessions, , memories] = await Promise.all(requests);
-    (files as StoredFile[]).forEach(assertPortableFile);
     const filePayload = await Promise.all((files as StoredFile[]).map(async (file) => ({
       id: file.id, name: file.name, type: file.type, size: file.size, createdAt: file.createdAt,
       ...(file.projectId ? { projectId: file.projectId } : {}),
       ...(file.disciplineId ? { disciplineId: file.disciplineId } : {}),
       ...(file.kind ? { kind: file.kind, noteText: file.noteText, updatedAt: file.updatedAt } : {}),
       ...(file.extraction ? { extraction: file.extraction } : {}),
+      ...(file.processing !== undefined ? { processing: portableProcessing(file.processing, file.id) } : {}),
       contentBase64: encodeBase64(new Uint8Array(await file.blob.arrayBuffer())),
     })));
     const payload: BackupPayload = {
@@ -94,7 +85,7 @@ export async function createBackup(): Promise<string> {
       data: { tasks: tasks as Task[], projects: projects as Project[], appointments: appointments as Appointment[],
         disciplines: disciplines as Discipline[], studyTopics: studyTopics as StudyTopic[],
         studyFlashcards: studyFlashcards as StudyFlashcard[], studyQuestions: studyQuestions as StudyQuestion[],
-        studyQuizAttempts: studyQuizAttempts as StudyQuizAttempt[], studyLearningProgress: studyLearningProgress as StudyLearningProgressBackup[],
+        studyQuizAttempts: studyQuizAttempts as StudyQuizAttempt[], studyLearningProgress: studyLearningProgress as StudyLearningProgress[],
         focusSessions: focusSessions as FocusSession[], memories: memories as AssistantMemory[], files: filePayload },
     };
     return JSON.stringify(payload);
@@ -167,11 +158,11 @@ function isExtractionMethod(value: unknown): boolean {
   return value === 'text' || value === 'ocr';
 }
 
-function isFiniteNumber(value: unknown): boolean {
+function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function isValidExtraction(value: unknown): boolean {
+function isValidExtraction(value: unknown): value is StoredTextExtraction {
   // OCR branches also use the image format and carry additional metadata.
   return isRecord(value)
     && typeof value.format === 'string' && ['txt', 'md', 'csv', 'json', 'pdf', 'docx', 'pptx', 'image'].includes(value.format)
@@ -185,6 +176,40 @@ function isValidExtraction(value: unknown): boolean {
       isRecord(page) && isCount(page.pageNumber) && page.pageNumber > 0 && typeof page.text === 'string'
       && (page.method === undefined || isExtractionMethod(page.method))
       && (page.confidence === undefined || page.confidence === null || isFiniteNumber(page.confidence)))));
+}
+
+// Persist evidence and explicit review decisions. Recalculate derived artifacts when resuming.
+function portableProcessing(value: unknown, fileId: string, legacy = false): MaterialProcessingState {
+  if (!isRecord(value) || value.version !== 1 || typeof value.profile !== 'string'
+    || !Object.hasOwn(PROCESSING_PROFILES, value.profile)
+    || typeof value.status !== 'string' || !['running', 'cancelled', 'failed', 'review', 'completed'].includes(value.status)
+    || (value.topicId !== undefined && !hasId(value.topicId)) || typeof value.stage !== 'string' || (value.error !== undefined && typeof value.error !== 'string')
+    || (value.raw !== undefined && !isValidExtraction(value.raw))
+    || (value.corrected !== undefined && (typeof value.corrected !== 'string' || !value.raw))
+    || ((value.status === 'review' || value.status === 'completed') && (value.corrected === undefined || !value.raw))) {
+    throw new Error(CHECKPOINT_ERROR);
+  }
+  const raw = value.raw as StoredTextExtraction | undefined;
+  const corrections = value.corrections;
+  if (corrections !== undefined && (!raw || typeof value.corrected !== 'string' || !Array.isArray(corrections)
+    || !corrections.every((item: unknown) => isRecord(item) && item.sourceFileId === fileId
+      && typeof item.original === 'string' && typeof item.corrected === 'string' && typeof item.reason === 'string'
+      && isFiniteNumber(item.confidence) && item.confidence >= 0 && item.confidence <= 100
+      && isRecord(item.region) && isCount(item.region.start) && isCount(item.region.end)
+      && item.region.start <= item.region.end && item.region.end <= raw.text.length))) {
+    throw new Error(CHECKPOINT_ERROR);
+  }
+  const interrupted = value.status === 'running' || (legacy && value.status === 'completed');
+  return {
+    version: 1, profile: value.profile as ProcessingProfile,
+    status: interrupted ? 'cancelled' : value.status as MaterialProcessingState['status'],
+    stage: interrupted ? 'Pronto para retomar processamento' : value.stage,
+    ...(typeof value.topicId === 'string' ? { topicId: value.topicId } : {}),
+    ...(typeof value.error === 'string' ? { error: value.error } : {}),
+    ...(raw ? { raw } : {}),
+    ...(typeof value.corrected === 'string' ? { corrected: value.corrected } : {}),
+    ...(corrections !== undefined ? { corrections: corrections as MaterialProcessingState['corrections'] } : {}),
+  };
 }
 
 /** Shared verification also protects callers that invoke restoreBackup directly. */
@@ -223,7 +248,7 @@ function validateBackupPayload(value: unknown): asserts value is BackupPayload {
       if (file[field] !== undefined && typeof file[field] !== 'string') throw new Error('Metadados de arquivo inválidos.');
     }
     if (file.kind !== undefined && file.kind !== 'note') throw new Error('Tipo de anotação inválido.');
-    assertPortableFile(file);
+    if (file.processing !== undefined) portableProcessing(file.processing, file.id as string);
     if (file.extraction !== undefined && !isValidExtraction(file.extraction)) {
       throw new Error('O backup contém uma extração de arquivo inválida.');
     }
@@ -294,6 +319,7 @@ function queueRestore(
   transaction: IDBTransaction,
   rows: RestoreRows,
   abort: (error: unknown) => void,
+  incoming: StoredFile[],
 ): void {
   const retained = STUDY_BACKUP_KEYS.filter((key) => rows[key] === undefined);
   const studyReads = retained.map((key) => [key, transaction.objectStore(key).getAll()] as const);
@@ -302,12 +328,23 @@ function queueRestore(
   // IndexedDB runs requests in enqueue order. The final cursor checks for local
   // checkpoints, then queues writes in its event callback while the transaction is active.
   const fileKeys: IDBValidKey[] = [];
+  const incomingById = new Map(incoming.map((file) => [file.id, file]));
   const files = transaction.objectStore(STORE_NAMES.files).openCursor();
   files.onsuccess = () => {
     try {
       const cursor = files.result;
       if (cursor) {
-        assertPortableFile(cursor.value);
+        const current = cursor.value as StoredFile;
+        if (current.processing !== undefined) {
+          const local = portableProcessing(current.processing, current.id);
+          const replacement = incomingById.get(current.id)?.processing;
+          if (!replacement || local.profile !== replacement.profile || local.corrected !== replacement.corrected
+            || (local.topicId !== undefined && local.topicId !== replacement.topicId)
+            || JSON.stringify(local.raw) !== JSON.stringify(replacement.raw)
+            || JSON.stringify(local.corrections) !== JSON.stringify(replacement.corrections)) {
+            throw new Error('A restauração substituiria checkpoints locais. Preserve os materiais atuais em um backup antes de continuar.');
+          }
+        }
         if (retained.length) fileKeys.push(cursor.primaryKey);
         cursor.continue();
         return;
@@ -339,8 +376,8 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
   // Decode every file before opening the write transaction: malformed data must never
   // leave a partially populated transaction or clear the user's existing records.
   const restoredFiles = payload.data.files.map((file) => {
-    const { contentBase64, ...metadata } = file;
-    return { ...metadata, blob: new Blob([decodeBase64(contentBase64)], { type: file.type }) };
+    const { contentBase64, processing, ...metadata } = file;
+    return { ...metadata, ...(processing !== undefined ? { processing: portableProcessing(processing, file.id, payload.version === 1) } : {}), blob: new Blob([decodeBase64(contentBase64)], { type: file.type }) };
   });
   const database = await openAlfredDatabase();
   try {
@@ -369,7 +406,7 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
         failure = error;
         transaction.abort();
       };
-      try { queueRestore(transaction, rows, abort); }
+      try { queueRestore(transaction, rows, abort, restoredFiles); }
       catch (error) { abort(error); }
     });
   } finally { database.close(); }

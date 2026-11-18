@@ -21,3 +21,5 @@ A build de backup não executa o pipeline de checkpoints ou a Central. É precis
 ## Homologação física pendente
 
 Numa origem HTTPS de teste separada, registre o SHA, modelo e versão do iOS. Repita no Safari e na PWA instalada com dados sintéticos. Prepare um banco marcado com estudo, disciplina, tópico e fonte. Restaure um v1 cujos IDs preservem os vínculos, e depois tente um v1 que removeria um destino. Confira a mensagem e compare o backup exportado antes e depois, ignorando a data de criação do backup. Repita em JSON e AES-GCM. Teste ainda banco vazio, v2 completo, anexos de 10 MiB, cancelamento, recarga e fechamento após confirmação. Após uma interrupção, confira se o estado é inteiramente anterior ou inteiramente novo. O aborto controlado fica nos testes automatizados. Use desktop para testar os limites de 100 MiB e 100 MiB + 1 byte e avance gradualmente no iPhone.
+
+> Atualização da consolidação: checkpoints compatíveis agora têm uma representação portátil que conserva evidências e decisões humanas. A matriz acima descreve o checkpoint anterior (#66). Consulte [Consolidação de Estudos e backup](CONSOLIDACAO_ESTUDOS.md) para o contrato atual.

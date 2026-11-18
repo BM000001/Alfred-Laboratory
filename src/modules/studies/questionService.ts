@@ -9,13 +9,14 @@ export function gradeStudyAnswer(question: Pick<StudyQuestion, 'correctOptionInd
 
 export function getQuestionSnapshot(answer: StudyQuizAnswer, disciplineId: string): StudyQuestion | undefined {
   const snapshot = answer.questionSnapshot;
-  if (snapshot?.id !== answer.questionId || snapshot.disciplineId !== disciplineId
+  if (!snapshot || (snapshot.id !== undefined && snapshot.id !== answer.questionId)
+    || (snapshot.disciplineId !== undefined && snapshot.disciplineId !== disciplineId)
     || typeof snapshot.prompt !== 'string' || !Array.isArray(snapshot.options)
     || !snapshot.options.every((option) => typeof option === 'string')
     || !Number.isInteger(snapshot.correctOptionIndex)
     || snapshot.correctOptionIndex < 0 || snapshot.correctOptionIndex >= snapshot.options.length
     || (snapshot.explanation !== undefined && typeof snapshot.explanation !== 'string')) return;
-  return snapshot;
+  return { ...snapshot, id: answer.questionId, disciplineId, createdAt: snapshot.createdAt ?? '' };
 }
 
 export function summarizeQuiz(answers: StudyQuizAnswer[]) {

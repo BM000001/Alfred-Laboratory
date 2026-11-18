@@ -436,14 +436,10 @@ describe('backupService', () => {
   });
 
   it.each([
-    {
-      version: 1, profile: 'printed', status: 'cancelled', stage: 'Trecho confirmado; pronto para retomar',
-      raw: documentFile.extraction, corrected: 'Texto sintético',
-      corrections: [{
-        original: 'Definição alternativa', corrected: '', reason: 'Confirmação explícita do usuário',
-        confidence: 100, sourceFileId: documentFile.id, region: { start: 0, end: 20 },
-      }],
-    },
+    { version: 1, profile: 'printed', status: 'completed', stage: 'incompleto' },
+    { version: 1, profile: 'printed', status: 'cancelled', stage: 'inválido',
+      raw: documentFile.extraction, corrected: 'a',
+      corrections: [{ sourceFileId: 'outro', region: { start: 0, end: 1 } }] },
     { version: -1, status: 'inválido' },
     null,
   ])('recusa checkpoint estrangeiro ou inválido antes de qualquer acesso ao banco (%j)', async (processing) => {
@@ -456,20 +452,55 @@ describe('backupService', () => {
     } finally { transaction.mockRestore(); }
   });
 
-  it('recusa exportar ou substituir arquivo local com checkpoint e conserva os dados existentes', async () => {
+  it('transporta evidência e revisão em AES-GCM, descarta cache e bloqueia substituição que perderia o checkpoint', async () => {
     const original = inspectBackup(await createBackup()).payload;
-    const processing = { version: 1, profile: 'printed', status: 'completed', stage: 'Resultados salvos', raw: documentFile.extraction };
+    const processing = { version: 1, profile: 'printed', status: 'running', stage: 'Etapa intermediária',
+      raw: documentFile.extraction, corrected: 'Trecho revisto', generated: { flashcards: ['cache'] },
+      corrections: [{ original: 'Trecho', corrected: 'Trecho revisto', reason: 'Revisão sintética',
+        confidence: 100, sourceFileId: documentFile.id, region: { start: 0, end: 6 } }],
+    };
     const file = { ...documentFile, processing, blob: new Blob(['a'], { type: documentFile.type }) };
     await request(STORE_NAMES.files, 'readwrite', (store) => store.put(file));
     const clear = vi.spyOn(IDBObjectStore.prototype, 'clear');
     try {
-      await expect(createBackup()).rejects.toThrow(/checkpoints/);
+      const password = 'senha-sintetica-123';
+      const raw = await createBackup();
+      const exported = inspectBackup(await decryptBackup(await encryptBackup(raw, password), password)).payload;
+      expect(exported.data.files[0].processing).toMatchObject({
+        raw: processing.raw, corrected: processing.corrected, corrections: processing.corrections, status: 'cancelled',
+      });
+      expect(exported.data.files[0].processing).not.toHaveProperty('generated');
+      await restoreBackup(exported);
+      expect(await request(STORE_NAMES.files, 'readonly', (store) => store.get(file.id))).toMatchObject({
+        processing: exported.data.files[0].processing,
+      });
+      clear.mockClear();
       await expect(restoreBackup(original)).rejects.toThrow(/checkpoints/);
       expect(clear).not.toHaveBeenCalled();
-      expect(await request(STORE_NAMES.files, 'readonly', (store) => store.get(file.id))).toMatchObject({ processing });
+      expect(await request(STORE_NAMES.files, 'readonly', (store) => store.get(file.id))).toMatchObject({ processing: exported.data.files[0].processing });
     } finally {
       clear.mockRestore();
       await request(STORE_NAMES.files, 'readwrite', (store) => store.delete(file.id));
+      await restoreBackup(original);
+    }
+  });
+
+  it('restaura checkpoint v1 numa base sem material e deixa os recursos ausentes recuperáveis', async () => {
+    const original = inspectBackup(await createBackup()).payload;
+    const processing = {
+      version: 1, profile: 'printed', status: 'completed', stage: 'Resultados salvos',
+      raw: documentFile.extraction, corrected: documentFile.extraction.text,
+    };
+    const incoming = inspectBackup(JSON.stringify({ ...validBackup, data: {
+      ...validBackup.data, files: [{ ...documentFile, processing }],
+    } })).payload;
+    try {
+      await restoreBackup(incoming);
+      const file = await request(STORE_NAMES.files, 'readonly', (store) => store.get(documentFile.id));
+      expect(file.processing).toMatchObject({ status: 'cancelled', corrected: processing.corrected });
+      expect(await file.blob.text()).toBe('a');
+    } finally {
+      await request(STORE_NAMES.files, 'readwrite', (store) => store.delete(documentFile.id));
       await restoreBackup(original);
     }
   });
