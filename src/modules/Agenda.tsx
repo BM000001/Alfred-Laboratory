@@ -36,15 +36,13 @@ function sourceLabel(item: Appointment): string | null {
   return null;
 }
 
-export function Agenda({ revision = 0, onDateChanged, integrationsOpen }: {
-  revision?: number; onDateChanged?: (date: string) => void; integrationsOpen?: boolean;
+export function Agenda({ revision = 0, onDateChanged, integrationsOnly }: {
+  revision?: number; onDateChanged?: (date: string) => void; integrationsOnly?: boolean;
 } = {}) {
   const [items, setItems] = useState<Appointment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedDate, setSelectedDate] = useState(dateKey(new Date()));
   const [view, setView] = useState<ViewMode>('week');
-  const integrationLink = useRef<HTMLElement>(null);
-  useEffect(() => { if (integrationsOpen) integrationLink.current?.focus(); }, [integrationsOpen]);
   const [editing, setEditing] = useState<Appointment>();
   useEffect(() => { onDateChanged?.(selectedDate); }, [selectedDate, onDateChanged]);
   const [loading, setLoading] = useState(true);
@@ -268,6 +266,38 @@ export function Agenda({ revision = 0, onDateChanged, integrationsOpen }: {
     : view === 'day' ? fullDate(selected)
       : selected.toLocaleDateString('pt-BR', { year: 'numeric', ...(view === 'month' ? { month: 'long' } : {}) });
 
+  if (integrationsOnly) return (
+      <section className="agenda-module" aria-label="Integrações de calendário"><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
+        <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM APPLE</span><h3 id="apple-calendar-title">Conectar Calendário Apple</h3></div><span className={appleAvailable ? 'apple-calendar-indicator' : 'apple-calendar-unavailable'}><span /> {appleAvailable ? 'Disponível neste dispositivo' : 'Aguardando app iOS'}</span></div>
+        {appleAvailable ? <>
+          <p>Conecte o calendário do iPhone para trazer seus próximos 90 dias de eventos. A sincronização é somente leitura e não altera seus compromissos manuais. Eventos ausentes só são arquivados quando o iPhone confirma que a leitura foi completa.</p>
+          <div className="apple-calendar-actions">
+            <button className="primary-action" type="button" disabled={appleBusy} onClick={() => void handleAppleCalendar(true)}>{appleBusy ? 'Aguarde...' : appleConnected ? 'Atualizar lista de calendários' : 'Conectar Calendário Apple'}</button>
+            <button className="text-action" type="button" disabled={appleBusy || !appleConnected || selectedAppleCalendars.length === 0} onClick={() => void handleAppleCalendar(false)}>Sincronizar selecionados</button>
+          </div>
+          {appleConnected && <div className="apple-calendar-picker"><strong>Escolha os calendários para importar</strong>{appleCalendars.length === 0 ? <p>Nenhum calendário disponível para leitura.</p> : appleCalendars.map((calendar) => <label key={calendar.id} className="apple-calendar-option"><input type="checkbox" checked={selectedAppleCalendars.includes(calendar.id)} onChange={(event) => setSelectedAppleCalendars((current) => event.target.checked ? [...current, calendar.id] : current.filter((id) => id !== calendar.id))} /><span><b>{calendar.title}</b><small>{calendar.source}</small></span></label>)}</div>}
+          <div className="apple-calendar-diagnostics" aria-label="Diagnóstico da conexão Apple">
+            <div className="apple-calendar-diagnostics-heading"><strong>Diagnóstico da conexão</strong><span>{appleBusy ? 'Verificando...' : appleLastResult === 'error' ? 'Atenção necessária' : appleLastResult === 'success' ? 'Última operação concluída' : 'Aguardando primeira sincronização'}</span></div>
+            <div className="apple-calendar-diagnostic-grid">
+              <div><small>Ambiente</small><strong>{appleAvailable ? 'App iOS nativo' : 'Navegador'}</strong></div>
+              <div><small>Calendários selecionados</small><strong>{selectedAppleCalendars.length} de {appleCalendars.length || '—'}</strong></div>
+              <div><small>Eventos na última leitura</small><strong>{appleImportedCount}</strong></div>
+              <div><small>Eventos Apple na Agenda</small><strong>{items.filter((item) => item.importedUid?.startsWith('apple:') && item.status !== 'cancelled').length}</strong></div>
+            </div>
+            <p className="apple-calendar-diagnostic-note">{!appleAvailable ? 'A permissão do Calendário só pode ser solicitada no app iOS. O navegador não consegue consultar o estado dessa permissão.' : !appleConnected ? 'Acesso ainda não confirmado. Toque em “Conectar Calendário Apple” para solicitar a permissão do iOS.' : appleLastResult === 'error' ? 'A última operação apresentou erro. Confira a mensagem abaixo e tente novamente.' : appleLastSync ? 'Acesso concedido anteriormente; a última sincronização foi registrada abaixo.' : 'Calendários listados. Faça a primeira sincronização para importar os eventos.'}</p>
+          </div>
+          {appleLastSync && <small className="apple-calendar-last-sync">Última sincronização: {new Date(appleLastSync).toLocaleString('pt-BR')}</small>}
+          {appleMessage && <p className="module-feedback" role="status">{appleMessage}</p>}
+        </> : <>
+          <p>Você está usando o Alfred pelo navegador. Para adicionar seu calendário diretamente, sem exportar arquivos, será necessário abrir o Alfred no aplicativo iOS nativo, que usa a permissão oficial do sistema Apple.</p>
+          <p className="apple-calendar-note">A conexão direta está em preparação e ainda não pode ser ativada nesta página. Enquanto isso, você pode importar um arquivo .ics na seção abaixo.</p>
+        </>}
+      </section>
+      <GoogleCalendarOAuthPanel onImported={refresh} />
+      <ICalendarImport existing={items} onImported={refresh} />
+    </section>
+  );
+
   return (
     <section className="agenda-module">
       <div className="agenda-toolbar">
@@ -326,35 +356,7 @@ export function Agenda({ revision = 0, onDateChanged, integrationsOpen }: {
         </div>
       )}
       <PersonalOrganization key={selectedDate} section="tarefas" date={selectedDate} revision={revision} onChanged={() => { void refresh(); }} />
-      <details className="calendar-integrations interface-disclosure" open={integrationsOpen || undefined}><summary ref={integrationLink}>Conectar calendários · Google, iPhone ou arquivo .ics</summary><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
-        <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM APPLE</span><h3 id="apple-calendar-title">Conectar Calendário Apple</h3></div><span className={appleAvailable ? 'apple-calendar-indicator' : 'apple-calendar-unavailable'}><span /> {appleAvailable ? 'Disponível neste dispositivo' : 'Aguardando app iOS'}</span></div>
-        {appleAvailable ? <>
-          <p>Conecte o calendário do iPhone para trazer seus próximos 90 dias de eventos. A sincronização é somente leitura e não altera seus compromissos manuais. Eventos ausentes só são arquivados quando o iPhone confirma que a leitura foi completa.</p>
-          <div className="apple-calendar-actions">
-            <button className="primary-action" type="button" disabled={appleBusy} onClick={() => void handleAppleCalendar(true)}>{appleBusy ? 'Aguarde...' : appleConnected ? 'Atualizar lista de calendários' : 'Conectar Calendário Apple'}</button>
-            <button className="text-action" type="button" disabled={appleBusy || !appleConnected || selectedAppleCalendars.length === 0} onClick={() => void handleAppleCalendar(false)}>Sincronizar selecionados</button>
-          </div>
-          {appleConnected && <div className="apple-calendar-picker"><strong>Escolha os calendários para importar</strong>{appleCalendars.length === 0 ? <p>Nenhum calendário disponível para leitura.</p> : appleCalendars.map((calendar) => <label key={calendar.id} className="apple-calendar-option"><input type="checkbox" checked={selectedAppleCalendars.includes(calendar.id)} onChange={(event) => setSelectedAppleCalendars((current) => event.target.checked ? [...current, calendar.id] : current.filter((id) => id !== calendar.id))} /><span><b>{calendar.title}</b><small>{calendar.source}</small></span></label>)}</div>}
-          <div className="apple-calendar-diagnostics" aria-label="Diagnóstico da conexão Apple">
-            <div className="apple-calendar-diagnostics-heading"><strong>Diagnóstico da conexão</strong><span>{appleBusy ? 'Verificando...' : appleLastResult === 'error' ? 'Atenção necessária' : appleLastResult === 'success' ? 'Última operação concluída' : 'Aguardando primeira sincronização'}</span></div>
-            <div className="apple-calendar-diagnostic-grid">
-              <div><small>Ambiente</small><strong>{appleAvailable ? 'App iOS nativo' : 'Navegador'}</strong></div>
-              <div><small>Calendários selecionados</small><strong>{selectedAppleCalendars.length} de {appleCalendars.length || '—'}</strong></div>
-              <div><small>Eventos na última leitura</small><strong>{appleImportedCount}</strong></div>
-              <div><small>Eventos Apple na Agenda</small><strong>{items.filter((item) => item.importedUid?.startsWith('apple:') && item.status !== 'cancelled').length}</strong></div>
-            </div>
-            <p className="apple-calendar-diagnostic-note">{!appleAvailable ? 'A permissão do Calendário só pode ser solicitada no app iOS. O navegador não consegue consultar o estado dessa permissão.' : !appleConnected ? 'Acesso ainda não confirmado. Toque em “Conectar Calendário Apple” para solicitar a permissão do iOS.' : appleLastResult === 'error' ? 'A última operação apresentou erro. Confira a mensagem abaixo e tente novamente.' : appleLastSync ? 'Acesso concedido anteriormente; a última sincronização foi registrada abaixo.' : 'Calendários listados. Faça a primeira sincronização para importar os eventos.'}</p>
-          </div>
-          {appleLastSync && <small className="apple-calendar-last-sync">Última sincronização: {new Date(appleLastSync).toLocaleString('pt-BR')}</small>}
-          {appleMessage && <p className="module-feedback" role="status">{appleMessage}</p>}
-        </> : <>
-          <p>Você está usando o Alfred pelo navegador. Para adicionar seu calendário diretamente, sem exportar arquivos, será necessário abrir o Alfred no aplicativo iOS nativo, que usa a permissão oficial do sistema Apple.</p>
-          <p className="apple-calendar-note">A conexão direta está em preparação e ainda não pode ser ativada nesta página. Enquanto isso, você pode importar um arquivo .ics na seção abaixo.</p>
-        </>}
-      </section>
-      <GoogleCalendarOAuthPanel onImported={refresh} />
-      <ICalendarImport existing={items} onImported={refresh} />
-      </details>
+
     </section>
   );
 }

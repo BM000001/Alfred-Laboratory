@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
 import { create } from './testActions';
@@ -77,13 +77,12 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Salvar compromisso' })).toBeInTheDocument();
   });
 
-  it('abre Organização diretamente no Calendário e permite abrir as integrações abaixo da agenda', async () => {
+  it('abre Organização diretamente no calendário e mantém integrações em Configurações', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     expect(await screen.findByText('CALENDÁRIO CENTRAL')).toBeInTheDocument();
-    const integrations = screen.getByText(/Conectar calendários · Google, iPhone ou arquivo \.ics/).closest('details');
-    expect(integrations).toHaveProperty('open', false);
-    fireEvent.click(within(integrations!).getByText(/Conectar calendários/));
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conexões de calendário' }));
     expect(screen.getByRole('heading', { name: 'Google Calendar' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Conectar Calendário Apple' })).toBeInTheDocument();
   });

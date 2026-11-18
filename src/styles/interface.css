@@ -221,7 +221,7 @@ button.calendar-day { display: grid; align-content: start; text-align: start; mi
 .focus-cycle .done { background: var(--accent); }
 @media (min-width: 960px) {
   .records-workspace, .settings-workbench { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
-  .settings-workbench .build-details { grid-column: 1 / -1; }
+  .settings-workbench :is(.build-details,.settings-integrations.expanded) { grid-column: 1 / -1; }
   .productivity-module { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
   .focus-history { grid-column: 1 / -1; }
 }

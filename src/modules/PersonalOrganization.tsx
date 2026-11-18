@@ -52,6 +52,8 @@ export function PersonalOrganization({ section, scopedProjectId, date, onOpenPro
 
   const visible = filterTasks(taskItems, { status: filter, projectId: scopedProjectId })
     .filter((task) => !date || (undated ? !task.dueDate : task.dueDate === date));
+  const scopedTasks = scopedProjectId ? taskItems.filter((task) => task.projectId === scopedProjectId) : [];
+  const scopedCompleted = scopedTasks.filter((task) => task.status === 'completed').length;
   if (loading) return <p role="status">Carregando seus dados…</p>;
 
   return <section className="records-list" aria-label={section === 'tarefas' ? 'Lista de tarefas' : 'Lista de projetos'}>
@@ -64,6 +66,10 @@ export function PersonalOrganization({ section, scopedProjectId, date, onOpenPro
         </select>
         {date && <button type="button" className="text-action" onClick={() => setUndated(!undated)}>{undated ? 'Tarefas da data' : 'Ver sem data'}</button>}
       </div>
+      {scopedTasks.length > 0 && <div className="brief-progress">
+        <progress aria-label="Progresso das tarefas deste projeto" max={scopedTasks.length} value={scopedCompleted} />
+        <small>{scopedCompleted} de {scopedTasks.length} tarefas concluídas</small>
+      </div>}
       {visible.length ? <div className="task-list">{visible.map((task) => <article className="task-row" key={task.id}>
         <label className="check-label"><input aria-label={`Concluir ${task.title}`} type="checkbox" checked={task.status === 'completed'} onChange={() => void update(
           () => tasks.update(task.id, { status: task.status === 'completed' ? 'pending' : 'completed' }), 'Não foi possível atualizar a tarefa.',

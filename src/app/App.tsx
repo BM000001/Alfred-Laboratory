@@ -96,10 +96,10 @@ function App() {
     catch { setPreferenceError('A preferência foi aplicada nesta sessão.'); }
   }
 
-  function navigate(target: Page, study?: StudyStart, setup = false) {
+  function navigate(target: Page, study?: StudyStart) {
     setPage(target);
     setStudyStart(study);
-    setCalendarSetup(setup);
+    setCalendarSetup(false);
     setStatus('');
     setMenu(undefined);
     content.current?.focus({ preventScroll: true });
@@ -111,11 +111,10 @@ function App() {
     if (page === 'estudos') setMenu(studyActions.current);
     else if (page === 'assistente') setMenu(assistantActions.current);
     else if (page === 'inicio' || page === 'organizacao') {
-      setMenu([
-        { label: 'Nova tarefa', run: () => setEditor({ kind: 'task' }) },
-        { label: 'Novo compromisso', run: () => setEditor({ kind: 'appointment' }) },
-        { label: 'Nova nota', run: () => setEditor({ kind: 'note' }) },
-      ]);
+      const task = { label: 'Nova tarefa', run: () => setEditor({ kind: 'task' }) };
+      const appointment = { label: 'Novo compromisso', run: () => setEditor({ kind: 'appointment' }) };
+      const note = { label: 'Nova nota', run: () => setEditor({ kind: 'note' }) };
+      setMenu(page === 'inicio' ? [task, appointment, note] : [appointment, task, note]);
     }
   }
 
@@ -161,7 +160,7 @@ function App() {
         onActions={(list) => { assistantActions.current = list; }}
         onCreate={(kind, projectId) => setEditor({ kind, projectId })} />}
       {page === 'organizacao' && <div className="calendar-workbench">
-        <Agenda revision={revision} onDateChanged={setSelectedDate} integrationsOpen={calendarSetup} />
+        <Agenda revision={revision} onDateChanged={setSelectedDate} />
         <details className="interface-disclosure"><summary>Notas gerais</summary><Notes revision={revision} /></details>
       </div>}
       {page === 'configuracoes' && <div className="settings-workbench">
@@ -183,8 +182,9 @@ function App() {
             }} /> Mostrar mascote Alfred</label>
             {preferenceError && <p role="status">{preferenceError}</p>}
           </section>
-          <section className="entry-panel"><h2>Integrações</h2>
-            <button type="button" onClick={() => navigate('organizacao', undefined, true)}>Conexões de calendário</button>
+          <section className={calendarSetup ? "entry-panel settings-integrations expanded" : "entry-panel settings-integrations"}><h2>Integrações</h2>
+            <button type="button" aria-expanded={calendarSetup} onClick={() => setCalendarSetup(!calendarSetup)}>Conexões de calendário</button>
+            {calendarSetup && <Agenda integrationsOnly />}
           </section>
           <details className="interface-disclosure"><summary>Arquivos gerais</summary><Files /></details>
           <details className="interface-disclosure"><summary>Memória e exportação do Alfred</summary>
