@@ -9,6 +9,7 @@ describe('Integrated workspaces', () => {
     await projectRepository.save(project);
     await taskRepository.save({ id: 'outside-task', title: 'Tarefa de outro espaço', status: 'pending', priority: 'low', projectId: 'another-project', createdAt: new Date().toISOString() });
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Organização' }));
     fireEvent.click(screen.getByRole('button', { name: 'Projetos' }));
     fireEvent.click(await screen.findByRole('button', { name: /Projeto de teste do espaço/ }));
     expect(await screen.findByRole('heading', { name: 'O que precisa ser feito?' })).toBeInTheDocument();
@@ -33,12 +34,14 @@ describe('Integrated workspaces', () => {
     const note = (await fileRepository.getAll()).find(file => file.name === 'Decisões do projeto');
     expect(note?.projectId).toBe(project.id);
   });
-  it('shows selected appearance only in Hoje and settings, and guards unsaved notes', async () => {
+  it('keeps theme in settings and guards unsaved notes', async () => {
     await projectRepository.save({ id: 'workspace-project', name: 'Projeto de teste do espaço', status: 'active', createdAt: new Date().toISOString() });
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
-    expect(screen.getByRole('button', { name: 'Técnico' })).toHaveAttribute('aria-pressed', 'true');
-    expect(document.documentElement.dataset.appearance).toBe('technical');
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Escuro' }));
+    expect(screen.getByRole('button', { name: 'Escuro' })).toHaveAttribute('aria-pressed', 'true');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    fireEvent.click(screen.getByRole('button', { name: 'Organização' }));
     fireEvent.click(screen.getByRole('button', { name: 'Projetos' }));
     expect(screen.queryByRole('group', { name: 'Aparência' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: /Projeto de teste do espaço/ }));
@@ -49,7 +52,7 @@ describe('Integrated workspaces', () => {
     expect(screen.getByLabelText('Título da anotação')).toHaveValue('Rascunho');
     confirm.mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
-    expect(screen.getByRole('button', { name: 'Técnico' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Escuro' })).toHaveAttribute('aria-pressed', 'true');
     confirm.mockRestore();
   });
 });

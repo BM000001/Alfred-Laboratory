@@ -43,7 +43,7 @@ function sourceLabel(item: Appointment): string | null {
   return null;
 }
 
-export function Agenda() {
+export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {}) {
   const [items, setItems] = useState<Appointment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -58,6 +58,14 @@ export function Agenda() {
   const [projectId, setProjectId] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  useEffect(() => {
+    if (creationRequest > 0) {
+      setEditingId(null);
+      setShowForm(true);
+      setError('');
+      setConflicts([]);
+    }
+  }, [creationRequest]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

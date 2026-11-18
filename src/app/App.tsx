@@ -1,5 +1,5 @@
 import mascotImage from '../assets/alfred.png';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PersonalOrganization } from '../modules/PersonalOrganization';
 import { Agenda } from '../modules/Agenda';
 import { Overview } from '../modules/Overview';
@@ -8,38 +8,38 @@ import { BackupSettings } from '../modules/BackupSettings';
 import { Productivity } from '../modules/Productivity';
 import { ProjectWorkspace } from '../modules/ProjectWorkspace';
 import { Assistant } from '../modules/Assistant';
+import { Notes } from '../modules/Notes';
+import { Files } from '../modules/Files';
+import { getAlfredLocalStorageKey } from '../storage/namespace';
 
-type SectionId = 'inicio' | 'assistente' | 'tarefas' | 'estudos' | 'agenda' | 'projetos' | 'arquivos' | 'produtividade' | 'configuracoes' | 'organizacao';
-type IconName = 'home' | 'sparkles' | 'check' | 'book' | 'calendar' | 'layers' | 'folder' | 'chart' | 'settings' | 'more';
+type OrganizationTab = 'agenda' | 'tarefas' | 'projetos' | 'notas' | 'arquivos' | 'produtividade';
+type Page = 'inicio' | 'estudos' | 'organizacao' | 'assistente' | 'configuracoes';
+type IconName = 'home' | 'sparkles' | 'check' | 'book' | 'calendar' | 'layers' | 'folder' | 'chart' | 'settings' | 'plus';
+type Theme = 'system' | 'light' | 'dark';
 
-const sections: { id: SectionId; label: string; icon: IconName }[] = [
+const appearanceKey = getAlfredLocalStorageKey('appearance');
+const mascotKey = getAlfredLocalStorageKey('mascot-hidden');
+const tabs: [OrganizationTab, string][] = [
+  ['agenda', 'Calendário'], ['tarefas', 'Tarefas'], ['projetos', 'Projetos'],
+  ['notas', 'Notas'], ['arquivos', 'Arquivos'], ['produtividade', 'Foco'],
+];
+const navigation = [
   { id: 'inicio', label: 'Hoje', icon: 'home' },
-  { id: 'organizacao', label: 'Organização', icon: 'calendar' },
-  { id: 'estudos', label: 'Estudos', icon: 'book' },
-  { id: 'projetos', label: 'Projetos', icon: 'layers' },
+  { id: 'estudos', label: 'Aprender', icon: 'book' },
+  { id: 'create', label: 'Criar', icon: 'plus' },
+  { id: 'organizacao', label: 'Organização', icon: 'layers' },
   { id: 'assistente', label: 'Alfred', icon: 'sparkles' },
-  { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
-];
-
-const mobilePrimary: SectionId[] = ['inicio', 'organizacao', 'assistente', 'projetos'];
-const mobileMore: SectionId[] = ['estudos', 'configuracoes'];
-
-const groups: { label: string; ids: SectionId[] }[] = [
-  { label: 'SEU ESPAÇO', ids: ['inicio', 'organizacao', 'estudos', 'projetos', 'assistente'] },
-];
-
-const sectionDetails: Record<SectionId, { title: string; description: string }> = {
-  inicio: { title: 'Seu dia, preparado.', description: 'Seu espaço está pronto. Vamos organizar o que realmente importa hoje.' },
-  assistente: { title: 'À sua disposição.', description: 'Converse com Alfred e consulte suas informações.' },
-  tarefas: { title: 'Tarefas', description: 'Transforme suas prioridades em próximos passos claros.' },
-  estudos: { title: 'Estudos', description: 'Disciplinas, conteúdos, cronogramas e avaliações ficarão organizados aqui.' },
-  agenda: { title: 'Calendário', description: 'Compromissos, eventos e prazos em uma visão única.' },
-  organizacao: { title: 'Organização', description: 'Compromissos, eventos e prazos no calendário. Tarefas e foco em seus próprios espaços.' },
-  projetos: { title: 'Projetos', description: 'Acompanhe objetivos, etapas e entregas importantes.' },
-  arquivos: { title: 'Arquivos', description: 'Seus documentos e materiais, organizados e fáceis de encontrar.' },
-  produtividade: { title: 'Produtividade', description: 'Hábitos, foco, pausas e revisões no seu ritmo.' },
-  configuracoes: { title: 'Configurações', description: 'Preferências, aparência, privacidade e controle dos seus dados.' },
+] as const;
+const pages: Record<Exclude<Page, 'inicio'>, [string, string]> = {
+  estudos: ['Aprender', 'Disciplinas, materiais e prática por unidade.'],
+  organizacao: ['Organização', 'Compromissos, eventos e prazos no calendário.'],
+  assistente: ['Alfred', 'Converse com seu assistente pessoal.'],
+  configuracoes: ['Configurações', 'Aparência, privacidade e seus dados.'],
 };
+
+function readPreference(key: string) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
 
 function Icon({ name }: { name: IconName }) {
   const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -53,130 +53,159 @@ function Icon({ name }: { name: IconName }) {
     folder: <><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H10l2 2h7.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-11Z" /></>,
     chart: <><path d="M4 19V5M4 19h17" /><path d="m7 15 4-4 3 2 5-6" /><path d="M16 7h3v3" /></>,
     settings: <><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.6.9l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.6-.9l-1.7.6-1.4-2.4 1.4-1.1a7 7 0 0 1 0-1.9l-1.4-1.1 1.4-2.4 1.7.6a8 8 0 0 1 1.6-.9l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.6.9l1.7-.6 1.4 2.4-1.4 1.1a7 7 0 0 1 0 1.8Z" transform="translate(-1 -1) scale(1.08)" /></>,
-    more: <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,
+    plus: <path d="M12 5v14M5 12h14" />,
   };
   return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" {...common}>{paths[name]}</svg>;
 }
 
+
 function App() {
-  const [activeSection, setActiveSection] = useState<SectionId>('inicio');
-  const [organizationTab, setOrganizationTab] = useState('agenda');
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem('alfred-appearance') === 'technical' ? 'technical' : 'daily'; } catch { return 'daily'; } });
-  const [themeError, setThemeError] = useState('');
-  useEffect(() => { document.documentElement.dataset.appearance = theme; }, [theme]);
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [page, setPage] = useState<Page>('inicio');
+  const [organizationTab, setOrganizationTab] = useState<OrganizationTab>('agenda');
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = readPreference(appearanceKey);
+    if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    const legacy = readPreference('alfred-appearance');
+    return legacy === 'technical' ? 'dark' : legacy === 'daily' ? 'light' : 'system';
+  });
+  const [mascotHidden, setMascotHidden] = useState(() => readPreference(mascotKey) === 'true');
+  const [preferenceError, setPreferenceError] = useState('');
+  const [quick, setQuick] = useState<{ tab: OrganizationTab; sequence: number }>();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const createButton = useRef<HTMLButtonElement>(null);
+  const closingForNavigation = useRef(false);
+  const quickSequence = useRef(0);
+  const content = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!mobileMoreOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileMoreOpen(false);
+    const system = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const apply = () => { document.documentElement.dataset.theme = theme === 'system' ? system?.matches ? 'dark' : 'light' : theme; };
+    apply();
+    if (theme === 'system') system?.addEventListener?.('change', apply);
+    return () => {
+      if (theme === 'system') system?.removeEventListener?.('change', apply);
+      delete document.documentElement.dataset.theme;
     };
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [mobileMoreOpen]);
-  const activeDetails = sectionDetails[activeSection];
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bom dia.' : hour < 18 ? 'Boa tarde.' : 'Boa noite.';
-  const activeItem = sections.find((item) => item.id === activeSection)!;
+  }, [theme]);
 
-  const navigate = (id: SectionId) => {
+  useEffect(() => {
+    const main = content.current;
+    if (!main || !quick || page !== 'organizacao' || organizationTab !== quick.tab) return;
+    const selectors: Partial<Record<OrganizationTab, string>> = {
+      tarefas: '#task-title', notas: '#note-title', projetos: '#project-name', agenda: '#appointment-title',
+    };
+    const selector = selectors[quick.tab];
+    if (!selector) return;
+    function focusField() {
+      const field = main?.querySelector<HTMLElement>(selector!);
+      field?.focus();
+      return Boolean(field);
+    }
+    if (focusField()) return;
+    const observer = new MutationObserver(() => { if (focusField()) observer.disconnect(); });
+    observer.observe(main, { subtree: true, childList: true });
+    return () => observer.disconnect();
+  }, [organizationTab, page, quick]);
+
+  function remember(key: string, value: string) {
+    try { localStorage.setItem(key, value); setPreferenceError(''); }
+    catch { setPreferenceError('A preferência foi aplicada nesta sessão.'); }
+  }
+
+  function navigate(target: Page | OrganizationTab, create = false) {
     if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
-    if (id === 'organizacao') { setOrganizationTab('agenda'); setActiveSection('organizacao'); }
-    else if (['tarefas', 'agenda', 'produtividade'].includes(id)) { setOrganizationTab(id); setActiveSection('organizacao'); }
-    else if (id === 'arquivos') setActiveSection('estudos');
-    else setActiveSection(id);
-    setMobileMoreOpen(false);
-  };
+    const tab = tabs.find(([id]) => id === target)?.[0];
+    if (tab) {
+      setOrganizationTab(tab);
+      setPage('organizacao');
+    } else {
+      if (target === 'organizacao' && page !== 'organizacao') setOrganizationTab('agenda');
+      setPage(target as Page);
+    }
+    setQuick(create && tab ? { tab, sequence: ++quickSequence.current } : undefined);
+    if (dialog.current?.open) {
+      closingForNavigation.current = true;
+      dialog.current.close();
+    }
+    content.current?.focus({ preventScroll: true });
+    document.documentElement.scrollTop = 0;
+  }
 
-  const appearance = <div className="appearance-picker" role="group" aria-label="Aparência"><span>Aparência</span>{[['daily', 'Cotidiano'], ['technical', 'Técnico']].map(([value, label]) => <button key={value} type="button" aria-pressed={theme === value} onClick={() => { setTheme(value); try { localStorage.setItem('alfred-appearance', value); setThemeError(''); } catch { setThemeError('A aparência foi aplicada, mas não pôde ser salva.'); } }}>{label}</button>)}{themeError && <small role="status">{themeError}</small>}</div>;
-  const mascot = <button className="mascot-companion" type="button" aria-label="Conversar com Alfred" onClick={() => navigate('assistente')}><img src={mascotImage} alt="" /><span>À sua disposição <span aria-hidden="true">↗</span></span></button>;
-  const renderNavItem = (section: (typeof sections)[number], compact = false) => (
-    <button
-      className={`nav-item ${activeSection === section.id ? 'active' : ''} ${compact ? 'mobile-nav-item' : ''}`}
-      key={section.id}
-      type="button"
-      aria-current={activeSection === section.id ? 'page' : undefined}
-      aria-label={compact ? `Abrir ${section.label}` : undefined}
-      onClick={() => navigate(section.id)}
-    >
-      <Icon name={section.icon} />
-      <span>{section.label}</span>
-    </button>
-  );
-
-  return (
-    <main className="app-shell">
-      <header className="topbar">
-        <a className="brand" href={import.meta.env.BASE_URL} aria-label="Alfred, início" onClick={(event) => { event.preventDefault(); navigate('inicio'); }}>
-          <span className="brand-mark" aria-hidden="true"><img src={`${import.meta.env.BASE_URL}brand/alfred-mark.svg`} alt="" /></span>
-          <span>Alfred<span className="brand-period">.</span></span>
-        </a>
-        <div className="topbar-meta">
-          <span className="topbar-status"><span className="status-dot" /> SEU ESPAÇO PESSOAL</span>
-          <span className="topbar-caption">PRIVADO POR PADRÃO</span>
-        </div>
-      </header>
-
-      <div className="workspace">
-        <aside className="sidebar-shell">
-          <nav className="sidebar" aria-label="Navegação principal">
-            {groups.map((group) => (
-              <div className="nav-group" key={group.label}>
-                <p className="nav-caption">{group.label}</p>
-                {group.ids.map((id) => renderNavItem(sections.find((item) => item.id === id)!))}
-              </div>
-            ))}
-            <div className="nav-bottom">
-
-              {renderNavItem(sections.find((item) => item.id === 'configuracoes')!)}
-            </div>
-            <div className="sidebar-note"><span className="sidebar-note-mark"><Icon name="sparkles" /></span><span><strong>Alfred</strong><small>Discreto. Atento. Ao seu lado.</small></span></div>
-          </nav>
-        </aside>
-
-        <section className="main-content" aria-live="polite">
-          <div className="mobile-page-context"><span className="mobile-context-icon"><Icon name={activeItem.icon} /></span><span>{activeItem.label}</span></div>
-          <section className="welcome" aria-labelledby="welcome-title">
-            <p className="eyebrow">{activeSection === 'inicio' ? 'SEU DIA, SOB CONTROLE' : 'ALFRED · ESPAÇO PESSOAL'}</p>
-            <h1 id="welcome-title">{activeSection === 'inicio' ? greeting : activeDetails.title}</h1>
-            <p className="welcome-copy">{activeSection === 'inicio' ? 'Seu espaço está pronto. Vamos organizar o que realmente importa hoje.' : activeDetails.description}</p>
-            {activeSection === 'inicio' && mascot}
-          </section>
-          {(activeSection === 'inicio' || activeSection === 'configuracoes') && appearance}
-          {activeSection === 'assistente' && <div className="assistant-introduction">{mascot}<p>Seu assistente está aqui. As alterações propostas por Alfred continuam dependendo da sua confirmação.</p></div>}
-
-          {activeSection === 'inicio' ? (
-            <Overview onNavigate={navigate} />
-          ) : activeSection === 'assistente' ? (
-            <Assistant />
-          ) : activeSection === 'organizacao' ? (
-            <><nav className="workspace-tabs" aria-label="Organização">{[['agenda', 'Calendário'], ['tarefas', 'Tarefas'], ['produtividade', 'Foco']].map(([key, label]) => <button key={key} type="button" aria-current={organizationTab === key ? 'page' : undefined} onClick={() => setOrganizationTab(key)}>{label}</button>)}</nav>{organizationTab === 'agenda' ? <Agenda /> : organizationTab === 'tarefas' ? <PersonalOrganization section="tarefas" /> : <Productivity />}</>
-          ) : activeSection === 'estudos' ? (
-            <Studies />
-          ) : activeSection === 'configuracoes' ? (
-            <BackupSettings />
-          ) : activeSection === 'projetos' ? (
-            <ProjectWorkspace />
-          ) : null}
-        </section>
-      </div>
-
-      <nav className="mobile-tabbar" aria-label="Navegação móvel">
-        {mobilePrimary.map((id) => renderNavItem(sections.find((item) => item.id === id)!, true))}
-        <button className={`nav-item mobile-nav-item mobile-more-trigger ${mobileMoreOpen || mobileMore.includes(activeSection) ? 'active' : ''}`} type="button" aria-expanded={mobileMoreOpen} aria-controls="mobile-more-menu" onClick={() => setMobileMoreOpen((open) => !open)}>
-          <Icon name="more" /><span>Mais</span>
-        </button>
-        {mobileMoreOpen && (
-          <div className="mobile-more-menu" id="mobile-more-menu">
-            <p className="mobile-more-heading">OUTRAS ÁREAS</p>
-            {mobileMore.map((id) => renderNavItem(sections.find((item) => item.id === id)!))}
-          </div>
-        )}
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Bom dia.' : hour < 18 ? 'Boa tarde.' : 'Boa noite.';
+  return <div className="alfred-shell">
+    <a className="skip-link" href="#main-content">Ir ao conteúdo</a>
+    <header className="masthead">
+      <a className="wordmark" href={import.meta.env.BASE_URL} aria-label="Alfred, início"
+        onClick={(event) => { event.preventDefault(); navigate('inicio'); }}>
+        <img src={`${import.meta.env.BASE_URL}brand/alfred-mark.svg`} alt="" /><span>alfred</span>
+      </a>
+      <nav className="primary-navigation" aria-label="Navegação principal">
+        {navigation.map(({ id, label, icon }) => id === 'create'
+          ? <button key={id} ref={createButton} type="button" className="create-launcher" aria-label="Criar"
+              aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}><Icon name={icon} /><span>{label}</span></button>
+          : <button key={id} type="button" aria-current={page === id ? 'page' : undefined}
+              onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span></button>)}
       </nav>
-
-      <footer className="app-footer"><span>ALFRED</span><span>Discreto. Atento. Ao seu lado.</span></footer>
+      <button type="button" className="settings-launcher" aria-label="Configurações"
+        aria-current={page === 'configuracoes' ? 'page' : undefined} onClick={() => navigate('configuracoes')}><Icon name="settings" /></button>
+    </header>
+    <main id="main-content" className={`page page-${page}`} tabIndex={-1} ref={content}>
+      {page === 'inicio' ? <>
+        <section className="day-hero" aria-labelledby="day-title">
+          <div className="day-copy">
+            <p className="day-date">{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(now)}</p>
+            <h1 id="day-title">{greeting}</h1>
+            <p>Veja o que merece sua atenção hoje.</p>
+            <button className="primary-action" type="button" onClick={() => navigate('assistente')}><Icon name="sparkles" /> Conversar com Alfred</button>
+          </div>
+          {!mascotHidden && <button className="day-mascot" type="button" aria-label="Abrir assistente Alfred" onClick={() => navigate('assistente')}><img src={mascotImage} alt="" /></button>}
+        </section>
+        <Overview onNavigate={navigate} />
+      </> : <>
+        <header className="page-heading"><h1>{pages[page][0]}</h1><p>{pages[page][1]}</p></header>
+        {page === 'estudos' && <Studies />}
+        {page === 'assistente' && <Assistant showMascot={!mascotHidden} />}
+        {page === 'organizacao' && <>
+          <nav className="workspace-tabs organization-tabs" aria-label="Ferramentas de organização">
+            {tabs.map(([id, label]) => <button key={id} type="button" aria-current={organizationTab === id ? 'page' : undefined}
+              onClick={() => navigate(id)}>{label}</button>)}
+          </nav>
+          {organizationTab === 'agenda' && <Agenda key={quick?.tab === 'agenda' ? quick.sequence : 0} creationRequest={quick?.tab === 'agenda' ? quick.sequence : 0} />}
+          {organizationTab === 'tarefas' && <PersonalOrganization key={quick?.tab === 'tarefas' ? quick.sequence : 0} section="tarefas" />}
+          {organizationTab === 'projetos' && <ProjectWorkspace key={quick?.tab === 'projetos' ? quick.sequence : 0} />}
+          {organizationTab === 'notas' && <Notes key={quick?.tab === 'notas' ? quick.sequence : 0} />}
+          {organizationTab === 'arquivos' && <Files />}
+          {organizationTab === 'produtividade' && <Productivity />}
+        </>}
+        {page === 'configuracoes' && <>
+          <section className="entry-panel settings-appearance">
+            <h2>Aparência</h2>
+            <div className="workspace-tabs" role="group" aria-label="Aparência">
+              {([['system', 'Automático'], ['light', 'Claro'], ['dark', 'Escuro']] as const).map(([value, label]) =>
+                <button key={value} type="button" aria-pressed={theme === value} onClick={() => {
+                  setTheme(value); remember(appearanceKey, value);
+                }}>{label}</button>)}
+            </div>
+            <label className="check-label"><input type="checkbox" checked={!mascotHidden} onChange={(event) => {
+              const hidden = !event.target.checked; setMascotHidden(hidden); remember(mascotKey, String(hidden));
+            }} /> Mostrar mascote Alfred</label>
+            {preferenceError && <p role="status">{preferenceError}</p>}
+          </section>
+          <BackupSettings />
+        </>}
+      </>}
     </main>
-  );
+    <dialog className="quick-dialog" ref={dialog} aria-labelledby="quick-title" onClose={() => { if (!closingForNavigation.current) createButton.current?.focus(); closingForNavigation.current = false; }}>
+      <header><h2 id="quick-title">Criar</h2><button type="button" aria-label="Fechar criação rápida" onClick={() => dialog.current?.close()}>×</button></header>
+      <div className="quick-actions">
+        {([['tarefas', 'Nova tarefa', 'check'], ['agenda', 'Novo compromisso', 'calendar'],
+          ['notas', 'Nova nota', 'book'], ['projetos', 'Novo projeto', 'folder']] as const).map(([id, label, icon]) =>
+          <button key={id} type="button" onClick={() => navigate(id, true)}><Icon name={icon} />{label}</button>)}
+      </div>
+    </dialog>
+  </div>;
 }
 
 export default App;
