@@ -1,189 +1,105 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import type { Task, TaskPriority } from './tasks/types';
+import { useEffect, useState } from 'react';
+import type { Task } from './tasks/types';
 import type { Project } from './projects/types';
-import { createTaskService } from './tasks/taskService';
-import { createProjectService } from './projects/projectService';
-import { taskRepository, projectRepository } from '../storage/repositories';
 import { filterTasks, isTaskOverdue } from './tasks/taskRules';
 import { summarizeProjectTasks } from './projects/projectRules';
+import { ProjectEditor, TaskEditor, priorityLabels, projects, tasks } from './RecordEditors';
 
-const tasks = createTaskService(taskRepository);
-const projects = createProjectService(projectRepository);
+type Props = {
+  section: 'tarefas' | 'projetos';
+  scopedProjectId?: string;
+  date?: string;
+  revision?: number;
+  onChanged?: () => void;
+  onOpenProject?: (project: Project) => void;
+};
 
-type Props = { section: 'tarefas' | 'projetos'; scopedProjectId?: string; onOpenProject?: (project: Project) => void };
-
-export function PersonalOrganization({ section, scopedProjectId, onOpenProject }: Props) {
+export function PersonalOrganization({ section, scopedProjectId, date, onOpenProject, revision = 0, onChanged }: Props) {
   const [taskItems, setTaskItems] = useState<Task[]>([]);
   const [projectItems, setProjectItems] = useState<Project[]>([]);
-  const [editingTaskId, setEditingTaskId] = useState<string>();
-  const [description, setDescription] = useState('');
-  const [title, setTitle] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('medium');
-  const [dueDate, setDueDate] = useState('');
-  const [projectId, setProjectId] = useState('');
-  const [projectName, setProjectName] = useState('');
-  const [projectDescription, setProjectDescription] = useState('');
+  const [editingTask, setEditingTask] = useState<Task>();
+  const [editingProject, setEditingProject] = useState<Project>();
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [undated, setUndated] = useState(false);
+  const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  async function refresh() {
-    const [loadedTasks, loadedProjects] = await Promise.all([tasks.list(), projects.list()]);
-    setTaskItems(loadedTasks);
-    setProjectItems(loadedProjects);
-  }
-
   useEffect(() => {
-    let mounted = true;
-    Promise.all([tasks.list(), projects.list()])
-      .then(([loadedTasks, loadedProjects]) => {
-        if (mounted) {
-          setTaskItems(loadedTasks);
-          setProjectItems(loadedProjects);
-        }
-      })
-      .catch(() => { if (mounted) setError('Não foi possível carregar seus dados locais.'); })
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
-  }, []);
-
-  const visibleTasks = useMemo(
-    () => filterTasks(taskItems, { status: filter, ...(scopedProjectId ? { projectId: scopedProjectId } : {}) }),
-    [taskItems, filter, scopedProjectId],
-  );
-
-  async function handleTaskSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
-    try {
-      const input = {
-        title,
-        priority,
-        description,
-        ...(dueDate ? { dueDate } : {}),
-        ...((scopedProjectId || projectId) ? { projectId: scopedProjectId || projectId } : {}),
-      };
-      if (editingTaskId) await tasks.update(editingTaskId, { ...input, dueDate: dueDate || undefined, projectId: scopedProjectId || projectId || undefined });
-      else await tasks.create(input);
-      setEditingTaskId(undefined); setDescription('');
-      setTitle('');
-      setDueDate('');
-      setProjectId('');
-      await refresh();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar a tarefa.');
-    }
-  }
-
-  async function handleProjectSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
-    try {
-      await projects.create({ name: projectName, ...(projectDescription.trim() ? { description: projectDescription } : {}) });
-      setProjectName('');
-      setProjectDescription('');
-      await refresh();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o projeto.');
-    }
-  }
-
-  async function toggleTask(task: Task) {
-    setError('');
-    try {
-      if (task.status === 'completed') {
-        await tasks.update(task.id, { status: 'pending' } as never);
-      } else {
-        await tasks.complete(task.id);
+    let active = true;
+    Promise.all([tasks.list(), projects.list()]).then(([loadedTasks, loadedProjects]) => {
+      if (active) {
+        setTaskItems(loadedTasks);
+        setProjectItems(loadedProjects);
       }
-      await refresh();
-    } catch {
-      setError('Não foi possível atualizar a tarefa.');
-    }
+    }).catch(() => { if (active) setError('Não foi possível carregar seus dados locais.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [revision, version]);
+
+  function changed() {
+    setVersion((current) => current + 1);
+    onChanged?.();
   }
 
-  async function deleteTask(task: Task) {
-    if (!window.confirm(`Excluir a tarefa "${task.title}"? Essa ação não pode ser desfeita.`)) return;
+  async function update(run: () => Promise<unknown>, message: string) {
     try {
-      await tasks.delete(task.id);
-      await refresh();
-    } catch {
-      setError('Não foi possível excluir a tarefa.');
-    }
+      setError('');
+      await run();
+      changed();
+    } catch { setError(message); }
   }
 
-  async function archiveProject(project: Project) {
-    if (!window.confirm(`Arquivar o projeto "${project.name}"?`)) return;
-    try {
-      await projects.archive(project.id);
-      await refresh();
-    } catch {
-      setError('Não foi possível arquivar o projeto.');
-    }
-  }
+  const visible = filterTasks(taskItems, { status: filter, projectId: scopedProjectId })
+    .filter((task) => !date || (undated ? !task.dueDate : task.dueDate === date));
+  if (loading) return <p role="status">Carregando seus dados…</p>;
 
-  if (loading) return <p className="module-feedback">Carregando seus dados...</p>;
-
-  return (
-    <section className="organization-module">
-      {error && <p className="module-error" role="alert">{error}</p>}
-
-      {section === 'tarefas' ? (
-        <div className="records-workspace">
-          <form className="entry-panel" onSubmit={handleTaskSubmit}>
-            <div className="panel-heading">
-              <div><span className="card-label">NOVA TAREFA</span><h2>{editingTaskId ? 'Detalhes da tarefa' : 'O que precisa ser feito?'}</h2></div>
-            </div>
-            <label className="field-label" htmlFor="task-title">Título</label>
-            <input id="task-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="Ex.: Estudar estrutura de dados" required />
-            <label className="field-label" htmlFor="task-description">Detalhes</label><textarea id="task-description" value={description} onChange={event => setDescription(event.target.value)} rows={3} />
-            <div className="form-grid">
-              <div><label className="field-label" htmlFor="task-priority">Prioridade</label><select id="task-priority" value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority)}><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option></select></div>
-              <div><label className="field-label" htmlFor="task-date">Prazo</label><input id="task-date" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></div>
-              {!scopedProjectId && <div><label className="field-label" htmlFor="task-project">Projeto</label><select id="task-project" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Sem projeto</option>{projectItems.filter((item) => item.status === 'active').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>}
-            </div>
-            <button className="primary-action" type="submit">{editingTaskId ? 'Salvar tarefa' : 'Adicionar tarefa'}</button>{editingTaskId && <button type="button" className="text-action" onClick={() => { setEditingTaskId(undefined); setTitle(''); setDescription(''); setDueDate(''); setProjectId(''); }}>Cancelar edição</button>}
-          </form>
-
-          <section className="records-list">
-            <div className="list-heading"><div><span className="card-label">SUA LISTA</span><h2>Tarefas</h2></div><label className="filter-control"><span className="sr-only">Filtrar tarefas</span><select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}><option value="all">Todas</option><option value="pending">Pendentes</option><option value="completed">Concluídas</option></select></label></div>
-            {visibleTasks.length === 0 ? <div className="empty-state"><strong>Nenhuma tarefa por aqui.</strong><p>Adicione uma tarefa acima para começar a organizar seu dia.</p></div> : (
-              <div className="task-list">{visibleTasks.map((task) => (
-                <article className={`task-row ${task.status === 'completed' ? 'is-completed' : ''}`} key={task.id}>
-                  <input aria-label={`Concluir ${task.title}`} type="checkbox" checked={task.status === 'completed'} onChange={() => void toggleTask(task)} />
-                  <div className="task-content"><button type="button" className="project-open" onClick={() => { setEditingTaskId(task.id); setTitle(task.title); setDescription(task.description || ''); setDueDate(task.dueDate || ''); setPriority(task.priority); setProjectId(task.projectId || ''); document.getElementById('task-title')?.focus(); }}><strong>{task.title}</strong></button><div className="task-meta"><span className={`priority priority-${task.priority}`}>{task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}</span>{task.dueDate && <span className={isTaskOverdue(task) ? 'overdue' : ''}>{isTaskOverdue(task) ? 'Atrasada · ' : 'Prazo · '}{new Date(`${task.dueDate}T00:00:00`).toLocaleDateString('pt-BR')}</span>}{task.projectId && <span>{projectItems.find((item) => item.id === task.projectId)?.name ?? 'Projeto'}</span>}</div></div>
-                  <button className="text-action" type="button" onClick={() => void deleteTask(task)}>Excluir</button>
-                </article>
-              ))}</div>
-            )}
-          </section>
+  return <section className="records-list" aria-label={section === 'tarefas' ? 'Lista de tarefas' : 'Lista de projetos'}>
+    {error && <p className="module-error" role="alert">{error}</p>}
+    {section === 'tarefas' ? <>
+      <div className="section-heading">
+        <h2>{date && !undated ? 'Tarefas da data selecionada' : date ? 'Tarefas sem data' : 'Tarefas'}</h2>
+        <select aria-label="Filtrar tarefas" value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}>
+          <option value="all">Todas</option><option value="pending">Pendentes</option><option value="completed">Concluídas</option>
+        </select>
+        {date && <button type="button" className="text-action" onClick={() => setUndated(!undated)}>{undated ? 'Tarefas da data' : 'Ver sem data'}</button>}
+      </div>
+      {visible.length ? <div className="task-list">{visible.map((task) => <article className="task-row" key={task.id}>
+        <label className="check-label"><input aria-label={`Concluir ${task.title}`} type="checkbox" checked={task.status === 'completed'} onChange={() => void update(
+          () => tasks.update(task.id, { status: task.status === 'completed' ? 'pending' : 'completed' }), 'Não foi possível atualizar a tarefa.',
+        )} /></label>
+        <div className="task-content">
+          <button type="button" className="text-action" onClick={() => setEditingTask(task)}><strong>{task.title}</strong></button>
+          {task.description && <p>{task.description}</p>}
+          <div className="task-meta"><span>{priorityLabels[task.priority]}</span><span>{task.status === 'completed' ? 'Concluída' : 'Pendente'}</span>
+            {task.dueDate && <span className={isTaskOverdue(task) ? 'overdue' : ''}>{new Date(task.dueDate + 'T12:00').toLocaleDateString('pt-BR')}</span>}
+            {!scopedProjectId && task.projectId && <span>{projectItems.find((project) => project.id === task.projectId)?.name ?? 'Projeto'}</span>}
+          </div>
         </div>
-      ) : (
-        <div className="records-workspace">
-          <form className="entry-panel" onSubmit={handleProjectSubmit}>
-            <span className="card-label">NOVO PROJETO</span><h2>Um objetivo de cada vez.</h2>
-            <label className="field-label" htmlFor="project-name">Nome do projeto</label>
-            <input id="project-name" value={projectName} onChange={(event) => setProjectName(event.target.value)} maxLength={80} placeholder="Ex.: Projeto de conclusão" required />
-            <label className="field-label" htmlFor="project-description">Descrição <span className="optional-label">· opcional</span></label>
-            <textarea id="project-description" value={projectDescription} onChange={(event) => setProjectDescription(event.target.value)} rows={2} placeholder="Qual é o objetivo deste projeto?" />
-            <button className="primary-action" type="submit">Criar projeto</button>
-          </form>
-          <section className="records-list">
-            <div className="list-heading"><div><span className="card-label">ACOMPANHAMENTO</span><h2>Seus projetos</h2></div></div>
-            {projectItems.length === 0 ? <div className="empty-state"><strong>Seus projetos começam aqui.</strong><p>Crie um projeto para agrupar tarefas e acompanhar o progresso.</p></div> : (
-              <div className="project-list">{projectItems.map((project) => {
-                const summary = summarizeProjectTasks(project, taskItems);
-                return <article className="project-card" key={project.id}>
-                  <div className="project-card-top"><div><span className={`project-status ${project.status}`}>{project.status === 'active' ? 'Ativo' : 'Arquivado'}</span><h3>{onOpenProject ? <button className="project-open" type="button" onClick={() => onOpenProject(project)}>{project.name}</button> : project.name}</h3></div>{project.status === 'active' && <button className="text-action" type="button" onClick={() => void archiveProject(project)}>Arquivar</button>}</div>
-                  {project.description && <p>{project.description}</p>}
-                  <div className="progress-label"><span>{summary.completed} de {summary.total} tarefas concluídas</span><strong>{summary.completionPercentage}%</strong></div>
-                  <div className="progress-track" role="progressbar" aria-label={`Progresso de ${project.name}`} aria-valuenow={summary.completionPercentage} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${summary.completionPercentage}%` }} /></div>
-                </article>;
-              })}</div>
-            )}
-          </section>
-        </div>
-      )}
-    </section>
-  );
+        <button className="text-action" type="button" onClick={() => {
+          if (window.confirm(`Excluir a tarefa “${task.title}”?`)) void update(() => tasks.delete(task.id), 'Não foi possível excluir a tarefa.');
+        }}>Excluir</button>
+      </article>)}</div> : <p>Nenhuma tarefa nesta lista.</p>}
+      {editingTask && <TaskEditor item={editingTask} scopedProjectId={scopedProjectId} onClose={() => setEditingTask(undefined)} onSaved={() => { setEditingTask(undefined); changed(); }} />}
+    </> : <>
+      <h2>Seus projetos</h2>
+      {projectItems.length ? <div className="project-list">{projectItems.map((project) => {
+        const summary = summarizeProjectTasks(project, taskItems);
+        return <article className="project-card" key={project.id}>
+          <div className="section-heading">
+            <h3><button className="text-action" type="button" onClick={() => onOpenProject?.(project)}>{project.name}</button></h3>
+            <small>{project.status === 'active' ? 'Ativo' : 'Arquivado'}</small>
+          </div>
+          {project.description && <p>{project.description}</p>}
+          <div className="brief-progress"><progress aria-label={`Progresso de ${project.name}`} max={100} value={summary.completionPercentage} />
+            <small>{summary.completed} de {summary.total} tarefas concluídas</small></div>
+          <button className="text-action" type="button" onClick={() => setEditingProject(project)}>Editar</button>
+          {project.status === 'active' && <button className="text-action" type="button" onClick={() => {
+            if (window.confirm(`Arquivar “${project.name}”?`)) void update(() => projects.archive(project.id), 'Não foi possível arquivar o projeto.');
+          }}>Arquivar</button>}
+        </article>;
+      })}</div> : <p>Nenhum projeto. Use + para criar.</p>}
+      {editingProject && <ProjectEditor item={editingProject} onClose={() => setEditingProject(undefined)} onSaved={() => { setEditingProject(undefined); changed(); }} />}
+    </>}
+  </section>;
 }

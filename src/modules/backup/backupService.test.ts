@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { decryptBackup, encryptBackup } from './encryptedBackup';
 import { createBackup, inspectBackup, restoreBackup } from './backupService';
-import { focusSessionRepository, memoryRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
+import { focusSessionRepository, memoryRepository, projectRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
 import { openAlfredDatabase, runStoreRequest, STORE_NAMES } from '../../storage/database';
 import type { AssistantMemory } from '../memory/types';
 import type { FocusSession } from '../productivity/types';
@@ -13,6 +13,16 @@ const validBackup = {
   createdAt: '2026-11-02T12:00:00.000Z',
   data: { tasks: [], projects: [], appointments: [], disciplines: [], studyTopics: [], focusSessions: [], memories: [], files: [] },
 };
+
+it('preserva etapas opcionais de projetos ao restaurar e exportar o backup', async () => {
+  const project = {
+    id: 'staged-project', name: 'Trabalho', createdAt: validBackup.createdAt, status: 'active' as const,
+    stages: [{ id: 'stage-1', title: 'Rascunho', completed: true }],
+  };
+  await restoreBackup(inspectBackup(JSON.stringify({ ...validBackup, data: { ...validBackup.data, projects: [project] } })).payload);
+  expect(await projectRepository.getById(project.id)).toEqual(project);
+  expect(inspectBackup(await createBackup()).payload.data.projects).toContainEqual(project);
+});
 
 const card = {
   id: 'backup-card-59', disciplineId: 'software', front: 'Mitose?', back: 'Divisão celular.',

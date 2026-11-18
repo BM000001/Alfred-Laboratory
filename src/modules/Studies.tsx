@@ -1,6 +1,7 @@
 import { Files } from './Files';
-import { Notes } from './Notes';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Notes, NoteEditor } from './Notes';
+import { EditDialog } from '../components/EditDialog';
+import { useEffect, useLayoutEffect, useMemo, useState, type FormEvent } from 'react';
 import type { Discipline, StudyTopic } from './studies/types';
 import { StudyLearning } from './studies/StudyLearning';
 import { StudyFlashcards } from './studies/StudyFlashcards';
@@ -21,10 +22,17 @@ const practiceViews = [
   ['questions', 'Simulados'], ['cards', 'Revisar flashcards'], ['performance', 'Desempenho'],
 ] as const;
 
-export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string; unitId: string } } = {}) {
-  const [studyView, setStudyView] = useState(initialUnit ? 'materiais' : 'conteudos');
+export type StudyAction = { label: string; run: () => void };
+export type StudyStart = { disciplineId: string; unitId: string; view?: 'materiais' | 'aprender' | 'praticar' };
+export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; onActions?: (actions: StudyAction[]) => void } = {}) {
+  const [studyView, setStudyView] = useState(initialUnit?.view ?? (initialUnit ? 'materiais' : 'conteudos'));
   const [practiceView, setPracticeView] = useState<typeof practiceViews[number][0]>('questions');
   const [showDisciplineForm, setShowDisciplineForm] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [showNote, setShowNote] = useState(false);
+  const [noteRevision, setNoteRevision] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [disciplines, setDisciplines] = useState<Discipline[]>([]);
   const [topics, setTopics] = useState<StudyTopic[]>([]);
@@ -43,22 +51,11 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const disciplineNameField = useRef<HTMLInputElement>(null);
-  const topicTitleField = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (showDisciplineForm) disciplineNameField.current?.focus();
-  }, [showDisciplineForm, editingDisciplineId]);
-
-  useEffect(() => {
-    if (showTopicForm) topicTitleField.current?.focus();
-  }, [showTopicForm, editingTopicId]);
-
   async function refresh() {
     const [loadedDisciplines, loadedTopics] = await Promise.all([studies.listDisciplines(), studies.listTopics()]);
     setDisciplines(loadedDisciplines.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
     setTopics(loadedTopics);
-    setSelectedDiscipline((current) => loadedDisciplines.find((item) => item.id === current)?.id || loadedDisciplines[0]?.id || '');
+    setSelectedDiscipline((current) => loadedDisciplines.find((item) => item.id === current)?.id ?? '');
   }
 
   async function refreshAfterMaterialImport() {
@@ -73,7 +70,7 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
         if (!active) return;
         setDisciplines(loadedDisciplines.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
         setTopics(loadedTopics);
-        setSelectedDiscipline(loadedDisciplines.find(({ id }) => id === initialDisciplineId)?.id ?? loadedDisciplines[0]?.id ?? '');
+        setSelectedDiscipline(loadedDisciplines.find(({ id }) => id === initialDisciplineId)?.id ?? '');
       })
       .catch(() => { if (active) setError('Não foi possível carregar seus dados de estudo.'); })
       .finally(() => { if (active) setLoading(false); });
@@ -89,13 +86,24 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
     setStudyView(view);
   }
 
+  useLayoutEffect(() => {
+    if (!onActions) return;
+    onActions(discipline ? [
+      { label: 'Nova unidade', run: () => { setFormError(''); setShowTopicForm(true); } },
+      { label: 'Adicionar material', run: () => { setStudyView('materiais'); setShowUpload(true); } },
+      { label: 'Criar nota vinculada', run: () => { setStudyView('notas'); setShowNote(true); } },
+    ] : [{ label: 'Nova disciplina', run: () => { setFormError(''); setShowDisciplineForm(true); } }]);
+  });
+
   const progress = useMemo(() => summarizeStudyProgress(topics), [topics]);
   const visibleTopics = topics.filter((topic) =>
     (filter === 'all' || topic.status === filter) && (!selectedDiscipline || topic.disciplineId === selectedDiscipline),
   );
 
   async function createDiscipline(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError('');
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true); setFormError('');
     try {
       if (editingDisciplineId) {
         await studies.updateDiscipline(editingDisciplineId, { name: disciplineName, description: disciplineDescription });
@@ -104,12 +112,14 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
         const created = await studies.createDiscipline({ name: disciplineName, ...(disciplineDescription.trim() ? { description: disciplineDescription } : {}) });
         setSelectedDiscipline(created.id); setUnitId('');
       }
+      setStudyView('conteudos');
       setDisciplineName(''); setDisciplineDescription(''); setEditingDisciplineId(null); setShowDisciplineForm(false); await refresh();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível salvar a disciplina.'); }
+    } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Não foi possível salvar a disciplina.'); }
+    finally { setSaving(false); }
   }
 
   function editDiscipline(discipline: Discipline) {
-    setShowDisciplineForm(true); setEditingDisciplineId(discipline.id); setDisciplineName(discipline.name); setDisciplineDescription(discipline.description ?? '');
+    setFormError(''); setShowDisciplineForm(true); setEditingDisciplineId(discipline.id); setDisciplineName(discipline.name); setDisciplineDescription(discipline.description ?? '');
   }
 
   function cancelDisciplineEdit() {
@@ -117,17 +127,21 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
   }
 
   async function createTopic(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError('');
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true); setFormError('');
     try {
       const input = { title: topicTitle, notes: topicNotes };
       if (editingTopicId) await studies.updateTopic(editingTopicId, input);
       else await studies.createTopic({ disciplineId: selectedDiscipline, ...input });
+      setStudyView('conteudos');
       setTopicTitle(''); setTopicNotes(''); setEditingTopicId(null); setShowTopicForm(false); await refresh();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o conteúdo.'); }
+    } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Não foi possível salvar o conteúdo.'); }
+    finally { setSaving(false); }
   }
 
   function editTopic(topic: StudyTopic) {
-    setShowTopicForm(true); setEditingTopicId(topic.id); setTopicTitle(topic.title); setTopicNotes(topic.notes ?? '');
+    setFormError(''); setShowTopicForm(true); setEditingTopicId(topic.id); setTopicTitle(topic.title); setTopicNotes(topic.notes ?? '');
   }
 
   async function toggleTopic(topic: StudyTopic) {
@@ -161,8 +175,9 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
     <section className="study-index-heading" aria-labelledby="disciplines-title">
       <div className="section-heading">
         <h2 id="disciplines-title">Disciplinas</h2>
-        {disciplines.length > 0 && <button className="secondary-action" type="button" aria-expanded={showDisciplineForm}
-          onClick={() => showDisciplineForm ? cancelDisciplineEdit() : setShowDisciplineForm(true)}>Nova disciplina</button>}
+        {discipline && <button className="text-action" type="button" onClick={() => {
+          setSelectedDiscipline(''); setUnitId(''); setStudyView('conteudos');
+        }}>Todas as disciplinas</button>}
       </div>
       {progress.total > 0 && <div className="study-overall">
         <progress aria-label="Progresso geral dos estudos" value={progress.completed} max={progress.total} />
@@ -170,17 +185,31 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
       </div>}
     </section>
 
-    {(!disciplines.length || showDisciplineForm) && <form className="entry-panel study-form" onSubmit={createDiscipline}>
-      <span className="card-label">ORGANIZE SUA ROTINA</span><h2>{editingDisciplineId ? "Editar disciplina" : "Adicionar disciplina"}</h2>
+    {showDisciplineForm && <EditDialog title={editingDisciplineId ? 'Editar disciplina' : 'Nova disciplina'} onClose={cancelDisciplineEdit}>
+      <form className="dialog-form" onSubmit={createDiscipline} data-saving={saving || undefined}>
       <label className="field-label" htmlFor="discipline-name">Nome</label>
-      <input ref={disciplineNameField} id="discipline-name" value={disciplineName} onChange={(event) => setDisciplineName(event.target.value)} maxLength={80} placeholder="Ex.: Estrutura de Dados" required />
+      <input id="discipline-name" value={disciplineName} onChange={(event) => setDisciplineName(event.target.value)} maxLength={80} placeholder="Ex.: Estrutura de Dados" required />
       <label className="field-label" htmlFor="discipline-description">Descrição <span className="optional-label">· opcional</span></label>
       <textarea id="discipline-description" value={disciplineDescription} onChange={(event) => setDisciplineDescription(event.target.value)} rows={2} placeholder="Professor, objetivo ou observações" />
-      <button className="primary-action" type="submit">{editingDisciplineId ? "Salvar disciplina" : "Criar disciplina"}</button>{editingDisciplineId && <button className="text-action" type="button" onClick={cancelDisciplineEdit}>Cancelar edição</button>}
-    </form>}
+        {formError && <p role="alert" className="module-error">{formError}</p>}
+        <button className="primary-action" type="submit" disabled={saving}>Salvar disciplina</button>
+      </form>
+    </EditDialog>}
+    {showTopicForm && <EditDialog title={editingTopicId ? 'Editar unidade' : 'Nova unidade'} onClose={() => {
+      setShowTopicForm(false); setEditingTopicId(null); setTopicTitle(''); setTopicNotes('');
+    }}>
+      <form className="dialog-form" onSubmit={createTopic} data-saving={saving || undefined}>
+        <label htmlFor="topic-title">Nome da unidade</label>
+        <input id="topic-title" value={topicTitle} onChange={(event) => setTopicTitle(event.target.value)} maxLength={120} required />
+        <label htmlFor="topic-notes">Anotações da unidade</label>
+        <textarea id="topic-notes" value={topicNotes} onChange={(event) => setTopicNotes(event.target.value)} rows={3} />
+        {formError && <p role="alert" className="module-error">{formError}</p>}
+        <button className="primary-action" type="submit" disabled={saving}>Salvar unidade</button>
+      </form>
+    </EditDialog>}
 
-    {disciplines.length === 0 ? <div className="empty-state"><strong>Seu espaço de estudos começa aqui.</strong><p>Cadastre uma disciplina para organizar os conteúdos e acompanhar sua evolução.</p></div> : <>
-      <div className="study-layout">
+    {disciplines.length === 0 ? <div className="empty-state"><strong>Seu espaço de estudos começa aqui.</strong><p>Use + para criar a primeira disciplina.</p></div> : <>
+      <div className={discipline ? "study-layout" : "study-library"}>
         <aside className="discipline-list" aria-label="Disciplinas">
           {disciplines.map((discipline) => {
             const summary = summarizeStudyProgress(topics.filter((topic) => topic.disciplineId === discipline.id));
@@ -191,7 +220,7 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
             </button>;
           })}
         </aside>
-        <div className="study-content">
+        {discipline && <div className="study-content">
           <header className="study-content-heading">
             <div><h2>{discipline?.name}</h2>{discipline?.description && <p>{discipline.description}</p>}</div>
             <details className="interface-disclosure study-management"><summary>Gerenciar disciplina</summary>
@@ -210,28 +239,19 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
             </select>
           </div>}
           {studyView === 'conteudos' && <>
-          <div className="section-heading study-unit-heading">
-            <h3>Unidades de estudo</h3>
-            {disciplineTopics.length > 0 && <button type="button" className="secondary-action" aria-expanded={showTopicForm} onClick={() => {
-              setShowTopicForm(!showTopicForm); setEditingTopicId(null); setTopicTitle(''); setTopicNotes('');
-            }}>Nova unidade</button>}
-          </div>
-          {(disciplineTopics.length === 0 || showTopicForm) && <form className="entry-panel topic-form" onSubmit={createTopic}>
-            <label className="field-label" htmlFor="topic-title">{editingTopicId ? "Editar conteúdo ou tópico" : "Novo conteúdo ou tópico"}</label>
-            <input ref={topicTitleField} id="topic-title" value={topicTitle} onChange={(event) => setTopicTitle(event.target.value)} maxLength={120} placeholder="Ex.: Listas encadeadas" required />
-            <label className="field-label" htmlFor="topic-notes">Anotações <span className="optional-label">· opcional</span></label>
-            <textarea id="topic-notes" value={topicNotes} onChange={(event) => setTopicNotes(event.target.value)} rows={2} placeholder="O que revisar ou praticar?" />
-            <button className="primary-action" type="submit">{editingTopicId ? "Salvar alterações" : "Adicionar conteúdo"}</button>{editingTopicId && <button className="text-action" type="button" onClick={() => { setShowTopicForm(false); setEditingTopicId(null); setTopicTitle(""); setTopicNotes(""); }}>Cancelar edição</button>}
-          </form>}
+          <h3>Unidades de estudo</h3>
           {disciplineTopics.length > 0 && <div className="study-filter"><label className="field-label" htmlFor="topic-filter">Exibir</label><select id="topic-filter" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Todos</option><option value="pending">Pendentes</option><option value="completed">Concluídos</option></select></div>}
-          {visibleTopics.length === 0 ? <div className="empty-state"><strong>Nenhum conteúdo nesta lista.</strong><p>Adicione um tópico ou altere o filtro para visualizar seus estudos.</p></div> : <div className="study-topic-list">{visibleTopics.map((topic) => <article className={topic.status === 'completed' ? 'study-topic completed' : 'study-topic'} key={topic.id}>
+          {visibleTopics.length === 0 ? <div className="empty-state"><strong>Nenhum conteúdo nesta lista.</strong><p>Use + para adicionar uma unidade ou altere o filtro.</p></div> : <div className="study-topic-list">{visibleTopics.map((topic) => <article className={topic.status === 'completed' ? 'study-topic completed' : 'study-topic'} key={topic.id}>
             <input type="checkbox" aria-label={`Marcar ${topic.title} como concluído`} checked={topic.status === 'completed'} onChange={() => void toggleTopic(topic)} />
             <div><strong>{topic.title}</strong>{topic.notes && <p>{topic.notes}</p>}</div>
             <div className="study-topic-actions"><button className="text-action" type="button" aria-label={`Materiais de ${topic.title}`} onClick={() => openUnit(topic.id, 'materiais')}>Materiais</button><button className="text-action" type="button" aria-label={`Praticar ${topic.title}`} onClick={() => openUnit(topic.id, 'praticar')}>Praticar</button><button className="text-action" type="button" onClick={() => editTopic(topic)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteTopic(topic)}>Excluir</button></div>
           </article>)}</div>}
           </>}
-          {studyView === 'materiais' && <><StudyMaterialImporter key={`import-${selectedDiscipline}-${unit?.id ?? ""}`} disciplineId={selectedDiscipline} unit={unit} onProcessed={refreshAfterMaterialImport} /><Files key={`files-${selectedDiscipline}-${studyRefreshVersion}`} disciplineId={selectedDiscipline} sourceFileId={unit ? unit.sourceFileId ?? null : undefined} allowUpload={false} /></>}
-          {studyView === 'notas' && <Notes key={selectedDiscipline} disciplineId={selectedDiscipline} />}
+          {studyView === 'materiais' && <><StudyMaterialImporter key={`import-${selectedDiscipline}-${unit?.id ?? ""}`} disciplineId={selectedDiscipline} unit={unit} onProcessed={refreshAfterMaterialImport} uploadOpen={showUpload} onCloseUpload={() => setShowUpload(false)} /><Files key={`files-${selectedDiscipline}-${studyRefreshVersion}`} disciplineId={selectedDiscipline} sourceFileId={unit ? unit.sourceFileId ?? null : undefined} allowUpload={false} /></>}
+          {studyView === 'notas' && <Notes key={selectedDiscipline} disciplineId={selectedDiscipline} revision={noteRevision} />}
+          {showNote && <NoteEditor scope={{ disciplineId: selectedDiscipline }} onClose={() => setShowNote(false)} onSaved={() => {
+            setShowNote(false); setNoteRevision((current) => current + 1);
+          }} />}
           {studyView === 'aprender' && <StudyLearning disciplineId={selectedDiscipline} topicId={unit?.id}
             topics={unit ? [unit] : disciplineTopics} refreshToken={studyRefreshVersion + practiceVersion + cardVersion} />}
           {studyView === 'praticar' && <div className="study-practice" key={`${selectedDiscipline}:${unit?.id ?? ''}`}>
@@ -251,7 +271,7 @@ export function Studies({ initialUnit }: { initialUnit?: { disciplineId: string;
                 refreshToken={studyRefreshVersion + practiceVersion} onCardCreated={() => setCardVersion((version) => version + 1)} />
             </div>
           </div>}
-        </div>
+        </div>}
       </div>
     </>}
   </section>;

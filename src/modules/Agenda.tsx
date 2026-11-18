@@ -1,24 +1,17 @@
 import { CalendarGrid, type CalendarView } from './agenda/CalendarGrid';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Appointment, AppointmentType } from './agenda/types';
-import { classifyImportedAppointment, findAppointmentConflicts, sortAppointmentsByStart } from './agenda/agendaRules';
-import { createAgendaService } from './agenda/agendaService';
-import { appointmentRepository } from '../storage/repositories';
-import { taskRepository, projectRepository } from '../storage/repositories';
+import { classifyImportedAppointment, sortAppointmentsByStart } from './agenda/agendaRules';
+import { AgendaEditor, agenda } from './AgendaEditor';
+import { PersonalOrganization } from './PersonalOrganization';
+import { taskRepository } from '../storage/repositories';
 import type { Task } from './tasks/types';
-import type { Project } from './projects/types';
 import { getAlfredLocalStorageKey } from '../storage/namespace';
 import { ICalendarImport } from './ICalendarImport';
 import { GoogleCalendarOAuthPanel } from './GoogleCalendarOAuthPanel';
 import { connectAppleCalendar, isNativeAppleCalendarAvailable, syncAppleCalendar, type NativeCalendarInfo } from './agenda/nativeCalendarBridge';
 
-const agenda = createAgendaService(appointmentRepository);
 type ViewMode = CalendarView;
-
-function localDateTime(date: Date): string {
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
-}
 
 function startOfDay(value: Date): Date {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate());
@@ -43,33 +36,19 @@ function sourceLabel(item: Appointment): string | null {
   return null;
 }
 
-export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {}) {
+export function Agenda({ revision = 0, onDateChanged, integrationsOpen }: {
+  revision?: number; onDateChanged?: (date: string) => void; integrationsOpen?: boolean;
+} = {}) {
   const [items, setItems] = useState<Appointment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedDate, setSelectedDate] = useState(dateKey(new Date()));
   const [view, setView] = useState<ViewMode>('week');
-  const [title, setTitle] = useState('');
-  const [type, setType] = useState<AppointmentType>('personal');
-  const [startsAt, setStartsAt] = useState(() => localDateTime(new Date(Date.now() + 60 * 60_000)));
-  const [endsAt, setEndsAt] = useState(() => localDateTime(new Date(Date.now() + 2 * 60 * 60_000)));
-  const [location, setLocation] = useState('');
-  const [description, setDescription] = useState('');
-  const [projectId, setProjectId] = useState('');
-  const [isAllDay, setIsAllDay] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  useEffect(() => {
-    if (creationRequest > 0) {
-      setEditingId(null);
-      setShowForm(true);
-      setError('');
-      setConflicts([]);
-    }
-  }, [creationRequest]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const integrationLink = useRef<HTMLElement>(null);
+  useEffect(() => { if (integrationsOpen) integrationLink.current?.focus(); }, [integrationsOpen]);
+  const [editing, setEditing] = useState<Appointment>();
+  useEffect(() => { onDateChanged?.(selectedDate); }, [selectedDate, onDateChanged]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [conflicts, setConflicts] = useState<Appointment[]>([]);
   const [appleBusy, setAppleBusy] = useState(false);
   const appleSyncInFlight = useRef(false);
   const [appleLastResult, setAppleLastResult] = useState<'success' | 'error' | null>(null);
@@ -184,23 +163,22 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
   }
 
   async function refresh() {
-    const [loaded, loadedTasks, loadedProjects] = await Promise.all([agenda.list(), taskRepository.getAll(), projectRepository.getAll()]);
+    const [loaded, loadedTasks] = await Promise.all([agenda.list(), taskRepository.getAll()]);
     setItems(sortAppointmentsByStart(loaded));
     setTasks(loadedTasks);
-    setProjects(loadedProjects.filter((project) => project.status === 'active'));
   }
 
   useEffect(() => {
     let active = true;
-    Promise.all([agenda.list(), taskRepository.getAll(), projectRepository.getAll()]).then(([loaded, loadedTasks, loadedProjects]) => {
-      if (active) { setItems(sortAppointmentsByStart(loaded)); setTasks(loadedTasks); setProjects(loadedProjects.filter((project) => project.status === 'active')); }
+    Promise.all([agenda.list(), taskRepository.getAll()]).then(([loaded, loadedTasks]) => {
+      if (active) { setItems(sortAppointmentsByStart(loaded)); setTasks(loadedTasks); }
     }).catch(() => {
       if (active) setError('Não foi possível carregar a Agenda. Verifique o armazenamento local do navegador.');
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, []);
+  }, [revision]);
 
   useEffect(() => {
     if (appleConnected) {
@@ -251,25 +229,10 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
   // the current selection rather than a stale closure.
   }, [appleAvailable, selectedAppleCalendars]);
 
-  const range = useMemo(() => {
-    const selected = new Date(`${selectedDate}T12:00:00`);
-    const start = startOfDay(selected);
-    if (view === 'year') return { start: new Date(selected.getFullYear(), 0, 1), end: new Date(selected.getFullYear() + 1, 0, 1) };
-    if (view === 'day') return { start, end: new Date(start.getTime() + 86400000) };
-    if (view === 'week') {
-      start.setDate(start.getDate() - start.getDay());
-      return { start, end: new Date(start.getTime() + 7 * 86400000) };
-    }
-    return {
-      start: new Date(selected.getFullYear(), selected.getMonth(), 1),
-      end: new Date(selected.getFullYear(), selected.getMonth() + 1, 1),
-    };
-  }, [selectedDate, view]);
-
-  const visibleItems = useMemo(() => items.filter((item) => {
-    const date = new Date(item.startsAt);
-    return new Date(item.endsAt) > range.start && date < range.end && item.status !== 'cancelled';
-  }), [items, range]);
+  const selected = new Date(selectedDate + 'T12:00');
+  const dayStart = startOfDay(selected);
+  const dayEnd = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate() + 1);
+  const visibleItems = items.filter((item) => item.status !== 'cancelled' && new Date(item.startsAt) < dayEnd && new Date(item.endsAt) > dayStart);
 
   const calendarDays = useMemo(() => {
     const selected = new Date(`${selectedDate}T12:00:00`);
@@ -285,71 +248,9 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
     const next = new Date(`${selectedDate}T12:00:00`);
     if (view === 'day') next.setDate(next.getDate() + amount);
     else if (view === 'week') next.setDate(next.getDate() + amount * 7);
-    else if (view === 'year') next.setFullYear(next.getFullYear() + amount);
-    else next.setMonth(next.getMonth() + amount);
+    else if (view === 'year') next.setFullYear(next.getFullYear() + amount, next.getMonth(), 1);
+    else next.setMonth(next.getMonth() + amount, 1);
     setSelectedDate(dateKey(next));
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
-    setConflicts([]);
-    const start = new Date(startsAt);
-    const end = new Date(endsAt);
-    if (!startsAt || !endsAt || !Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
-      setError('Informe datas e horários válidos para o compromisso.');
-      return;
-    }
-    if (end <= start) {
-      setError('O horário de término deve ser posterior ao início.');
-      return;
-    }
-    const candidate = { id: '__new__', startsAt: start.toISOString(), endsAt: end.toISOString() };
-    const overlaps = findAppointmentConflicts(items, { ...candidate, id: editingId ?? candidate.id });
-    if (overlaps.length) {
-      setConflicts(overlaps);
-      setError('Este horário coincide com outro compromisso. Ajuste o horário antes de salvar.');
-      return;
-    }
-    try {
-      const input = { title, type, startsAt: start.toISOString(), endsAt: end.toISOString(), location: location.trim(), description: description.trim(), isAllDay, ...(projectId ? { projectId } : {}) };
-      if (editingId) await agenda.update(editingId, input);
-      else await agenda.create(input);
-      resetForm();
-      await refresh();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o compromisso.');
-    }
-  }
-
-  function resetForm() {
-    setTitle('');
-    setType('personal');
-    setStartsAt(localDateTime(new Date(Date.now() + 60 * 60_000)));
-    setEndsAt(localDateTime(new Date(Date.now() + 2 * 60 * 60_000)));
-    setLocation('');
-    setDescription('');
-    setProjectId('');
-    setIsAllDay(false);
-    setEditingId(null);
-    setShowForm(false);
-    setConflicts([]);
-    setError('');
-  }
-
-  function editAppointment(item: Appointment) {
-    setEditingId(item.id);
-    setTitle(item.title);
-    setType(item.type);
-    setStartsAt(localDateTime(new Date(item.startsAt)));
-    setEndsAt(localDateTime(new Date(item.endsAt)));
-    setLocation(item.location ?? '');
-    setDescription(item.description ?? '');
-    setProjectId(item.projectId ?? '');
-    setIsAllDay(Boolean(item.isAllDay));
-    setConflicts([]);
-    setError('');
-    setShowForm(true);
   }
 
   async function cancelAppointment(item: Appointment) {
@@ -362,11 +263,10 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
     }
   }
 
-  const selectedLabel = new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR', {
-    ...(view !== 'year' ? { month: 'long' as const } : {}),
-    year: 'numeric',
-    ...(view === 'day' ? { day: 'numeric' as const } : {}),
-  });
+  const fullDate = (date: Date) => date.toLocaleDateString('pt-BR', { dateStyle: 'long' });
+  const selectedLabel = view === 'week' ? `${fullDate(calendarDays[0])} – ${fullDate(calendarDays[6])}`
+    : view === 'day' ? fullDate(selected)
+      : selected.toLocaleDateString('pt-BR', { year: 'numeric', ...(view === 'month' ? { month: 'long' } : {}) });
 
   return (
     <section className="agenda-module">
@@ -375,35 +275,13 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
           <span className="card-label">CALENDÁRIO CENTRAL</span>
           <h2>{selectedLabel}</h2>
         </div>
-        <button className="primary-action" type="button" onClick={() => { if (showForm) resetForm(); else { setEditingId(null); setShowForm(true); setError(''); setConflicts([]); } }}>
-          {showForm ? 'Fechar' : '+ Novo compromisso'}
-        </button>
       </div>
-
-      {showForm && (
-        <form className="entry-panel agenda-form" onSubmit={handleSubmit}>
-          <span className="card-label">{editingId ? 'EDITAR COMPROMISSO' : 'NOVO COMPROMISSO'}</span>
-          <h2>{editingId ? 'Atualize seus dados.' : 'O que está marcado?'}</h2>
-          <label className="field-label" htmlFor="appointment-title">Título</label>
-          <input id="appointment-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="Ex.: Aula de programação" required />
-          <label className="agenda-all-day"><input type="checkbox" checked={isAllDay} onChange={(event) => setIsAllDay(event.target.checked)} /> Evento de dia inteiro</label>
-          <div className="form-grid agenda-form-grid">
-            <div><label className="field-label" htmlFor="appointment-type">Tipo</label><select id="appointment-type" value={type} onChange={(event) => setType(event.target.value as AppointmentType)}><option value="class">Aula</option><option value="exam">Prova</option><option value="deadline">Prazo</option><option value="personal">Pessoal</option><option value="other">Outro</option></select></div>
-            <div><label className="field-label" htmlFor="appointment-start">Início</label><input id="appointment-start" type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></div>
-            <div><label className="field-label" htmlFor="appointment-end">Término</label><input id="appointment-end" type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} required /></div>
-          </div>
-          <label className="field-label" htmlFor="appointment-project">Projeto <span className="optional-label">· opcional</span></label>
-          <select id="appointment-project" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Sem projeto vinculado</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
-          <label className="field-label" htmlFor="appointment-location">Local <span className="optional-label">· opcional</span></label>
-          <input id="appointment-location" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Sala, endereço ou link" />
-          <label className="field-label" htmlFor="appointment-description">Observações <span className="optional-label">· opcional</span></label>
-          <textarea id="appointment-description" rows={2} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Detalhes importantes..." />
-          <div className="agenda-form-actions"><button className="primary-action" type="submit">{editingId ? 'Salvar alterações' : 'Salvar compromisso'}</button>{editingId && <button className="text-action" type="button" onClick={resetForm}>Cancelar edição</button>}</div>
-        </form>
-      )}
-
+      {editing && <AgendaEditor item={editing} onClose={() => setEditing(undefined)} onSaved={() => {
+        setEditing(undefined);
+        void refresh();
+      }} />}
       <div className="agenda-controls">
-        <div className="agenda-date-navigation"><button type="button" className="text-action" aria-label="Período anterior" onClick={() => moveCalendar(-1)}>‹</button><button type="button" className="text-action" onClick={() => setSelectedDate(dateKey(new Date()))}>Hoje</button><button type="button" className="text-action" aria-label="Próximo período" onClick={() => moveCalendar(1)}>›</button><label className="agenda-date-label">Data<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label></div>
+        <div className="agenda-date-navigation"><button type="button" className="text-action" aria-label="Período anterior" onClick={() => moveCalendar(-1)}>‹</button><button type="button" className="text-action" onClick={() => setSelectedDate(dateKey(new Date()))}>Hoje</button><button type="button" className="text-action" aria-label="Próximo período" onClick={() => moveCalendar(1)}>›</button><label className="agenda-date-label">Data<input type="date" value={selectedDate} onChange={(event) => { if (event.target.value) setSelectedDate(event.target.value); }} /></label></div>
         <div className="agenda-view-switch" aria-label="Visualização da agenda">
           <button type="button" aria-pressed={view === 'day'} className={view === 'day' ? 'selected' : ''} onClick={() => setView('day')}>Dia</button>
           <button type="button" aria-pressed={view === 'week'} className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>Semana</button>
@@ -412,14 +290,14 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
         </div>
       </div>
 
-      {view === 'year' && <CalendarGrid date={selectedDate} view="year" items={items} onDate={(date, nextView) => { setSelectedDate(date); setView(nextView); }} onEvent={editAppointment} />}
+      {view === 'year' && <CalendarGrid date={selectedDate} view="year" items={items} onDate={(date, nextView) => { setSelectedDate(date); setView(nextView); }} onEvent={setEditing} />}
       {view !== 'day' && view !== 'year' && <div className={`calendar-grid calendar-${view}`} role="grid" aria-label={`Calendário ${view === 'week' ? 'semanal' : 'mensal'}`}>
         {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((weekday) => <div className="calendar-weekday" role="columnheader" key={weekday}>{weekday}</div>)}
         {calendarDays.map((day) => {
           const key = dateKey(day);
           const dayEvents = items.filter((item) => item.status !== 'cancelled' && dateKey(new Date(item.startsAt)) === key);
           const deadlines = tasks.filter((task) => task.status !== 'completed' && task.dueDate?.slice(0, 10) === key);
-          return <button type="button" role="gridcell" aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayEvents.length + deadlines.length} itens`} className={`calendar-day ${view === 'month' && day.getMonth() !== new Date(`${selectedDate}T12:00:00`).getMonth() ? 'outside-month' : ''} ${key === dateKey(new Date()) ? 'is-today' : ''} ${key === selectedDate ? 'is-selected' : ''}`} key={key} onClick={() => { setSelectedDate(key); setView('day'); }}>
+          return <button type="button" role="gridcell" aria-selected={key === selectedDate} aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayEvents.length + deadlines.length} itens`} className={`calendar-day ${view === 'month' && day.getMonth() !== new Date(`${selectedDate}T12:00:00`).getMonth() ? 'outside-month' : ''} ${key === dateKey(new Date()) ? 'is-today' : ''} ${key === selectedDate ? 'is-selected' : ''}`} key={key} onClick={() => { setSelectedDate(key); }}>
             <span className="calendar-day-number">{day.getDate()}</span>
             <span className="calendar-day-events">{dayEvents.slice(0, view === 'month' ? 2 : 5).map((item) => { const source = sourceLabel(item); return <span key={item.id} className={`calendar-event type-${item.type}`} title={`${source ? `${source} · ` : ''}${item.title}`}>{item.isAllDay ? 'Dia inteiro · ' : `${formatTime(item.startsAt)} · `}{source ? `${source} · ` : ''}{item.title}</span>; })}{deadlines.slice(0, 2).map((task) => <span key={`task-${task.id}`} className="calendar-event task-event" title={task.title}>Prazo · {task.title}</span>)}</span>
           </button>;
@@ -427,7 +305,7 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
       </div>}
 
       {error && <p className="module-error" role="alert">{error}</p>}
-      {conflicts.length > 0 && <div className="agenda-conflicts"><strong>Conflito encontrado</strong>{conflicts.map((item) => <p key={item.id}>{item.title} · {formatTime(item.startsAt)}–{formatTime(item.endsAt)}</p>)}</div>}
+      <h3>Compromissos de {fullDate(selected)}</h3>
 
       {loading ? <p className="module-feedback">Carregando sua Agenda...</p> : visibleItems.length === 0 ? (
         <div className="empty-state"><strong>Nenhum compromisso neste período.</strong><p>Quando você adicionar aulas, provas e outros eventos, eles aparecerão aqui.</p></div>
@@ -442,12 +320,13 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
                 <p>{new Date(item.startsAt).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}{item.location ? ` · ${item.location}` : ''}</p>
                 {item.description && <p>{item.description}</p>}
               </div>
-              <div className="appointment-actions"><button className="text-action" type="button" onClick={() => editAppointment(item)}>Editar</button><button className="text-action" type="button" onClick={() => void cancelAppointment(item)}>Cancelar</button></div>
+              <div className="appointment-actions"><button className="text-action" type="button" onClick={() => setEditing(item)}>Editar</button><button className="text-action" type="button" onClick={() => void cancelAppointment(item)}>Cancelar</button></div>
             </article>
           ))}
         </div>
       )}
-      <details className="calendar-integrations interface-disclosure"><summary>Conectar calendários · Google, iPhone ou arquivo .ics</summary><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
+      <PersonalOrganization key={selectedDate} section="tarefas" date={selectedDate} revision={revision} onChanged={() => { void refresh(); }} />
+      <details className="calendar-integrations interface-disclosure" open={integrationsOpen || undefined}><summary ref={integrationLink}>Conectar calendários · Google, iPhone ou arquivo .ics</summary><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
         <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM APPLE</span><h3 id="apple-calendar-title">Conectar Calendário Apple</h3></div><span className={appleAvailable ? 'apple-calendar-indicator' : 'apple-calendar-unavailable'}><span /> {appleAvailable ? 'Disponível neste dispositivo' : 'Aguardando app iOS'}</span></div>
         {appleAvailable ? <>
           <p>Conecte o calendário do iPhone para trazer seus próximos 90 dias de eventos. A sincronização é somente leitura e não altera seus compromissos manuais. Eventos ausentes só são arquivados quando o iPhone confirma que a leitura foi completa.</p>

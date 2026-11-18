@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, useRef, type ChangeEvent } from 'react';
+import { EditDialog } from '../components/EditDialog';
+import { useEffect, useMemo, useState, useRef, type FormEvent } from 'react';
 import { disciplineRepository, fileRepository } from '../storage/repositories';
 import { createFileService } from './files/fileService';
 import { extractTextDocument, type ExtractedTextDocument } from './files/documentExtractor';
@@ -12,12 +13,19 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
-export function Files({ projectId, disciplineId, sourceFileId, allowUpload = true }: { projectId?: string; disciplineId?: string; sourceFileId?: string | null; allowUpload?: boolean }) {
+export function Files({ projectId, disciplineId, sourceFileId, allowUpload = true, revision = 0, uploadOnly = false, onUploaded }: {
+  projectId?: string; disciplineId?: string; sourceFileId?: string | null; allowUpload?: boolean; revision?: number;
+  uploadOnly?: boolean; onUploaded?: () => void;
+}) {
   const [items, setItems] = useState<FileSummary[]>([]);
   const [disciplines, setDisciplines] = useState<Discipline[]>([]);
   const [query, setQuery] = useState('');
   const [filterDiscipline, setFilterDiscipline] = useState('all');
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [selected, setSelected] = useState<File>();
+  const [uploadError, setUploadError] = useState('');
   const [uploadDiscipline, setUploadDiscipline] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [readingFileId, setReadingFileId] = useState<string | null>(null);
@@ -42,7 +50,7 @@ export function Files({ projectId, disciplineId, sourceFileId, allowUpload = tru
       .catch(() => { if (active) setError('Não foi possível acessar seus arquivos e disciplinas locais.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [revision]);
   const scopedItems = useMemo(() => items.filter((item) =>
     item.kind !== 'note' && (projectId ? item.projectId === projectId : !item.projectId) &&
     (!disciplineId || item.disciplineId === disciplineId) && (sourceFileId === undefined || item.id === sourceFileId)), [items, projectId, disciplineId, sourceFileId]);
@@ -50,14 +58,21 @@ export function Files({ projectId, disciplineId, sourceFileId, allowUpload = tru
     item.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')) &&
     (filterDiscipline === 'all' || (filterDiscipline === 'unassigned' ? !item.disciplineId : item.disciplineId === filterDiscipline)),
   ), [scopedItems, query, filterDiscipline]);
-  async function addFile(event: ChangeEvent<HTMLInputElement>) {
-    const selected = event.target.files?.[0];
-    if (!selected) return;
-    setError('');
-    setPreview(null);
-    try { await files.add(selected, disciplineId || uploadDiscipline || undefined, projectId); await refresh(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o arquivo.'); }
-    event.target.value = '';
+  async function addFile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected || uploading) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      await files.add(selected, disciplineId || uploadDiscipline || undefined, projectId);
+      setSelected(undefined);
+      setUploadDiscipline('');
+      setUploadOpen(false);
+      if (onUploaded) onUploaded();
+      else await refresh();
+    } catch (cause) {
+      setUploadError(cause instanceof Error ? cause.message : 'Não foi possível salvar o arquivo.');
+    } finally { setUploading(false); }
   }
   async function openFile(item: FileSummary) {
     try {
@@ -139,25 +154,36 @@ export function Files({ projectId, disciplineId, sourceFileId, allowUpload = tru
   function disciplineName(id?: string): string {
     return disciplines.find((discipline) => discipline.id === id)?.name ?? 'Sem disciplina';
   }
+  const uploadFields = <form className="dialog-form" onSubmit={addFile} data-saving={uploading || undefined}>
+    {!projectId && !disciplineId && <>
+      <label htmlFor="file-discipline">Vincular a uma disciplina (opcional)</label>
+      <select id="file-discipline" value={uploadDiscipline} onChange={(event) => setUploadDiscipline(event.target.value)}>
+        <option value="">Sem disciplina</option>
+        {disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
+      </select>
+    </>}
+    <label className="file-upload-button">Selecionar arquivo<input type="file" onChange={(event) => setSelected(event.target.files?.[0])} disabled={uploading} /></label>
+    {selected && <p>{selected.name}</p>}
+    <small>Até 10 MB por arquivo.</small>
+    {uploadError && <p className="module-error" role="alert">{uploadError}</p>}
+    <button className="primary-action" type="submit" disabled={uploading || !selected}>{uploading ? 'Salvando…' : 'Salvar arquivo'}</button>
+  </form>;
+  if (uploadOnly) return uploadFields;
   return <section className="files-module">
     {error && <p className="module-error" role="alert">{error}</p>}
     {allowUpload && <section className="entry-panel" aria-labelledby="file-add-title">
       <div className="section-heading">
         <h2 id="file-add-title">Biblioteca de arquivos</h2>
-        <label className="file-upload-button">Adicionar arquivo<input type="file" onChange={addFile} aria-label="Selecionar arquivo" /></label>
+        <button type="button" className="secondary-action" onClick={() => setUploadOpen(true)}>Adicionar arquivo</button>
       </div>
-      <div className="form-grid"><div>
-        <label className="field-label" htmlFor="file-discipline">Vincular novo arquivo à disciplina <span className="optional-label">· opcional</span></label>
-        <select id="file-discipline" disabled={Boolean(disciplineId)} value={disciplineId || uploadDiscipline} onChange={(event) => setUploadDiscipline(event.target.value)}>
-          <option value="">Sem disciplina</option>
-          {disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
-        </select>
-      </div></div>
       <details className="interface-disclosure">
         <summary>Limites e OCR</summary>
         <p>Até 10 MB por arquivo. O OCR em português processa até 20 páginas por operação neste dispositivo. Os componentes baixados na primeira utilização ficam em cache para uso offline.</p>
       </details>
     </section>}
+    {uploadOpen && <EditDialog title="Adicionar arquivo" onClose={() => {
+      setSelected(undefined); setUploadDiscipline(''); setUploadError(''); setUploadOpen(false);
+    }}>{uploadFields}</EditDialog>}
     <div className="form-grid file-filters">
       <div>
         <label className="field-label" htmlFor="file-search">Pesquisar arquivos</label>

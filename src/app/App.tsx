@@ -1,38 +1,37 @@
-import mascotImage from '../assets/alfred.png';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { PersonalOrganization } from '../modules/PersonalOrganization';
 import { Agenda } from '../modules/Agenda';
+import { AgendaEditor } from '../modules/AgendaEditor';
 import { Overview } from '../modules/Overview';
-import { Studies } from '../modules/Studies';
+import { Studies, type StudyAction, type StudyStart } from '../modules/Studies';
 import { BackupSettings } from '../modules/BackupSettings';
-import { Productivity } from '../modules/Productivity';
-import { ProjectWorkspace } from '../modules/ProjectWorkspace';
-import { Assistant } from '../modules/Assistant';
-import { Notes } from '../modules/Notes';
+import { StageEditor } from '../modules/ProjectWorkspace';
+import { AlfredWorkspace, type ProjectCreation } from '../modules/AlfredWorkspace';
+import { Notes, NoteEditor } from '../modules/Notes';
 import { Files } from '../modules/Files';
+import { AssistantMemoryPanel } from '../modules/AssistantMemoryPanel';
+import { ManualExportPanel } from '../modules/ManualExportPanel';
+import { EditDialog } from '../components/EditDialog';
+import { ProjectEditor, TaskEditor } from '../modules/RecordEditors';
 import { getAlfredLocalStorageKey } from '../storage/namespace';
 
-type OrganizationTab = 'agenda' | 'tarefas' | 'projetos' | 'notas' | 'arquivos' | 'produtividade';
 type Page = 'inicio' | 'estudos' | 'organizacao' | 'assistente' | 'configuracoes';
+type Editor = { kind: ProjectCreation | 'appointment' | 'account'; projectId?: string };
 type IconName = 'home' | 'sparkles' | 'check' | 'book' | 'calendar' | 'layers' | 'folder' | 'chart' | 'settings' | 'plus';
 type Theme = 'system' | 'light' | 'dark';
 
 const appearanceKey = getAlfredLocalStorageKey('appearance');
 const mascotKey = getAlfredLocalStorageKey('mascot-hidden');
-const tabs: [OrganizationTab, string, IconName][] = [
-  ['agenda', 'Calendário', 'calendar'], ['tarefas', 'Tarefas', 'check'], ['projetos', 'Projetos', 'layers'],
-  ['notas', 'Notas', 'book'], ['arquivos', 'Arquivos', 'folder'], ['produtividade', 'Foco', 'chart'],
-];
+const nameKey = getAlfredLocalStorageKey('account-name');
 const navigation = [
   { id: 'inicio', label: 'Hoje', icon: 'home' },
   { id: 'estudos', label: 'Aprender', icon: 'book' },
-  { id: 'create', label: 'Criar', icon: 'plus' },
+  { id: 'create', label: '+', icon: 'plus' },
   { id: 'organizacao', label: 'Organização', icon: 'layers' },
   { id: 'assistente', label: 'Alfred', icon: 'sparkles' },
 ] as const;
 const pages: Record<Exclude<Page, 'inicio' | 'assistente'>, [string, string]> = {
   estudos: ['Aprender', 'Disciplinas, materiais e prática por unidade.'],
-  organizacao: ['Organização', 'Seu calendário, seus projetos e as ferramentas da rotina.'],
+  organizacao: ['Organização', ''],
   configuracoes: ['Configurações', 'Aparência, privacidade e seus dados.'],
 };
 
@@ -60,8 +59,17 @@ function Icon({ name }: { name: IconName }) {
 
 function App() {
   const [page, setPage] = useState<Page>('inicio');
-  const [organizationTab, setOrganizationTab] = useState<OrganizationTab>('agenda');
-  const [studyStart, setStudyStart] = useState<{ disciplineId: string; unitId: string }>();
+  const [studyStart, setStudyStart] = useState<StudyStart>();
+  const [editor, setEditor] = useState<Editor>();
+  const [menu, setMenu] = useState<StudyAction[]>();
+  const [revision, setRevision] = useState(0);
+  const [status, setStatus] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string>();
+  const [calendarSetup, setCalendarSetup] = useState(false);
+  const [name, setName] = useState(() => readPreference(nameKey) ?? '');
+  const [nameDraft, setNameDraft] = useState('');
+  const studyActions = useRef<StudyAction[]>([]);
+  const assistantActions = useRef<StudyAction[]>([]);
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = readPreference(appearanceKey);
     if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
@@ -70,11 +78,6 @@ function App() {
   });
   const [mascotHidden, setMascotHidden] = useState(() => readPreference(mascotKey) === 'true');
   const [preferenceError, setPreferenceError] = useState('');
-  const [quick, setQuick] = useState<{ tab: OrganizationTab; sequence: number }>();
-  const dialog = useRef<HTMLDialogElement>(null);
-  const createButton = useRef<HTMLButtonElement>(null);
-  const closingForNavigation = useRef(false);
-  const quickSequence = useRef(0);
   const content = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -88,54 +91,46 @@ function App() {
     };
   }, [theme]);
 
-  useEffect(() => {
-    const main = content.current;
-    if (!main || !quick || page !== 'organizacao' || organizationTab !== quick.tab) return;
-    const selectors: Partial<Record<OrganizationTab, string>> = {
-      tarefas: '#task-title', notas: '#note-title', projetos: '#project-name', agenda: '#appointment-title',
-    };
-    const selector = selectors[quick.tab];
-    if (!selector) return;
-    function focusField() {
-      const field = main?.querySelector<HTMLElement>(selector!);
-      field?.focus();
-      return Boolean(field);
-    }
-    if (focusField()) return;
-    const observer = new MutationObserver(() => { if (focusField()) observer.disconnect(); });
-    observer.observe(main, { subtree: true, childList: true });
-    return () => observer.disconnect();
-  }, [organizationTab, page, quick]);
-
   function remember(key: string, value: string) {
     try { localStorage.setItem(key, value); setPreferenceError(''); }
     catch { setPreferenceError('A preferência foi aplicada nesta sessão.'); }
   }
 
-  function navigate(target: Page | OrganizationTab, create = false, study?: typeof studyStart) {
-    if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
-    const tab = tabs.find(([id]) => id === target)?.[0];
-    if (tab) {
-      setOrganizationTab(tab);
-      setPage('organizacao');
-    } else {
-      if (target === 'organizacao' && page !== 'organizacao') setOrganizationTab('agenda');
-      setPage(target as Page);
-    }
+  function navigate(target: Page, study?: StudyStart, setup = false) {
+    setPage(target);
     setStudyStart(study);
-    setQuick(create && tab ? { tab, sequence: ++quickSequence.current } : undefined);
-    if (dialog.current?.open) {
-      closingForNavigation.current = true;
-      dialog.current.close();
-    }
+    setCalendarSetup(setup);
+    setStatus('');
+    setMenu(undefined);
     content.current?.focus({ preventScroll: true });
     document.documentElement.scrollTop = 0;
   }
 
+  function createMenu() {
+    setStatus('');
+    if (page === 'estudos') setMenu(studyActions.current);
+    else if (page === 'assistente') setMenu(assistantActions.current);
+    else if (page === 'inicio' || page === 'organizacao') {
+      setMenu([
+        { label: 'Nova tarefa', run: () => setEditor({ kind: 'task' }) },
+        { label: 'Novo compromisso', run: () => setEditor({ kind: 'appointment' }) },
+        { label: 'Nova nota', run: () => setEditor({ kind: 'note' }) },
+      ]);
+    }
+  }
+
+  const close = () => setEditor(undefined);
+  function saved() {
+    close();
+    setRevision((value) => value + 1);
+    setStatus(editor?.kind === 'note' ? 'Nota salva.' : 'Alterações salvas.');
+  }
+  const contextualDate = page === 'organizacao' ? selectedDate : undefined;
+
   const build = document.querySelector<HTMLMetaElement>('meta[name=alfred-build]')?.content;
   const now = new Date();
   const hour = now.getHours();
-  const greeting = hour < 12 ? 'Bom dia.' : hour < 18 ? 'Boa tarde.' : 'Boa noite.';
+  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   return <div className="alfred-shell">
     <a className="skip-link" href="#main-content">Ir ao conteúdo</a>
     <header className="masthead">
@@ -145,8 +140,8 @@ function App() {
       </a>
       <nav className="primary-navigation" aria-label="Navegação principal">
         {navigation.map(({ id, label, icon }) => id === 'create'
-          ? <button key={id} ref={createButton} type="button" className="create-launcher" aria-label="Criar"
-              aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}><Icon name={icon} /><span className="create-label">{label}</span></button>
+          ? <button key={id} type="button" className="create-launcher" aria-label="Criar"
+              aria-haspopup="dialog" disabled={page === 'configuracoes'} onClick={createMenu}><Icon name={icon} /><span className="sr-only">{label}</span></button>
           : <button key={id} type="button" aria-current={page === id ? 'page' : undefined}
               onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span></button>)}
       </nav>
@@ -154,35 +149,27 @@ function App() {
         aria-current={page === 'configuracoes' ? 'page' : undefined} onClick={() => navigate('configuracoes')}><Icon name="settings" /></button>
     </header>
     <main id="main-content" className={`page page-${page}`} tabIndex={-1} ref={content}>
-      {page === 'inicio' ? <>
-        <section className="day-hero" aria-labelledby="day-title">
-          <div className="day-copy">
-            <p className="day-date">{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(now)}</p>
-            <h1 id="day-title">{greeting}</h1>
-            <button className="secondary-action" type="button" onClick={() => navigate('assistente')}><Icon name="sparkles" /> Conversar com Alfred</button>
-          </div>
-          {!mascotHidden && <button className="day-mascot" type="button" aria-label="Abrir assistente Alfred" onClick={() => navigate('assistente')}><img src={mascotImage} alt="" /></button>}
-        </section>
-        <Overview onNavigate={navigate} onResumeStudy={(topic) => navigate('estudos', false, { disciplineId: topic.disciplineId, unitId: topic.id })} />
-      </> : <>
-        {page !== 'assistente' && <header className="page-heading"><h1>{pages[page][0]}</h1><p>{pages[page][1]}</p></header>}
-        {page === 'estudos' && <Studies initialUnit={studyStart} />}
-        {page === 'assistente' && <Assistant showMascot={!mascotHidden} />}
-        {page === 'organizacao' && <div className="organization-workbench">
-          <nav className="tool-rail" aria-label="Ferramentas de organização">
-            {tabs.map(([id, label, icon]) => <button key={id} type="button" aria-current={organizationTab === id ? 'page' : undefined}
-              onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span></button>)}
-          </nav>
-          <div className="organization-tool">
-            {organizationTab === 'agenda' && <Agenda key={quick?.tab === 'agenda' ? quick.sequence : 0} creationRequest={quick?.tab === 'agenda' ? quick.sequence : 0} />}
-            {organizationTab === 'tarefas' && <PersonalOrganization key={quick?.tab === 'tarefas' ? quick.sequence : 0} section="tarefas" />}
-            {organizationTab === 'projetos' && <ProjectWorkspace key={quick?.tab === 'projetos' ? quick.sequence : 0} />}
-            {organizationTab === 'notas' && <Notes key={quick?.tab === 'notas' ? quick.sequence : 0} />}
-            {organizationTab === 'arquivos' && <Files />}
-            {organizationTab === 'produtividade' && <Productivity />}
-          </div>
-        </div>}
-        {page === 'configuracoes' && <div className="settings-workbench">
+      {status && <p className="save-notice" role="status">{status}</p>}
+      {page === 'inicio' && <Overview greeting={greeting + (name ? ', ' + name : '') + '.'}
+        onCalendar={() => navigate('organizacao')} onAssistant={() => navigate('assistente')}
+        onResumeStudy={(start) => navigate('estudos', start)} revision={revision} />}
+      {page !== 'inicio' && page !== 'assistente' && <header className="page-heading">
+        <h1>{pages[page][0]}</h1>{pages[page][1] && <p>{pages[page][1]}</p>}
+      </header>}
+      {page === 'estudos' && <Studies initialUnit={studyStart} onActions={(list) => { studyActions.current = list; }} />}
+      {page === 'assistente' && <AlfredWorkspace showMascot={!mascotHidden} revision={revision}
+        onActions={(list) => { assistantActions.current = list; }}
+        onCreate={(kind, projectId) => setEditor({ kind, projectId })} />}
+      {page === 'organizacao' && <div className="calendar-workbench">
+        <Agenda revision={revision} onDateChanged={setSelectedDate} integrationsOpen={calendarSetup} />
+        <details className="interface-disclosure"><summary>Notas gerais</summary><Notes revision={revision} /></details>
+      </div>}
+      {page === 'configuracoes' && <div className="settings-workbench">
+          <section className="entry-panel" aria-label="Conta">
+            <h2>Conta</h2>
+            <p>{name || 'Nome de exibição ainda não definido neste dispositivo.'}</p>
+            <button type="button" onClick={() => { setNameDraft(name); setEditor({ kind: 'account' }); }}>Editar nome</button>
+          </section>
           <section className="entry-panel settings-appearance">
             <h2>Aparência</h2>
             <div className="workspace-tabs" role="group" aria-label="Aparência">
@@ -196,19 +183,41 @@ function App() {
             }} /> Mostrar mascote Alfred</label>
             {preferenceError && <p role="status">{preferenceError}</p>}
           </section>
+          <section className="entry-panel"><h2>Integrações</h2>
+            <button type="button" onClick={() => navigate('organizacao', undefined, true)}>Conexões de calendário</button>
+          </section>
+          <details className="interface-disclosure"><summary>Arquivos gerais</summary><Files /></details>
+          <details className="interface-disclosure"><summary>Memória e exportação do Alfred</summary>
+            <AssistantMemoryPanel /><ManualExportPanel />
+          </details>
           <BackupSettings />
           {build && <p className="build-details">Versão <code>{build}</code></p>}
         </div>}
-      </>}
     </main>
-    <dialog className="quick-dialog" ref={dialog} aria-labelledby="quick-title" onClose={() => { if (!closingForNavigation.current) createButton.current?.focus(); closingForNavigation.current = false; }}>
-      <header><h2 id="quick-title">Criar</h2><button type="button" aria-label="Fechar criação rápida" onClick={() => dialog.current?.close()}>×</button></header>
+    {menu && <EditDialog title="Criar" protect={false} onClose={() => setMenu(undefined)}>
       <div className="quick-actions">
-        {([['tarefas', 'Nova tarefa', 'check'], ['agenda', 'Novo compromisso', 'calendar'],
-          ['notas', 'Nova nota', 'book'], ['projetos', 'Novo projeto', 'folder']] as const).map(([id, label, icon]) =>
-          <button key={id} type="button" onClick={() => navigate(id, true)}><Icon name={icon} />{label}</button>)}
+        {menu.map(({ label, run }) => <button key={label} type="button" onClick={() => { setMenu(undefined); run(); }}>{label}</button>)}
       </div>
-    </dialog>
+    </EditDialog>}
+    {editor?.kind === 'task' && <TaskEditor date={contextualDate} scopedProjectId={editor.projectId} onClose={close} onSaved={saved} />}
+    {editor?.kind === 'appointment' && <AgendaEditor date={contextualDate} onClose={close} onSaved={saved} />}
+    {editor?.kind === 'project' && <ProjectEditor onClose={close} onSaved={saved} />}
+    {editor?.kind === 'note' && <NoteEditor scope={{ projectId: editor.projectId }} chooseDiscipline={page === 'inicio'} onClose={close} onSaved={saved} />}
+    {editor?.kind === 'stage' && editor.projectId && <StageEditor projectId={editor.projectId} onClose={close} onSaved={saved} />}
+    {editor?.kind === 'file' && editor.projectId && <EditDialog title="Adicionar arquivo" onClose={close}>
+      <Files projectId={editor.projectId} uploadOnly onUploaded={saved} />
+    </EditDialog>}
+    {editor?.kind === 'account' && <EditDialog title="Editar nome" onClose={close}>
+      <form className="dialog-form" onSubmit={(event) => {
+        event.preventDefault();
+        const value = nameDraft.trim();
+        setName(value); remember(nameKey, value); close();
+      }}>
+        <label htmlFor="profile-name">Nome de exibição</label>
+        <input id="profile-name" maxLength={80} autoComplete="name" value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} />
+        <button className="primary-action" type="submit">Salvar</button>
+      </form>
+    </EditDialog>}
   </div>;
 }
 

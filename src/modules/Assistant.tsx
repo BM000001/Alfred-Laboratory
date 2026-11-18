@@ -10,8 +10,6 @@ import { prepareTaskDescriptionUpdate } from './assistant/taskDescriptionProposa
 import type { Task, TaskPriority } from './tasks/types';
 import { LocalAssistantProvider } from './assistant/localAssistant';
 import { Brain } from './brain';
-import { AssistantMemoryPanel } from './AssistantMemoryPanel';
-import { ManualExportPanel } from './ManualExportPanel';
 import { appointmentRepository, assistantMessageRepository, memoryRepository, studyTopicRepository, taskRepository } from '../storage/repositories';
 
 function createMessage(role: AssistantMessage['role'], content: string): AssistantMessage {
@@ -25,7 +23,9 @@ type PendingTaskProposal =
   | { action: 'due-date'; task: Task; dueDate: string; proposal: ActionProposal }
   | { action: 'description'; task: Task; description: string; proposal: ActionProposal };
 
-export function Assistant({ showMascot = true }: { showMascot?: boolean } = {}) {
+export function Assistant({ showMascot = true, conversationId, onHistoryChanged }: {
+  showMascot?: boolean; conversationId?: string; onHistoryChanged?: () => void;
+} = {}) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [historyReady, setHistoryReady] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -37,23 +37,19 @@ export function Assistant({ showMascot = true }: { showMascot?: boolean } = {}) 
   const conversationRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLInputElement>(null);
   const recentTaskIdRef = useRef<string | null>(null);
+  const persistedIds = useRef(new Set<string>());
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const welcomeMessage = 'À sua disposição. O que você quer consultar ou organizar hoje?';
 
   useEffect(() => {
     let active = true;
-    assistantMessageRepository.getAll().then(async (saved) => {
+    assistantMessageRepository.getAll().then((saved) => {
       if (!active) return;
-      const ordered = saved.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-      const retained = ordered.slice(-200);
-      const expired = ordered.slice(0, Math.max(0, ordered.length - retained.length));
-      await Promise.all(expired.map((message) => assistantMessageRepository.delete(message.id)));
-      if (!active) return;
-      setMessages(retained.length ? [
-        ...retained,
-        createMessage('assistant', 'Conversa anterior recuperada. Propostas de alteração que estavam aguardando confirmação não são retomadas após recarregar a página; se necessário, solicite-as novamente.'),
-      ] : [createMessage('assistant', welcomeMessage)]);
+      const thread = saved.filter((message) => message.conversationId === conversationId)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      persistedIds.current = new Set(thread.map(({ id }) => id));
+      setMessages(thread.length ? thread : [createMessage('assistant', welcomeMessage)]);
       setHistoryReady(true);
     }).catch(() => {
       if (!active) return;
@@ -62,15 +58,20 @@ export function Assistant({ showMascot = true }: { showMascot?: boolean } = {}) 
       setError('Não foi possível recuperar o histórico local. Você pode continuar, mas a conversa desta sessão talvez não seja salva.');
     });
     return () => { active = false; };
-  }, []);
+  }, [conversationId]);
 
   useEffect(() => {
     if (!historyReady || messages.length === 0) return;
-    const retained = messages.slice(-200);
-    persistenceQueueRef.current = persistenceQueueRef.current
-      .then(async () => { await Promise.all(retained.map((message) => assistantMessageRepository.save(message))); })
-      .catch(() => setError('Não foi possível salvar o histórico da conversa neste dispositivo.'));
-  }, [messages, historyReady]);
+    persistenceQueueRef.current = persistenceQueueRef.current.then(async () => {
+      const pending = messages.filter(({ id }) => !persistedIds.current.has(id));
+      if (!pending.length) return;
+      await Promise.all(pending.map(async (message) => {
+        await assistantMessageRepository.save(conversationId ? { ...message, conversationId } : message);
+        persistedIds.current.add(message.id);
+      }));
+      onHistoryChanged?.();
+    }).catch(() => setError('Não foi possível salvar o histórico da conversa neste dispositivo.'));
+  }, [messages, historyReady, conversationId, onHistoryChanged]);
 
   useEffect(() => {
     const conversation = conversationRef.current;
@@ -355,7 +356,10 @@ export function Assistant({ showMascot = true }: { showMascot?: boolean } = {}) 
     if (!confirmClear || loading || approving || pendingProposal) return;
     try {
       await persistenceQueueRef.current;
-      await assistantMessageRepository.clear();
+      const stored = await assistantMessageRepository.getAll();
+      await Promise.all(stored.filter((message) => message.conversationId === conversationId)
+        .map((message) => assistantMessageRepository.delete(message.id)));
+      persistedIds.current.clear();
       recentTaskIdRef.current = null;
       setMessages([createMessage('assistant', welcomeMessage)]);
       setConfirmClear(false);
@@ -379,12 +383,6 @@ export function Assistant({ showMascot = true }: { showMascot?: boolean } = {}) 
           {showMascot && <AlfredMascot mood={error ? 'warning' : pendingProposal ? 'curious' : loading || approving ? 'thinking' : 'idle'} />}
           <div><span className="assistant-status"><i aria-hidden="true" /> Assistente local</span><h1>Alfred</h1><p>Tarefas, agenda e estudos neste dispositivo.</p></div>
         </header>
-        <details className="interface-disclosure assistant-tools">
-          <summary>Memória e exportação</summary>
-          <p>Revise e autorize o conteúdo antes de exportar para uma IA externa. Alfred também pode propor criar, concluir ou editar tarefas, sempre com sua confirmação.</p>
-          <AssistantMemoryPanel />
-          <ManualExportPanel />
-        </details>
       </aside>
       <div className="assistant-stage">
         <div className="section-heading assistant-session">
