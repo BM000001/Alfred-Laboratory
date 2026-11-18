@@ -64,6 +64,7 @@ function App() {
   const [menu, setMenu] = useState<StudyAction[]>();
   const [revision, setRevision] = useState(0);
   const [status, setStatus] = useState('');
+  const [calendarStart, setCalendarStart] = useState<string>();
   const [selectedDate, setSelectedDate] = useState<string>();
   const [calendarSetup, setCalendarSetup] = useState(false);
   const [name, setName] = useState(() => readPreference(nameKey) ?? '');
@@ -96,9 +97,10 @@ function App() {
     catch { setPreferenceError('A preferência foi aplicada nesta sessão.'); }
   }
 
-  function navigate(target: Page, study?: StudyStart) {
+  function navigate(target: Page, context?: { study?: StudyStart; calendarDate?: string }) {
     setPage(target);
-    setStudyStart(study);
+    setStudyStart(context?.study);
+    setCalendarStart(context?.calendarDate);
     setCalendarSetup(false);
     setStatus('');
     setMenu(undefined);
@@ -150,8 +152,8 @@ function App() {
     <main id="main-content" className={`page page-${page}`} tabIndex={-1} ref={content}>
       {status && <p className="save-notice" role="status">{status}</p>}
       {page === 'inicio' && <Overview greeting={greeting + (name ? ', ' + name : '') + '.'}
-        onCalendar={() => navigate('organizacao')} onAssistant={() => navigate('assistente')}
-        onResumeStudy={(start) => navigate('estudos', start)} revision={revision} />}
+        onCalendar={(calendarDate) => navigate('organizacao', { calendarDate })} onAssistant={() => navigate('assistente')}
+        onResumeStudy={(study) => navigate('estudos', { study })} revision={revision} />}
       {page !== 'inicio' && page !== 'assistente' && <header className="page-heading">
         <h1>{pages[page][0]}</h1>{pages[page][1] && <p>{pages[page][1]}</p>}
       </header>}
@@ -160,7 +162,7 @@ function App() {
         onActions={(list) => { assistantActions.current = list; }}
         onCreate={(kind, projectId) => setEditor({ kind, projectId })} />}
       {page === 'organizacao' && <div className="calendar-workbench">
-        <Agenda revision={revision} onDateChanged={setSelectedDate} />
+        <Agenda initialDate={calendarStart} revision={revision} onDateChanged={setSelectedDate} />
         <details className="interface-disclosure"><summary>Notas gerais</summary><Notes revision={revision} /></details>
       </div>}
       {page === 'configuracoes' && <div className="settings-workbench">

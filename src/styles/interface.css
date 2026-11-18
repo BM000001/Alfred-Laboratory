@@ -229,6 +229,12 @@ button.calendar-day { display: grid; align-content: start; text-align: start; mi
 
 .today-weather { min-inline-size: 0; align-self: end; }
 .today-weather small { display: block; }
+.weather-actions { display: flex; flex-wrap: wrap; gap: .25rem; }
+.today-suggestions li { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .35rem 1rem; }
+@media (max-width: 560px) {
+  .today-suggestions li { grid-template-columns: minmax(0, 1fr); }
+  .today-suggestions button { justify-self: start; padding-inline: .35rem; }
+}
 .today-priorities { justify-items: stretch; }
 .today-priorities h2 { margin: 0; }
 .today-assistant { justify-self: start; }

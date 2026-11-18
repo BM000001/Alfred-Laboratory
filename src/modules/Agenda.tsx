@@ -36,12 +36,12 @@ function sourceLabel(item: Appointment): string | null {
   return null;
 }
 
-export function Agenda({ revision = 0, onDateChanged, integrationsOnly }: {
-  revision?: number; onDateChanged?: (date: string) => void; integrationsOnly?: boolean;
+export function Agenda({ revision = 0, onDateChanged, integrationsOnly, initialDate }: {
+  revision?: number; onDateChanged?: (date: string) => void; integrationsOnly?: boolean; initialDate?: string;
 } = {}) {
   const [items, setItems] = useState<Appointment[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [selectedDate, setSelectedDate] = useState(dateKey(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => initialDate ?? dateKey(new Date()));
   const [view, setView] = useState<ViewMode>('week');
   const [editing, setEditing] = useState<Appointment>();
   useEffect(() => { onDateChanged?.(selectedDate); }, [selectedDate, onDateChanged]);

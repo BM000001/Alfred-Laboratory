@@ -18,6 +18,8 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: /bom dia\.|boa tarde\.|boa noite\./i })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'Prioridades' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Conversar com Alfred' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Sugestões do Alfred' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Continuar estudando' })).not.toBeInTheDocument();
   });
 
@@ -46,6 +48,30 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Ecologia' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Materiais' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByLabelText('Unidade de estudo')).toHaveValue('unit');
+  });
+
+  it('abre na data de uma sugestão de prazo sem repeti-la nas prioridades', async () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const date = [tomorrow.getFullYear(), String(tomorrow.getMonth() + 1).padStart(2, '0'), String(tomorrow.getDate()).padStart(2, '0')].join('-');
+    await taskRepository.save({ id: 'deadline', title: 'Entregar trabalho de teste', dueDate: date, createdAt: new Date().toISOString(), status: 'pending', priority: 'high' });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Sugestões do Alfred' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Prioridades' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver tarefas do prazo' }));
+    expect(screen.getByLabelText('Data')).toHaveValue(date);
+    expect(await screen.findByRole('button', { name: 'Entregar trabalho de teste' })).toBeVisible();
+  });
+
+  it('apresenta uma única ação quando um estudo pendente vira sugestão', async () => {
+    const previous = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    await disciplineRepository.save({ id: 'study', name: 'Ecologia', createdAt: previous });
+    await studyTopicRepository.save({ id: 'unit', title: 'Ecossistemas', disciplineId: 'study', status: 'pending', sourceFileId: 'material', createdAt: previous });
+    render(<App />);
+    expect(await screen.findByText('Retome um estudo em andamento')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Continuar estudando' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retomar estudo' }));
+    expect(await screen.findByLabelText('Unidade de estudo')).toHaveValue('unit');
   });
 
   it('exibe o mascote do designer no Assistente com estado acessível', () => {

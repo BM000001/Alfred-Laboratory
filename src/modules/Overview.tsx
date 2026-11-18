@@ -6,20 +6,16 @@ import { appointmentRepository, disciplineRepository, studyFlashcardRepository, 
 import { isTaskOverdue } from './tasks/taskRules';
 import { sortAppointmentsByStart } from './agenda/agendaRules';
 import { TodayWeather } from './TodayWeather';
+import { getTodaySuggestions, localDateKey as dateKey, type StudyResume } from './todaySuggestions';
 
-type Resume = StudyStart & { title: string; subject: string };
 type Activity = StudyStart & { at: string };
-
-function dateKey(date: Date): string {
-  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
-}
 
 function appointmentTime(item: Appointment) {
   const time = (value: string) => new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return item.isAllDay ? 'Dia inteiro' : `${time(item.startsAt)}–${time(item.endsAt)}`;
 }
 
-async function loadResume(): Promise<Resume | undefined> {
+async function loadResume(): Promise<StudyResume | undefined> {
   const [topics, disciplines, cards, attempts, questions, progress] = await Promise.all([
     studyTopicRepository.getAll(), disciplineRepository.getAll(), studyFlashcardRepository.getAll(),
     studyQuizAttemptRepository.getAll(), studyQuestionRepository.getAll(), studyLearningProgressRepository.getAll(),
@@ -53,16 +49,16 @@ async function loadResume(): Promise<Resume | undefined> {
     if (!subject) continue;
     const topic = topicById.get(entry.unitId);
     if (!entry.unitId || topic?.disciplineId === entry.disciplineId) {
-      return { ...entry, subject, title: topic?.title ?? subject };
+      return { ...entry, subject, title: topic?.title ?? subject, pending: topic?.status === 'pending' };
     }
   }
 }
 
 export function Overview({ greeting, onCalendar, onAssistant, onResumeStudy, revision }: {
-  greeting: string; onCalendar: () => void; onAssistant: () => void; onResumeStudy: (start: StudyStart) => void; revision: number;
+  greeting: string; onCalendar: (date?: string) => void; onAssistant: () => void; onResumeStudy: (start: StudyStart) => void; revision: number;
 }) {
   const [routine, setRoutine] = useState<{ tasks: Task[]; appointments: Appointment[] }>();
-  const [resume, setResume] = useState<Resume>();
+  const [resume, setResume] = useState<StudyResume>();
   const [error, setError] = useState('');
   const [studyError, setStudyError] = useState('');
 
@@ -91,6 +87,8 @@ export function Overview({ greeting, onCalendar, onAssistant, onResumeStudy, rev
   const regular = todayAppointments.filter((item) => !preparation.includes(item));
   const agenda = regular.length ? regular : appointments.slice(0, 1).filter((item) => !preparation.includes(item));
   const date = now.toLocaleDateString('pt-BR', { dateStyle: 'full' });
+  const suggestions = getTodaySuggestions(routine?.tasks ?? [], routine?.appointments ?? [], resume, now);
+  const suggestsStudy = suggestions.some((item) => item.kind === 'study');
 
   return <section className="daily-brief" aria-label="Resumo do Alfred">
     <header className="day-hero">
@@ -108,7 +106,7 @@ export function Overview({ greeting, onCalendar, onAssistant, onResumeStudy, rev
       <section className="brief-panel today-agenda" aria-labelledby="today-agenda">
         <div className="section-heading">
           <h2 id="today-agenda">{regular.length ? 'Agenda de hoje' : agenda.length ? 'Próximo compromisso' : 'Agenda'}</h2>
-          <button className="text-action" type="button" onClick={onCalendar}>Abrir calendário</button>
+          <button className="text-action" type="button" onClick={() => onCalendar()}>Abrir calendário</button>
         </div>
         {agenda.length ? <ul className="brief-list">{agenda.slice(0, 4).map((item) => <li key={item.id}>
           <strong>{item.title}</strong><small>{dateKey(new Date(item.startsAt)) > today ? new Date(item.startsAt).toLocaleDateString('pt-BR') + ' · ' : ''}{appointmentTime(item)}{item.location && ' · ' + item.location}</small>
@@ -116,11 +114,20 @@ export function Overview({ greeting, onCalendar, onAssistant, onResumeStudy, rev
       </section>
     </>}
     {studyError && <p role="status">{studyError}</p>}
-    {resume && <section className="brief-panel" aria-labelledby="today-study">
+    {resume && !suggestsStudy && <section className="brief-panel" aria-labelledby="today-study">
       <h2 id="today-study">Continuar estudando</h2>
       <div className="brief-resume"><div><strong>{resume.title}</strong>{resume.title !== resume.subject && <p>{resume.subject}</p>}</div>
         <button className="secondary-action" type="button" onClick={() => onResumeStudy(resume)}>Retomar estudo</button></div>
     </section>}
-    <button className="text-action today-assistant" type="button" onClick={onAssistant}>Conversar com Alfred</button>
+    {suggestions.length ? <section className="brief-panel today-suggestions" aria-labelledby="today-suggestions">
+      <h2 id="today-suggestions">Sugestões do Alfred</h2>
+      <ul className="brief-list">{suggestions.map((item) => <li key={item.kind}>
+        <div><strong>{item.title}</strong><p>{item.detail}</p></div>
+        <button className="text-action" type="button" onClick={() => {
+          if (item.kind === 'study') onResumeStudy(item.study);
+          else onCalendar(item.date);
+        }}>{item.action}</button>
+      </li>)}</ul>
+    </section> : <button className="text-action today-assistant" type="button" onClick={onAssistant}>Conversar com Alfred</button>}
   </section>;
 }
