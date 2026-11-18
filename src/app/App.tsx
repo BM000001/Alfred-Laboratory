@@ -131,6 +131,7 @@ function App() {
     document.documentElement.scrollTop = 0;
   }
 
+  const build = document.querySelector<HTMLMetaElement>('meta[name=alfred-build]')?.content;
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Bom dia.' : hour < 18 ? 'Boa tarde.' : 'Boa noite.';
@@ -144,7 +145,7 @@ function App() {
       <nav className="primary-navigation" aria-label="Navegação principal">
         {navigation.map(({ id, label, icon }) => id === 'create'
           ? <button key={id} ref={createButton} type="button" className="create-launcher" aria-label="Criar"
-              aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}><Icon name={icon} /><span>{label}</span></button>
+              aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}><Icon name={icon} /><span className="create-label">{label}</span></button>
           : <button key={id} type="button" aria-current={page === id ? 'page' : undefined}
               onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span></button>)}
       </nav>
@@ -194,6 +195,7 @@ function App() {
             {preferenceError && <p role="status">{preferenceError}</p>}
           </section>
           <BackupSettings />
+          {build && <p className="build-details">Versão <code>{build}</code></p>}
         </>}
       </>}
     </main>

@@ -33,10 +33,11 @@
 .quick-dialog header { justify-content: space-between; margin-block-end: 1rem; }
 .quick-actions { display: grid; gap: .5rem; }
 .workspace-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-block-end: var(--space); }
-.workspace-tabs button { font-size: .9rem; }
+.workspace-tabs button { font-size: .9rem; max-inline-size: 100%; overflow-wrap: anywhere; }
+.build-details { margin-block-start: var(--space); font-size: .875rem; }
 .settings-appearance { margin-block-end: var(--space); }
 .check-label { display: flex; gap: .5rem; align-items: center; min-block-size: 44px; }
-:where(.dashboard-panel,.entry-panel,.study-progress,.study-flashcards,.study-question-bank,.study-performance,.study-learning,.study-material-importer,.assistant-module,.agenda-module,.focus-side-card,.focus-panel) {
+:where(.dashboard-panel,.entry-panel,.study-progress,.study-flashcards,.study-question-bank,.study-performance,.study-learning,.study-material-importer,.focus-side-card,.focus-panel) {
   border: 1px solid var(--edge); background: var(--surface); border-radius: var(--radius); padding: var(--space);
 }
 :where(.entry-panel,.studies-module,.organization-module,.productivity-module,.backup-settings,.agenda-module,.assistant-module,.study-content,.study-learning,.study-material-importer,.study-flashcards,.study-question-bank,.study-performance,.notes-workspace) { display: grid; gap: var(--space); min-inline-size: 0; }
@@ -109,11 +110,16 @@ fieldset { min-inline-size: 0; border: 1px solid var(--edge); border-radius: var
 @media (max-width: 720px) {
   .masthead { grid-template-columns: 1fr auto; }
   .primary-navigation { z-index: 3; position: fixed; inset: auto 0 0; display: grid; grid-template-columns: repeat(5,minmax(0, 1fr)); gap: 0; border-block-start: 1px solid var(--edge); background: var(--surface); padding: .35rem env(safe-area-inset-right) calc(.35rem + env(safe-area-inset-bottom)) env(safe-area-inset-left); }
-  .primary-navigation button { flex-direction: column; justify-content: center; gap: .1rem; border-radius: .5rem; padding: .28rem .05rem; font-size: clamp(.62rem, 2.7vw, .78rem); line-height: 1.2; }
-  .primary-navigation .create-launcher { margin-inline: auto; padding-inline: .6rem; }
+  .primary-navigation button { flex-direction: column; justify-content: center; gap: .18rem; border-radius: .5rem; padding: .3rem .1rem; min-block-size: 48px; font-size: clamp(.65rem, 2.6vw, .78rem); line-height: 1.2; }
+  .primary-navigation button span { max-inline-size: 100%; overflow-wrap: anywhere; }
+  .workspace-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); }
+  .workspace-tabs button { min-inline-size: 0; padding-inline: .5rem; }
+  .page-heading h1 { font-size: clamp(2.35rem, 10vw, 4.375rem); }
+  .primary-navigation .create-launcher { margin-inline: auto; inline-size: 44px; }
   .page { padding-block-end: calc(5rem + env(safe-area-inset-bottom)); }
   .page:focus-within:has(input:focus, textarea:focus, select:focus) { padding-block-end: calc(7rem + env(safe-area-inset-bottom)); }
   :is(input,textarea,select) { font-size: 1rem; scroll-margin-bottom: 6rem; }
+  .agenda-module, .assistant-module { padding: 0; }
   .dashboard-columns, .dashboard-home-grid, .study-layout, .notes-workspace { grid-template-columns: minmax(0,1fr); }
   .dashboard-summary { gap: .4rem; }
   .dashboard-stat { padding: .5rem; }
@@ -151,4 +157,10 @@ button.calendar-day { display: grid; align-content: start; text-align: start; mi
   .dashboard-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-stat { padding: .75rem; }
   .dashboard-stat:last-child { grid-column: 1 / -1; }
+}
+
+@media (min-width: 721px) {
+  :where(.agenda-module,.assistant-module) {
+    border: 1px solid var(--edge); background: var(--surface); border-radius: var(--radius); padding: var(--space);
+  }
 }
