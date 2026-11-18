@@ -2,6 +2,12 @@ import { useState, type ChangeEvent } from 'react';
 import { createBackup, inspectBackup, restoreBackup } from './backup/backupService';
 import { decryptBackup, encryptBackup, isEncryptedBackup } from './backup/encryptedBackup';
 
+const MAX_BACKUP_BYTES = 100 * 1024 * 1024;
+
+function assertBackupSize(size: number) {
+  if (size > MAX_BACKUP_BYTES) throw new Error('O backup excede o limite de 100 MiB.');
+}
+
 type BackupPreview = ReturnType<typeof inspectBackup>;
 
 const labels: Record<string, string> = {
@@ -14,6 +20,7 @@ const labels: Record<string, string> = {
 
 function downloadJson(content: string, filename: string) {
   const blob = new Blob([content], { type: 'application/json' });
+  assertBackupSize(blob.size);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -68,7 +75,7 @@ export function BackupSettings() {
     setPreview(null); setEncryptedRaw(null); setEncryptedPassword(''); setError(''); setFeedback('');
     if (!file) return;
     try {
-      if (file.size > 100 * 1024 * 1024) throw new Error('O backup excede o limite de 100 MB.');
+      assertBackupSize(file.size);
       const raw = await file.text();
       if (isEncryptedBackup(raw)) {
         setEncryptedRaw(raw);

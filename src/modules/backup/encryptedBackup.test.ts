@@ -25,3 +25,14 @@ describe('encryptedBackup', () => {
     expect(isEncryptedBackup('{')).toBe(false);
   });
 });
+
+it('rejeita Base64 malformado no envelope e rejeita cifra adulterada com Base64 válido', async () => {
+  const password = 'senha-sintetica-123';
+  const envelope = JSON.parse(await encryptBackup('conteúdo sintético', password));
+  await expect(decryptBackup(JSON.stringify({ ...envelope, ciphertext: 'Y=Q=' }), password))
+    .rejects.toThrow('Envelope de backup criptografado inválido');
+  const replacement = envelope.ciphertext.startsWith('A') ? 'B' : 'A';
+  await expect(decryptBackup(JSON.stringify({
+    ...envelope, ciphertext: replacement + envelope.ciphertext.slice(1),
+  }), password)).rejects.toThrow('Senha incorreta ou backup criptografado danificado');
+});

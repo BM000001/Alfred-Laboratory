@@ -8,6 +8,7 @@ import type { FocusSession } from '../productivity/types';
 import type { AssistantMemory } from '../memory/types';
 import type { StudyFlashcard } from '../studies/flashcardTypes';
 import type { StudyQuestion, StudyQuizAttempt } from '../studies/questionTypes';
+import { base64ByteLength, decodeBase64, encodeBase64 } from './backupBase64';
 
 const BACKUP_FORMAT = 'alfred-local-backup';
 // Version 2 includes the complete study state. Version 1 remains readable.
@@ -43,30 +44,18 @@ type BackupPayload = {
   };
 };
 
-function toBase64(bytes: Uint8Array): string {
-  let binary = '';
-  const chunkSize = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
-  }
-  return btoa(binary);
-}
-
-function fromBase64(value: string): Uint8Array {
-  if (value.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
-    throw new Error('Conteúdo Base64 inválido.');
-  }
-  const binary = atob(value);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function assertEntities(value: unknown, label: string): asserts value is Array<{ id: string }> {
-  if (!Array.isArray(value) || !value.every((item) => isRecord(item) && typeof item.id === 'string' && item.id.length > 0)) {
-    throw new Error(`O backup contém dados inválidos em: ${label}.`);
+function assertEntities(value: unknown, label: string): void {
+  if (!Array.isArray(value)) throw new Error(`O backup contém dados inválidos em: ${label}.`);
+  const ids = new Set<string>();
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.id !== 'string' || item.id.length === 0 || ids.has(item.id)) {
+      throw new Error(`O backup contém dados inválidos em: ${label}.`);
+    }
+    ids.add(item.id);
   }
 }
 
@@ -92,7 +81,7 @@ export async function createBackup(): Promise<string> {
       ...(file.disciplineId ? { disciplineId: file.disciplineId } : {}),
       ...(file.kind ? { kind: file.kind, noteText: file.noteText, updatedAt: file.updatedAt } : {}),
       ...(file.extraction ? { extraction: file.extraction } : {}),
-      contentBase64: toBase64(new Uint8Array(await file.blob.arrayBuffer())),
+      contentBase64: encodeBase64(new Uint8Array(await file.blob.arrayBuffer())),
     })));
     const payload: BackupPayload = {
       format: BACKUP_FORMAT, version: BACKUP_VERSION, createdAt: new Date().toISOString(),
@@ -168,6 +157,30 @@ function validateStudyData(data: Record<string, unknown>, version: 1 | 2): void 
   }
 }
 
+function isExtractionMethod(value: unknown): boolean {
+  return value === 'text' || value === 'ocr';
+}
+
+function isFiniteNumber(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isValidExtraction(value: unknown): boolean {
+  // OCR branches also use the image format and carry additional metadata.
+  return isRecord(value)
+    && typeof value.format === 'string' && ['txt', 'md', 'csv', 'json', 'pdf', 'docx', 'pptx', 'image'].includes(value.format)
+    && typeof value.text === 'string' && isCount(value.characterCount) && isCount(value.wordCount)
+    && isValidDate(value.extractedAt)
+    && (value.extractionMethod === undefined || isExtractionMethod(value.extractionMethod))
+    && (value.language === undefined || typeof value.language === 'string')
+    && (value.confidence === undefined || isFiniteNumber(value.confidence))
+    && (value.pageCount === undefined || isCount(value.pageCount))
+    && (value.pages === undefined || (Array.isArray(value.pages) && value.pages.every((page: unknown) =>
+      isRecord(page) && isCount(page.pageNumber) && page.pageNumber > 0 && typeof page.text === 'string'
+      && (page.method === undefined || isExtractionMethod(page.method))
+      && (page.confidence === undefined || page.confidence === null || isFiniteNumber(page.confidence)))));
+}
+
 /** Shared verification also protects callers that invoke restoreBackup directly. */
 function validateBackupPayload(value: unknown): asserts value is BackupPayload {
   if (!isRecord(value) || value.format !== BACKUP_FORMAT || (value.version !== 1 && value.version !== BACKUP_VERSION) || !isRecord(value.data)) {
@@ -199,11 +212,14 @@ function validateBackupPayload(value: unknown): asserts value is BackupPayload {
       if (file[field] !== undefined && typeof file[field] !== 'string') throw new Error('Metadados de arquivo inválidos.');
     }
     if (file.kind !== undefined && file.kind !== 'note') throw new Error('Tipo de anotação inválido.');
-    let bytes: Uint8Array;
-    try { bytes = fromBase64(file.contentBase64); } catch {
+    if (file.extraction !== undefined && !isValidExtraction(file.extraction)) {
+      throw new Error('O backup contém uma extração de arquivo inválida.');
+    }
+    let decodedSize: number;
+    try { decodedSize = base64ByteLength(file.contentBase64); } catch {
       throw new Error('O backup contém arquivos com conteúdo Base64 inválido.');
     }
-    if (bytes.byteLength !== file.size) throw new Error('O tamanho do conteúdo de um arquivo não corresponde aos metadados.');
+    if (decodedSize !== file.size) throw new Error('O tamanho do conteúdo de um arquivo não corresponde aos metadados.');
   }
   if (!isValidDate(value.createdAt)) throw new Error('Data de criação do backup inválida.');
 }
@@ -233,10 +249,8 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
   // Decode every file before opening the write transaction: malformed data must never
   // leave a partially populated transaction or clear the user's existing records.
   const restoredFiles = payload.data.files.map((file) => {
-    const bytes = fromBase64(file.contentBase64);
-    if (bytes.byteLength !== file.size) throw new Error('O tamanho do conteúdo de um arquivo não corresponde aos metadados.');
     const { contentBase64, ...metadata } = file;
-    return { ...metadata, blob: new Blob([bytes], { type: file.type }) };
+    return { ...metadata, blob: new Blob([decodeBase64(contentBase64)], { type: file.type }) };
   });
   const database = await openAlfredDatabase();
   const names = Object.values(STORE_NAMES);
@@ -244,7 +258,6 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
     const transaction = database.transaction(names, 'readwrite');
     const completion = new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error ?? new Error('Não foi possível restaurar o backup.'));
       transaction.onabort = () => reject(transaction.error ?? new Error('A restauração foi cancelada.'));
     });
     const rows: Record<string, unknown[]> = {
@@ -263,10 +276,16 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
     if (payload.data.studyQuestions !== undefined) rows[STORE_NAMES.studyQuestions] = payload.data.studyQuestions;
     if (payload.data.studyQuizAttempts !== undefined) rows[STORE_NAMES.studyQuizAttempts] = payload.data.studyQuizAttempts;
     if (payload.data.studyLearningProgress !== undefined) rows[STORE_NAMES.studyLearningProgress] = payload.data.studyLearningProgress;
-    for (const name of Object.keys(rows)) {
-      const store = transaction.objectStore(name);
-      store.clear();
-      for (const entity of rows[name] ?? []) store.put(entity);
+    try {
+      for (const [name, entities] of Object.entries(rows)) {
+        const store = transaction.objectStore(name);
+        store.clear();
+        for (const entity of entities) store.put(entity);
+      }
+    } catch (error) {
+      transaction.abort();
+      await completion.catch(() => undefined);
+      throw error;
     }
     await completion;
   } finally { database.close(); }
