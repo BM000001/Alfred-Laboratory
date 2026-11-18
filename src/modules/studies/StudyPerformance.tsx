@@ -11,7 +11,7 @@ function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
 }
 
-export function StudyPerformance({ disciplineId, topics }: { disciplineId: string; topics: StudyTopic[] }) {
+export function StudyPerformance({ disciplineId, topics, unitId, refreshToken = 0, onCardCreated }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; onCardCreated?: () => void }) {
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [attempts, setAttempts] = useState<StudyQuizAttempt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,31 +30,39 @@ export function StudyPerformance({ disciplineId, topics }: { disciplineId: strin
       .catch(() => { if (active) setError('Não foi possível calcular o desempenho desta disciplina.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [disciplineId]);
+  }, [disciplineId, refreshToken]);
 
   const performance = useMemo(
     () => summarizeStudyPerformance(topics.filter(topic => topic.disciplineId === disciplineId), questions, attempts),
     [topics, questions, attempts, disciplineId],
   );
-  const totals = useMemo(() => ({
-    answered: performance.reduce((sum, topic) => sum + topic.answered, 0),
-    correct: performance.reduce((sum, topic) => sum + topic.correct, 0),
-    incorrect: performance.reduce((sum, topic) => sum + topic.incorrect, 0),
-  }), [performance]);
+  const totals = useMemo(() => {
+    if (!unitId) {
+      const answered = attempts.reduce((sum, attempt) => sum + attempt.totalQuestions, 0);
+      const correct = attempts.reduce((sum, attempt) => sum + attempt.correctAnswers, 0);
+      return { answered, correct, incorrect: answered - correct };
+    }
+    return performance.reduce((total, topic) => ({
+      answered: total.answered + topic.answered,
+      correct: total.correct + topic.correct,
+      incorrect: total.incorrect + topic.incorrect,
+    }), { answered: 0, correct: 0, incorrect: 0 });
+  }, [attempts, performance, unitId]);
 
-  async function createReviewCard(question: QuestionPerformance) {
+  async function createReviewCard(topicId: string, question: QuestionPerformance) {
     setError('');
     setFeedback('');
     try {
       const existing = await flashcards.list();
-      const key = normalize(question.prompt);
-      if (existing.some(card => card.disciplineId === disciplineId && normalize(card.front) === key)) {
+      const front = question.prompt.length > 500 ? question.prompt.slice(0, 497) + '...' : question.prompt;
+      const key = normalize(front);
+      if (existing.some(card => card.disciplineId === disciplineId && card.topicId === topicId && normalize(card.front) === key)) {
         setFeedback('Este erro já possui um flashcard nesta disciplina.');
         return;
       }
-      const front = question.prompt.length > 500 ? question.prompt.slice(0, 497) + '...' : question.prompt;
-      const back = `Resposta correta: ${question.correctAnswer}${question.explanation ? `\n\nExplicação: ${question.explanation}` : ''}`;
-      await flashcards.create({ disciplineId, front, back });
+      const back = `Resposta correta: ${question.correctAnswer}${question.explanation ? `\n\nExplicação: ${question.explanation}` : ''}`.slice(0, 2000);
+      await flashcards.create({ disciplineId, topicId, front, back });
+      onCardCreated?.();
       setFeedback('Flashcard de revisão criado. Ele já está disponível na fila de memorização.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível criar o flashcard de revisão.');
@@ -62,7 +70,7 @@ export function StudyPerformance({ disciplineId, topics }: { disciplineId: strin
   }
 
   return <section className="study-performance" aria-label="Desempenho por tópico">
-    <div><span className="card-label">ANÁLISE DE APRENDIZAGEM</span><h3>Seu desempenho por tópico</h3><p>Os resultados consideram todas as respostas registradas nos simulados desta disciplina.</p></div>
+    <div><span className="card-label">ANÁLISE DE APRENDIZAGEM</span><h3>Seu desempenho por tópico</h3><p>{unitId ? 'Respostas registradas nesta unidade.' : 'Respostas registradas nesta disciplina.'}</p></div>
     {loading ? <p className="module-feedback">Calculando desempenho...</p> : <>
       <div className="study-performance-summary">
         <div><strong>{totals.answered}</strong><span>respostas</span></div>
@@ -77,7 +85,7 @@ export function StudyPerformance({ disciplineId, topics }: { disciplineId: strin
           <div className="study-performance-meta"><span>{topic.questionCount} questão(ões)</span><span>{topic.correct} acerto(s) · {topic.incorrect} erro(s)</span></div>
           {topic.questions.filter(question => question.incorrect > 0).slice(0, 3).map(question => <div className="study-performance-error" key={question.questionId}>
             <div><strong>{question.prompt}</strong><span>{question.incorrect} erro(s) em {question.answered} resposta(s)</span></div>
-            <button type="button" className="text-action" onClick={() => void createReviewCard(question)}>Revisar com flashcard</button>
+            <button type="button" className="text-action" onClick={() => void createReviewCard(topic.topicId, question)}>Revisar com flashcard</button>
           </div>)}
         </article>)}
       </div>}

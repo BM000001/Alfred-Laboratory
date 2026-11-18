@@ -7,6 +7,17 @@ export function gradeStudyAnswer(question: Pick<StudyQuestion, 'correctOptionInd
   return selectedOptionIndex !== null && selectedOptionIndex === question.correctOptionIndex;
 }
 
+export function getQuestionSnapshot(answer: StudyQuizAnswer, disciplineId: string): StudyQuestion | undefined {
+  const snapshot = answer.questionSnapshot;
+  if (snapshot?.id !== answer.questionId || snapshot.disciplineId !== disciplineId
+    || typeof snapshot.prompt !== 'string' || !Array.isArray(snapshot.options)
+    || !snapshot.options.every((option) => typeof option === 'string')
+    || !Number.isInteger(snapshot.correctOptionIndex)
+    || snapshot.correctOptionIndex < 0 || snapshot.correctOptionIndex >= snapshot.options.length
+    || (snapshot.explanation !== undefined && typeof snapshot.explanation !== 'string')) return;
+  return snapshot;
+}
+
 export function summarizeQuiz(answers: StudyQuizAnswer[]) {
   const correct = answers.filter((answer) => answer.isCorrect).length;
   return { total: answers.length, correct, incorrect: answers.length - correct, percentage: answers.length ? Math.round(correct / answers.length * 100) : 0 };

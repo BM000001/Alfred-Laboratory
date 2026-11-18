@@ -32,6 +32,7 @@ export interface StudyQuizAnswer {
   questionId: string;
   selectedOptionIndex: number | null;
   isCorrect: boolean;
+  questionSnapshot?: StudyQuestion;
 }
 
 export interface StudyQuizAttempt {

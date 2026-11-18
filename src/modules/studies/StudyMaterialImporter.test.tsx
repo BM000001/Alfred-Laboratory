@@ -31,8 +31,8 @@ describe('StudyMaterialImporter', () => {
     await waitFor(async () => {
       expect(await fileRepository.getAll()).toHaveLength(3);
       expect(await studyTopicRepository.getAll()).toHaveLength(3);
-      expect(await studyFlashcardRepository.getAll()).toHaveLength(4);
-      expect(await studyQuestionRepository.getAll()).toHaveLength(4);
+      expect(await studyFlashcardRepository.getAll()).toHaveLength(12);
+      expect(await studyQuestionRepository.getAll()).toHaveLength(12);
     });
     const [storedFile] = await fileRepository.getAll();
     expect(storedFile.extraction?.text).toBe(definitions);

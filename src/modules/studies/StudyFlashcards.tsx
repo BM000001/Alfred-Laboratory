@@ -8,7 +8,7 @@ const ratingLabels: Array<{ value: FlashcardRating; label: string }> = [
   { value: 'again', label: 'Errei' }, { value: 'hard', label: 'Difícil' }, { value: 'good', label: 'Bom' }, { value: 'easy', label: 'Fácil' },
 ];
 
-export function StudyFlashcards({ disciplineId, refreshToken = 0 }: { disciplineId: string; refreshToken?: number }) {
+export function StudyFlashcards({ disciplineId, topicId, refreshToken = 0 }: { disciplineId: string; topicId?: string; refreshToken?: number }) {
   const [cards, setCards] = useState<StudyFlashcard[]>([]);
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
@@ -22,24 +22,24 @@ export function StudyFlashcards({ disciplineId, refreshToken = 0 }: { discipline
 
   async function refresh() {
     const all = await service.list();
-    setCards(all.filter((card) => card.disciplineId === disciplineId).sort((a, b) => a.nextReviewAt.localeCompare(b.nextReviewAt)));
+    setCards(all.filter((card) => card.disciplineId === disciplineId && (!topicId || card.topicId === topicId)).sort((a, b) => a.nextReviewAt.localeCompare(b.nextReviewAt)));
   }
 
   useEffect(() => {
     let active = true;
-    service.list().then((all) => { if (active) setCards(all.filter((card) => card.disciplineId === disciplineId).sort((a, b) => a.nextReviewAt.localeCompare(b.nextReviewAt))); })
+    service.list().then((all) => { if (active) setCards(all.filter((card) => card.disciplineId === disciplineId && (!topicId || card.topicId === topicId)).sort((a, b) => a.nextReviewAt.localeCompare(b.nextReviewAt))); })
       .catch(() => { if (active) setError('Não foi possível carregar os flashcards.'); })
       .finally(() => { if (active) setLoading(false); });
     setShowAnswer(false); setCurrentId('');
     return () => { active = false; };
-  }, [disciplineId, refreshToken]);
+  }, [disciplineId, topicId, refreshToken]);
 
   const dueCards = useMemo(() => cards.filter((card) => isFlashcardDue(card)), [cards]);
   const current = dueCards.find((card) => card.id === currentId) ?? dueCards[0];
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError('');
-    try { await service.create({ disciplineId, front, back }); setFront(''); setBack(''); await refresh(); }
+    try { await service.create({ disciplineId, topicId, front, back }); setFront(''); setBack(''); await refresh(); }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível criar o flashcard.'); }
   }
 

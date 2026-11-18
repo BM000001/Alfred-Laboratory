@@ -12,7 +12,7 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
-export function Files({ projectId, disciplineId, allowUpload = true }: { projectId?: string; disciplineId?: string; allowUpload?: boolean }) {
+export function Files({ projectId, disciplineId, sourceFileId, allowUpload = true }: { projectId?: string; disciplineId?: string; sourceFileId?: string | null; allowUpload?: boolean }) {
   const [items, setItems] = useState<FileSummary[]>([]);
   const [disciplines, setDisciplines] = useState<Discipline[]>([]);
   const [query, setQuery] = useState('');
@@ -45,7 +45,7 @@ export function Files({ projectId, disciplineId, allowUpload = true }: { project
   }, []);
   const scopedItems = useMemo(() => items.filter((item) =>
     item.kind !== 'note' && (projectId ? item.projectId === projectId : !item.projectId) &&
-    (!disciplineId || item.disciplineId === disciplineId)), [items, projectId, disciplineId]);
+    (!disciplineId || item.disciplineId === disciplineId) && (sourceFileId === undefined || item.id === sourceFileId)), [items, projectId, disciplineId, sourceFileId]);
   const visible = useMemo(() => scopedItems.filter((item) =>
     item.name.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR')) &&
     (filterDiscipline === 'all' || (filterDiscipline === 'unassigned' ? !item.disciplineId : item.disciplineId === filterDiscipline)),

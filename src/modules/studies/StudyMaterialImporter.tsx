@@ -7,6 +7,8 @@ import type { ExtractedTextDocument } from '../files/documentExtractor';
 import { createStudyService } from './studyService';
 import { createFlashcardService } from './flashcardService';
 import { createQuestionService } from './questionService';
+import { attachStudyMaterial } from './attachStudyMaterial';
+import type { StudyTopic } from './types';
 import { generateStudyResources } from './studyMaterialGeneration';
 
 const files = createFileService(fileRepository);
@@ -32,7 +34,7 @@ async function sameBytes(left: Blob, right: Blob): Promise<boolean> {
   return a.every((byte, index) => byte === b[index]);
 }
 
-export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplineId: string; onProcessed?: () => Promise<void> }) {
+export function StudyMaterialImporter({ disciplineId, unit, onProcessed }: { disciplineId: string; unit?: StudyTopic; onProcessed?: () => Promise<void> }) {
   const [staged, setStaged] = useState<File[]>([]);
   const [statuses, setStatuses] = useState<ProcessingStatus[]>([]);
   const [saving, setSaving] = useState(false);
@@ -44,8 +46,14 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
 
   function stageFiles(event: ChangeEvent<HTMLInputElement>) {
     const incoming = Array.from(event.target.files ?? []);
+    if (unit && incoming.length > 1) {
+      setError('Selecione um arquivo por unidade.');
+      event.target.value = '';
+      return;
+    }
     if (incoming.length) {
       setStaged((current) => {
+        if (unit) return incoming;
         const seen = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
         return [...current, ...incoming.filter((file) => {
           const key = `${file.name}:${file.size}:${file.lastModified}`;
@@ -63,13 +71,12 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
     setSaving(true); setError(''); cancelRef.current = false;
     const queue = [...staged];
     const nextStatuses: ProcessingStatus[] = [];
+    let storedChanges = false;
     const processedSuccessfully = new Set<File>();
     setStatuses(queue.map((file) => ({ name: file.name, status: 'processing', detail: 'Aguardando processamento local.' })));
     try {
-      const [existingCards, existingQuestions] = await Promise.all([flashcards.list(), questions.list()]);
+      const [existingCards, existingQuestions, existingTopics] = await Promise.all([flashcards.list(), questions.list(), study.listTopics()]);
       const savedFiles = await fileRepository.getAll();
-      const cardKeys = new Set(existingCards.filter((item) => item.disciplineId === disciplineId).map((item) => normalize(item.front) + '|' + normalize(item.back)));
-      const questionKeys = new Set(existingQuestions.filter((item) => item.disciplineId === disciplineId).map((item) => normalize(item.prompt)));
       for (const [index, file] of queue.entries()) {
           if (cancelRef.current) {
             setStatuses((current) => current.map((status, statusIndex) => statusIndex >= index && status.status === 'processing' ? { ...status, status: 'error', detail: 'Cancelado antes deste arquivo; permaneceu na preparação para uma nova tentativa.' } : status));
@@ -80,35 +87,39 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
         try {
           // Save the original first. A format/extraction failure must not erase the user's file.
           const previous = await findPreviouslyStoredFile(savedFiles, file, disciplineId);
-          let extracted: ExtractedTextDocument;
-          if (previous?.extraction) {
-            sourceId = previous.id;
-            extracted = { fileName: previous.name, ...previous.extraction };
-          } else {
-            if (previous) sourceId = previous.id;
-            else sourceId = (await files.add(file, disciplineId)).id;
-            extracted = await extractTextDocument(file);
-            await files.saveExtraction(sourceId, extracted);
+          if (unit?.sourceFileId && unit.sourceFileId !== previous?.id
+            && savedFiles.some((candidate) => candidate.id === unit.sourceFileId)) {
+            throw new Error('A unidade já tem um material vinculado. Use outra unidade para este arquivo.');
           }
+          if (previous) sourceId = previous.id;
+          else sourceId = (await files.add(file, disciplineId)).id;
+          storedChanges = true;
+          if (!previous) {
+            const saved = await files.get(sourceId);
+            if (saved) savedFiles.push(saved);
+          }
+          const topic = unit ? await attachStudyMaterial(unit.id, disciplineId, sourceId)
+            : existingTopics.find((item) => item.disciplineId === disciplineId && item.sourceFileId === sourceId)
+            ?? await study.createTopic({ disciplineId, title: file.name.slice(0, 120), sourceFileId: sourceId, sourceFileName: file.name });
+          if (!existingTopics.some((item) => item.id === topic.id)) existingTopics.push(topic);
+          const extracted: ExtractedTextDocument = previous?.extraction
+            ? { fileName: previous.name, ...previous.extraction }
+            : await extractTextDocument(file);
+          if (!previous?.extraction) await files.saveExtraction(sourceId, extracted);
           const generated = generateStudyResources(extracted.text);
-          const topic = await study.createTopic({
-            disciplineId,
-            title: file.name,
-            sourceFileId: sourceId,
-            sourceFileName: file.name,
-            notes: `${extracted.wordCount} palavras extraídas localmente em ${new Date(extracted.extractedAt).toLocaleString('pt-BR')}.`,
-          });
+          const cardKeys = new Set(existingCards.filter((item) => item.disciplineId === disciplineId && item.topicId === topic.id).map((item) => normalize(item.front) + '|' + normalize(item.back)));
+          const questionKeys = new Set(existingQuestions.filter((item) => item.disciplineId === disciplineId && item.topicId === topic.id).map((item) => normalize(item.prompt)));
           let cardsAdded = 0, questionsAdded = 0, duplicates = 0;
           for (const card of generated.flashcards) {
             const key = normalize(card.front) + '|' + normalize(card.back);
             if (cardKeys.has(key)) { duplicates++; continue; }
-            await flashcards.create({ disciplineId, ...card, topicId: topic.id, sourceFileId: sourceId, sourceFileName: file.name });
+            existingCards.push(await flashcards.create({ disciplineId, ...card, topicId: topic.id, sourceFileId: sourceId, sourceFileName: file.name }));
             cardKeys.add(key); cardsAdded++;
           }
           for (const question of generated.questions) {
             const key = normalize(question.prompt);
             if (questionKeys.has(key)) { duplicates++; continue; }
-            await questions.create({ disciplineId, topicId: topic.id, ...question, sourceFileId: sourceId, sourceFileName: file.name });
+            existingQuestions.push(await questions.create({ disciplineId, topicId: topic.id, ...question, sourceFileId: sourceId, sourceFileName: file.name }));
             questionKeys.add(key); questionsAdded++;
           }
           const resourceMessage = cardsAdded || questionsAdded
@@ -124,7 +135,7 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
       }
       if (cancelRef.current) setError('Processamento interrompido. Os arquivos já concluídos foram preservados.');
       setStaged((current) => current.filter((file) => !processedSuccessfully.has(file)));
-      if (processedSuccessfully.size) {
+      if (storedChanges) {
         try { await onProcessed?.(); }
         catch { setError('Os materiais foram salvos, mas a tela não conseguiu atualizar. Recarregue para ver os recursos.'); }
       }
@@ -149,12 +160,12 @@ export function StudyMaterialImporter({ disciplineId, onProcessed }: { disciplin
   return <section className="study-material-importer" aria-label="Adicionar material de estudo">
     <div>
       <span className="card-label">MATERIAL DA DISCIPLINA</span>
-      <h3>Adicionar arquivos de estudo</h3>
-      <p>Selecione um ou vários materiais. Ao clicar em Salvar, Alfred guarda os originais e processa o texto localmente; os recursos são criados somente quando há definições explícitas no documento.</p>
+      <h3>{unit ? `Material de ${unit.title}` : 'Adicionar arquivos de estudo'}</h3>
+      <p>{unit ? 'Selecione um arquivo para vincular a esta unidade.' : 'Selecione um ou vários materiais.'} Ao salvar, Alfred guarda os originais e cria atividades localmente quando encontra definições explícitas.</p>
     </div>
     <label className="file-upload-button study-material-select">
       Adicionar arquivos
-      <input ref={fileInput} type="file" multiple accept=".pdf,.docx,.pptx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,text/csv,application/json" disabled={saving} onChange={stageFiles} />
+      <input ref={fileInput} type="file" multiple={!unit} accept=".pdf,.docx,.pptx,.txt,.md,.csv,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,text/csv,application/json" disabled={saving} onChange={stageFiles} />
     </label>
     {staged.length > 0 && <div className="study-material-staging" aria-label="Arquivos aguardando processamento">
       <strong>{staged.length} arquivo(s) na preparação</strong>
