@@ -67,6 +67,12 @@ export function StudyFlashcards({ disciplineId, topicId, refreshToken = 0 }: { d
   return <section className="study-flashcards" aria-label="Flashcards e revisão espaçada">
     <div className="study-flashcards-header"><div><span className="card-label">MEMORIZAÇÃO ATIVA</span><h3>Flashcards</h3></div><span className="study-flashcards-count">{dueCards.length} para revisar · {cards.length} no total</span></div>
     {error && <p className="module-error" role="alert">{error}</p>}
+    {loading ? <p className="module-feedback">Carregando cartões...</p> : current ? <article className="study-flashcard">
+      <div className="study-flashcard-face"><span>{showAnswer ? 'Resposta' : 'Pergunta'}</span><strong>{showAnswer ? current.back : current.front}</strong></div>
+      {!showAnswer ? <div className="study-flashcard-actions"><button type="button" onClick={() => setShowAnswer(true)}>Revelar resposta</button></div> : <div className="study-flashcard-actions">{ratingLabels.map((rating) => <button type="button" key={rating.value} onClick={() => void rate(rating.value)}>{rating.label}</button>)}</div>}
+      <div className="study-flashcard-meta">Revisado {current.reviewCount} vez(es) · {dueCards.length} cartão(ões) na fila</div>
+      <div className="study-flashcard-actions"><button type="button" onClick={() => void removeCurrent()}>Excluir cartão</button></div>
+    </article> : <div className="study-flashcard-empty">{cards.length === 0 ? 'Crie seu primeiro cartão abaixo. Pergunta na frente, resposta no verso.' : 'Excelente. Você revisou todos os cartões vencidos desta disciplina. Os próximos retornam na data programada.'}</div>}
     <form className="study-flashcard-form" onSubmit={create}>
       <label htmlFor="flashcard-front">Pergunta ou conceito</label>
       <textarea id="flashcard-front" rows={2} maxLength={500} value={front} onChange={(event) => setFront(event.target.value)} placeholder="Ex.: O que é uma estrutura de dados?" required />
@@ -80,12 +86,6 @@ export function StudyFlashcards({ disciplineId, topicId, refreshToken = 0 }: { d
       <label htmlFor="flashcard-edit-back">Resposta</label><textarea id="flashcard-edit-back" rows={2} maxLength={2000} value={editingBack} onChange={(event) => setEditingBack(event.target.value)} required />
       <button className="primary-action" type="submit">Salvar edição</button><button className="text-action" type="button" onClick={() => setEditingId('')}>Cancelar</button>
     </form>}
-    {loading ? <p className="module-feedback">Carregando cartões...</p> : current ? <article className="study-flashcard">
-      <div className="study-flashcard-face"><span>{showAnswer ? 'Resposta' : 'Pergunta'}</span><strong>{showAnswer ? current.back : current.front}</strong></div>
-      {!showAnswer ? <div className="study-flashcard-actions"><button type="button" onClick={() => setShowAnswer(true)}>Revelar resposta</button></div> : <div className="study-flashcard-actions">{ratingLabels.map((rating) => <button type="button" key={rating.value} onClick={() => void rate(rating.value)}>{rating.label}</button>)}</div>}
-      <div className="study-flashcard-meta">Revisado {current.reviewCount} vez(es) · {dueCards.length} cartão(ões) na fila</div>
-      <div className="study-flashcard-actions"><button type="button" onClick={() => void removeCurrent()}>Excluir cartão</button></div>
-    </article> : <div className="study-flashcard-empty">{cards.length === 0 ? 'Crie seu primeiro cartão acima. Pergunta na frente, resposta no verso.' : 'Excelente. Você revisou todos os cartões vencidos desta disciplina. Os próximos retornam na data programada.'}</div>}
     {cards.length > 0 && <div className="study-flashcard-list" aria-label="Todos os flashcards desta disciplina">
       <strong>Cartões da disciplina</strong>
       {cards.map((card) => <article key={card.id}><div><span>{card.subject ?? card.sourceFileName ?? 'Criado manualmente'}</span><strong>{card.front}</strong></div><div>

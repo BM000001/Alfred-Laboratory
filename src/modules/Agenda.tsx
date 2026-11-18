@@ -380,7 +380,74 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
         </button>
       </div>
 
-      <details className="calendar-integrations" open><summary>Conectar calendários · Google, iPhone ou arquivo .ics</summary><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
+      {showForm && (
+        <form className="entry-panel agenda-form" onSubmit={handleSubmit}>
+          <span className="card-label">{editingId ? 'EDITAR COMPROMISSO' : 'NOVO COMPROMISSO'}</span>
+          <h2>{editingId ? 'Atualize seus dados.' : 'O que está marcado?'}</h2>
+          <label className="field-label" htmlFor="appointment-title">Título</label>
+          <input id="appointment-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="Ex.: Aula de programação" required />
+          <label className="agenda-all-day"><input type="checkbox" checked={isAllDay} onChange={(event) => setIsAllDay(event.target.checked)} /> Evento de dia inteiro</label>
+          <div className="form-grid agenda-form-grid">
+            <div><label className="field-label" htmlFor="appointment-type">Tipo</label><select id="appointment-type" value={type} onChange={(event) => setType(event.target.value as AppointmentType)}><option value="class">Aula</option><option value="exam">Prova</option><option value="deadline">Prazo</option><option value="personal">Pessoal</option><option value="other">Outro</option></select></div>
+            <div><label className="field-label" htmlFor="appointment-start">Início</label><input id="appointment-start" type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></div>
+            <div><label className="field-label" htmlFor="appointment-end">Término</label><input id="appointment-end" type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} required /></div>
+          </div>
+          <label className="field-label" htmlFor="appointment-project">Projeto <span className="optional-label">· opcional</span></label>
+          <select id="appointment-project" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Sem projeto vinculado</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
+          <label className="field-label" htmlFor="appointment-location">Local <span className="optional-label">· opcional</span></label>
+          <input id="appointment-location" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Sala, endereço ou link" />
+          <label className="field-label" htmlFor="appointment-description">Observações <span className="optional-label">· opcional</span></label>
+          <textarea id="appointment-description" rows={2} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Detalhes importantes..." />
+          <div className="agenda-form-actions"><button className="primary-action" type="submit">{editingId ? 'Salvar alterações' : 'Salvar compromisso'}</button>{editingId && <button className="text-action" type="button" onClick={resetForm}>Cancelar edição</button>}</div>
+        </form>
+      )}
+
+      <div className="agenda-controls">
+        <div className="agenda-date-navigation"><button type="button" className="text-action" aria-label="Período anterior" onClick={() => moveCalendar(-1)}>‹</button><button type="button" className="text-action" onClick={() => setSelectedDate(dateKey(new Date()))}>Hoje</button><button type="button" className="text-action" aria-label="Próximo período" onClick={() => moveCalendar(1)}>›</button><label className="agenda-date-label">Data<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label></div>
+        <div className="agenda-view-switch" aria-label="Visualização da agenda">
+          <button type="button" aria-pressed={view === 'day'} className={view === 'day' ? 'selected' : ''} onClick={() => setView('day')}>Dia</button>
+          <button type="button" aria-pressed={view === 'week'} className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>Semana</button>
+          <button type="button" aria-pressed={view === 'month'} className={view === 'month' ? 'selected' : ''} onClick={() => setView('month')}>Mês</button>
+          <button type="button" aria-pressed={view === 'year'} className={view === 'year' ? 'selected' : ''} onClick={() => setView('year')}>Ano</button>
+        </div>
+      </div>
+
+      {view === 'year' && <CalendarGrid date={selectedDate} view="year" items={items} onDate={(date, nextView) => { setSelectedDate(date); setView(nextView); }} onEvent={editAppointment} />}
+      {view !== 'day' && view !== 'year' && <div className={`calendar-grid calendar-${view}`} role="grid" aria-label={`Calendário ${view === 'week' ? 'semanal' : 'mensal'}`}>
+        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((weekday) => <div className="calendar-weekday" role="columnheader" key={weekday}>{weekday}</div>)}
+        {calendarDays.map((day) => {
+          const key = dateKey(day);
+          const dayEvents = items.filter((item) => item.status !== 'cancelled' && dateKey(new Date(item.startsAt)) === key);
+          const deadlines = tasks.filter((task) => task.status !== 'completed' && task.dueDate?.slice(0, 10) === key);
+          return <button type="button" role="gridcell" aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayEvents.length + deadlines.length} itens`} className={`calendar-day ${view === 'month' && day.getMonth() !== new Date(`${selectedDate}T12:00:00`).getMonth() ? 'outside-month' : ''} ${key === dateKey(new Date()) ? 'is-today' : ''} ${key === selectedDate ? 'is-selected' : ''}`} key={key} onClick={() => { setSelectedDate(key); setView('day'); }}>
+            <span className="calendar-day-number">{day.getDate()}</span>
+            <span className="calendar-day-events">{dayEvents.slice(0, view === 'month' ? 2 : 5).map((item) => { const source = sourceLabel(item); return <span key={item.id} className={`calendar-event type-${item.type}`} title={`${source ? `${source} · ` : ''}${item.title}`}>{item.isAllDay ? 'Dia inteiro · ' : `${formatTime(item.startsAt)} · `}{source ? `${source} · ` : ''}{item.title}</span>; })}{deadlines.slice(0, 2).map((task) => <span key={`task-${task.id}`} className="calendar-event task-event" title={task.title}>Prazo · {task.title}</span>)}</span>
+          </button>;
+        })}
+      </div>}
+
+      {error && <p className="module-error" role="alert">{error}</p>}
+      {conflicts.length > 0 && <div className="agenda-conflicts"><strong>Conflito encontrado</strong>{conflicts.map((item) => <p key={item.id}>{item.title} · {formatTime(item.startsAt)}–{formatTime(item.endsAt)}</p>)}</div>}
+
+      {loading ? <p className="module-feedback">Carregando sua Agenda...</p> : visibleItems.length === 0 ? (
+        <div className="empty-state"><strong>Nenhum compromisso neste período.</strong><p>Quando você adicionar aulas, provas e outros eventos, eles aparecerão aqui.</p></div>
+      ) : (
+        <div className="appointment-list">
+          {visibleItems.map((item) => (
+            <article className="appointment-card" key={item.id}>
+              <div className="appointment-time">{item.isAllDay ? <strong>Dia inteiro</strong> : <><strong>{formatTime(item.startsAt)}</strong><span>{formatTime(item.endsAt)}</span></>}</div>
+              <div className="appointment-details">
+                <span className={`appointment-type type-${item.type}`}>{typeLabel(item.type)}</span>{sourceLabel(item) && <span className="appointment-source-tag">{sourceLabel(item)}</span>}{item.isRecurring && <span className="appointment-origin-tag">Recorrente</span>}{item.importedCalendarName && <span className="appointment-source-tag">{item.importedCalendarName}</span>}
+                <h3>{item.title}</h3>
+                <p>{new Date(item.startsAt).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}{item.location ? ` · ${item.location}` : ''}</p>
+                {item.description && <p>{item.description}</p>}
+              </div>
+              <div className="appointment-actions"><button className="text-action" type="button" onClick={() => editAppointment(item)}>Editar</button><button className="text-action" type="button" onClick={() => void cancelAppointment(item)}>Cancelar</button></div>
+            </article>
+          ))}
+        </div>
+      )}
+      <details className="calendar-integrations interface-disclosure"><summary>Conectar calendários · Google, iPhone ou arquivo .ics</summary><section className="entry-panel apple-calendar-panel" aria-labelledby="apple-calendar-title">
         <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM APPLE</span><h3 id="apple-calendar-title">Conectar Calendário Apple</h3></div><span className={appleAvailable ? 'apple-calendar-indicator' : 'apple-calendar-unavailable'}><span /> {appleAvailable ? 'Disponível neste dispositivo' : 'Aguardando app iOS'}</span></div>
         {appleAvailable ? <>
           <p>Conecte o calendário do iPhone para trazer seus próximos 90 dias de eventos. A sincronização é somente leitura e não altera seus compromissos manuais. Eventos ausentes só são arquivados quando o iPhone confirma que a leitura foi completa.</p>
@@ -409,74 +476,6 @@ export function Agenda({ creationRequest = 0 }: { creationRequest?: number } = {
       <GoogleCalendarOAuthPanel onImported={refresh} />
       <ICalendarImport existing={items} onImported={refresh} />
       </details>
-
-      <div className="agenda-controls">
-        <div className="agenda-date-navigation"><button type="button" className="text-action" aria-label="Período anterior" onClick={() => moveCalendar(-1)}>‹</button><button type="button" className="text-action" onClick={() => setSelectedDate(dateKey(new Date()))}>Hoje</button><button type="button" className="text-action" aria-label="Próximo período" onClick={() => moveCalendar(1)}>›</button><label className="agenda-date-label">Data<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label></div>
-        <div className="agenda-view-switch" aria-label="Visualização da agenda">
-          <button type="button" aria-pressed={view === 'day'} className={view === 'day' ? 'selected' : ''} onClick={() => setView('day')}>Dia</button>
-          <button type="button" aria-pressed={view === 'week'} className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>Semana</button>
-          <button type="button" aria-pressed={view === 'month'} className={view === 'month' ? 'selected' : ''} onClick={() => setView('month')}>Mês</button>
-          <button type="button" aria-pressed={view === 'year'} className={view === 'year' ? 'selected' : ''} onClick={() => setView('year')}>Ano</button>
-        </div>
-      </div>
-
-      {view === 'year' && <CalendarGrid date={selectedDate} view="year" items={items} onDate={(date, nextView) => { setSelectedDate(date); setView(nextView); }} onEvent={editAppointment} />}
-      {view !== 'day' && view !== 'year' && <div className={`calendar-grid calendar-${view}`} role="grid" aria-label={`Calendário ${view === 'week' ? 'semanal' : 'mensal'}`}>
-        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((weekday) => <div className="calendar-weekday" role="columnheader" key={weekday}>{weekday}</div>)}
-        {calendarDays.map((day) => {
-          const key = dateKey(day);
-          const dayEvents = items.filter((item) => item.status !== 'cancelled' && dateKey(new Date(item.startsAt)) === key);
-          const deadlines = tasks.filter((task) => task.status !== 'completed' && task.dueDate?.slice(0, 10) === key);
-          return <button type="button" role="gridcell" aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayEvents.length + deadlines.length} itens`} className={`calendar-day ${view === 'month' && day.getMonth() !== new Date(`${selectedDate}T12:00:00`).getMonth() ? 'outside-month' : ''} ${key === dateKey(new Date()) ? 'is-today' : ''} ${key === selectedDate ? 'is-selected' : ''}`} key={key} onClick={() => { setSelectedDate(key); setView('day'); }}>
-            <span className="calendar-day-number">{day.getDate()}</span>
-            <span className="calendar-day-events">{dayEvents.slice(0, view === 'month' ? 2 : 5).map((item) => { const source = sourceLabel(item); return <span key={item.id} className={`calendar-event type-${item.type}`} title={`${source ? `${source} · ` : ''}${item.title}`}>{item.isAllDay ? 'Dia inteiro · ' : `${formatTime(item.startsAt)} · `}{source ? `${source} · ` : ''}{item.title}</span>; })}{deadlines.slice(0, 2).map((task) => <span key={`task-${task.id}`} className="calendar-event task-event" title={task.title}>Prazo · {task.title}</span>)}</span>
-          </button>;
-        })}
-      </div>}
-
-      {showForm && (
-        <form className="entry-panel agenda-form" onSubmit={handleSubmit}>
-          <span className="card-label">{editingId ? 'EDITAR COMPROMISSO' : 'NOVO COMPROMISSO'}</span>
-          <h2>{editingId ? 'Atualize seus dados.' : 'O que está marcado?'}</h2>
-          <label className="field-label" htmlFor="appointment-title">Título</label>
-          <input id="appointment-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} placeholder="Ex.: Aula de programação" required />
-          <label className="agenda-all-day"><input type="checkbox" checked={isAllDay} onChange={(event) => setIsAllDay(event.target.checked)} /> Evento de dia inteiro</label>
-          <div className="form-grid agenda-form-grid">
-            <div><label className="field-label" htmlFor="appointment-type">Tipo</label><select id="appointment-type" value={type} onChange={(event) => setType(event.target.value as AppointmentType)}><option value="class">Aula</option><option value="exam">Prova</option><option value="deadline">Prazo</option><option value="personal">Pessoal</option><option value="other">Outro</option></select></div>
-            <div><label className="field-label" htmlFor="appointment-start">Início</label><input id="appointment-start" type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} required /></div>
-            <div><label className="field-label" htmlFor="appointment-end">Término</label><input id="appointment-end" type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} required /></div>
-          </div>
-          <label className="field-label" htmlFor="appointment-project">Projeto <span className="optional-label">· opcional</span></label>
-          <select id="appointment-project" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Sem projeto vinculado</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select>
-          <label className="field-label" htmlFor="appointment-location">Local <span className="optional-label">· opcional</span></label>
-          <input id="appointment-location" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Sala, endereço ou link" />
-          <label className="field-label" htmlFor="appointment-description">Observações <span className="optional-label">· opcional</span></label>
-          <textarea id="appointment-description" rows={2} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Detalhes importantes..." />
-          <div className="agenda-form-actions"><button className="primary-action" type="submit">{editingId ? 'Salvar alterações' : 'Salvar compromisso'}</button>{editingId && <button className="text-action" type="button" onClick={resetForm}>Cancelar edição</button>}</div>
-        </form>
-      )}
-
-      {error && <p className="module-error" role="alert">{error}</p>}
-      {conflicts.length > 0 && <div className="agenda-conflicts"><strong>Conflito encontrado</strong>{conflicts.map((item) => <p key={item.id}>{item.title} · {formatTime(item.startsAt)}–{formatTime(item.endsAt)}</p>)}</div>}
-
-      {loading ? <p className="module-feedback">Carregando sua Agenda...</p> : visibleItems.length === 0 ? (
-        <div className="empty-state"><strong>Nenhum compromisso neste período.</strong><p>Quando você adicionar aulas, provas e outros eventos, eles aparecerão aqui.</p></div>
-      ) : (
-        <div className="appointment-list">
-          {visibleItems.map((item) => (
-            <article className="appointment-card" key={item.id}>
-              <div className="appointment-time">{item.isAllDay ? <strong>Dia inteiro</strong> : <><strong>{formatTime(item.startsAt)}</strong><span>{formatTime(item.endsAt)}</span></>}</div>
-              <div className="appointment-details">
-                <span className={`appointment-type type-${item.type}`}>{typeLabel(item.type)}</span>{sourceLabel(item) && <span className="appointment-source-tag">{sourceLabel(item)}</span>}{item.isRecurring && <span className="appointment-origin-tag">Recorrente</span>}{item.importedCalendarName && <span className="appointment-source-tag">{item.importedCalendarName}</span>}
-                <h3>{item.title}</h3>
-                <p>{new Date(item.startsAt).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}{item.location ? ` · ${item.location}` : ''}</p>
-                {item.description && <p>{item.description}</p>}
-              </div>
-              <div className="appointment-actions"><button className="text-action" type="button" onClick={() => editAppointment(item)}>Editar</button><button className="text-action" type="button" onClick={() => void cancelAppointment(item)}>Cancelar</button></div>
-            </article>
-          ))}
-        </div>
-      )}
     </section>
   );
 }
