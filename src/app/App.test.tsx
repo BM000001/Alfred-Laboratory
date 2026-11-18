@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import App from './App';
+import { create } from './testActions';
 import { appointmentRepository, disciplineRepository, projectRepository, studyTopicRepository, taskRepository } from '../storage/repositories';
 
 describe('App', () => {
@@ -15,9 +16,11 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: /alfred, início/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /alfred, início/i }).querySelector('img')).toHaveAttribute('src', expect.stringContaining('brand/alfred-mark.svg'));
     expect(screen.getByRole('heading', { name: /bom dia\.|boa tarde\.|boa noite\./i })).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'Agenda livre' })).toBeVisible();
-    expect(screen.getByText('Nenhuma tarefa pendente.')).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Continuar estudando' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Prioridades' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Conversar com Alfred' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Sugestões do Alfred' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Continuar estudando' })).not.toBeInTheDocument();
   });
 
   it('prioriza dados locais e retoma a unidade pendente da disciplina correta', async () => {
@@ -32,19 +35,43 @@ describe('App', () => {
       projectRepository.save({ id: 'project', name: 'Pesquisa sintética', status: 'active', createdAt }),
       disciplineRepository.save({ id: 'first', name: 'Anatomia', createdAt }),
       disciplineRepository.save({ id: 'study', name: 'Ecologia', createdAt }),
-      studyTopicRepository.save({ id: 'unit', title: 'Ecossistemas', disciplineId: 'study', status: 'pending', createdAt }),
+      studyTopicRepository.save({ id: 'unit', title: 'Ecossistemas', disciplineId: 'study', status: 'pending', sourceFileId: 'material', createdAt }),
     ]);
 
     render(<App />);
-    expect(await screen.findByRole('heading', { name: 'Seminário de teste' })).toBeVisible();
+    expect(await screen.findByText('Seminário de teste')).toBeVisible();
     expect(screen.getByText('Revisar fichamento')).toBeVisible();
     expect(screen.queryByText('Tarefa de baixa prioridade')).not.toBeInTheDocument();
-    expect(screen.getByText('Pesquisa sintética')).toBeVisible();
+    expect(screen.queryByText('Pesquisa sintética')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Retomar unidade' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retomar estudo' }));
     expect(await screen.findByRole('heading', { name: 'Ecologia' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Materiais' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByLabelText('Unidade de estudo')).toHaveValue('unit');
+  });
+
+  it('abre na data de uma sugestão de prazo sem repeti-la nas prioridades', async () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const date = [tomorrow.getFullYear(), String(tomorrow.getMonth() + 1).padStart(2, '0'), String(tomorrow.getDate()).padStart(2, '0')].join('-');
+    await taskRepository.save({ id: 'deadline', title: 'Entregar trabalho de teste', dueDate: date, createdAt: new Date().toISOString(), status: 'pending', priority: 'high' });
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'Sugestões do Alfred' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Prioridades' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver tarefas do prazo' }));
+    expect(screen.getByLabelText('Data')).toHaveValue(date);
+    expect(await screen.findByRole('button', { name: 'Entregar trabalho de teste' })).toBeVisible();
+  });
+
+  it('apresenta uma única ação quando um estudo pendente vira sugestão', async () => {
+    const previous = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    await disciplineRepository.save({ id: 'study', name: 'Ecologia', createdAt: previous });
+    await studyTopicRepository.save({ id: 'unit', title: 'Ecossistemas', disciplineId: 'study', status: 'pending', sourceFileId: 'material', createdAt: previous });
+    render(<App />);
+    expect(await screen.findByText('Retome um estudo em andamento')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Continuar estudando' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retomar estudo' }));
+    expect(await screen.findByLabelText('Unidade de estudo')).toHaveValue('unit');
   });
 
   it('exibe o mascote do designer no Assistente com estado acessível', () => {
@@ -57,9 +84,8 @@ describe('App', () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
     expect(screen.getByRole('heading', { name: 'Organização' })).toBeInTheDocument();
-    expect(screen.getByText(/seu calendário, seus projetos/i)).toBeInTheDocument();
+    expect(screen.getByRole('grid', { name: 'Calendário semanal' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
     expect(screen.getByRole('heading', { name: 'Aprender' })).toBeInTheDocument();
@@ -69,24 +95,20 @@ describe('App', () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
 
     expect(await screen.findByText('CALENDÁRIO CENTRAL')).toBeInTheDocument();
     expect(screen.getByRole('grid', { name: 'Calendário semanal' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /novo compromisso/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /novo compromisso/i }));
-    expect(screen.getByRole('heading', { name: 'O que está marcado?' })).toBeInTheDocument();
+    create('Novo compromisso');
+    expect(screen.getByRole('heading', { name: 'Novo compromisso' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Salvar compromisso' })).toBeInTheDocument();
   });
 
-  it('abre Organização diretamente no Calendário e permite abrir as integrações abaixo da agenda', async () => {
+  it('abre Organização diretamente no calendário e mantém integrações em Configurações', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     expect(await screen.findByText('CALENDÁRIO CENTRAL')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Calendário' })).toHaveAttribute('aria-current', 'page');
-    const integrations = screen.getByText(/Conectar calendários · Google, iPhone ou arquivo \.ics/).closest('details');
-    expect(integrations).toHaveProperty('open', false);
-    fireEvent.click(within(integrations!).getByText(/Conectar calendários/));
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conexões de calendário' }));
     expect(screen.getByRole('heading', { name: 'Google Calendar' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Conectar Calendário Apple' })).toBeInTheDocument();
   });
@@ -95,40 +117,44 @@ describe('App', () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^tarefas$/i }));
-
-    expect(await screen.findByRole('heading', { name: 'O que precisa ser feito?' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Adicionar tarefa' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Tarefas da data selecionada' })).toBeInTheDocument();
+    create('Nova tarefa');
+    expect(screen.getByRole('button', { name: 'Salvar tarefa' })).toBeInTheDocument();
   });
 
   it('abre a área funcional de projetos', async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^projetos$/i }));
-
-    expect(await screen.findByRole('heading', { name: 'Um objetivo de cada vez.' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Criar projeto' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Alfred' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Projetos' }));
+    expect(await screen.findByRole('heading', { name: 'Seus projetos' })).toBeInTheDocument();
+    create('Novo projeto');
+    expect(screen.getByRole('button', { name: 'Salvar projeto' })).toBeInTheDocument();
   });
 
   it('permite cadastrar disciplina e conteúdo em Estudos', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
 
-    fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Estrutura de Dados' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
+    await screen.findByRole('heading', { name: 'Disciplinas' });
+    create('Nova disciplina');
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Estrutura de Dados' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
     expect(await screen.findByRole('button', { name: /Estrutura de Dados/ })).toBeInTheDocument();
 
-    fireEvent.change(await screen.findByLabelText('Novo conteúdo ou tópico'), { target: { value: 'Listas encadeadas' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Adicionar conteúdo' }));
+    create('Nova unidade');
+    fireEvent.change(screen.getByLabelText('Nome da unidade'), { target: { value: 'Listas encadeadas' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar unidade' }));
     expect(await screen.findByText('Listas encadeadas', { selector: 'strong' })).toBeInTheDocument();
   });
   it('permite editar o nome e a descrição de uma disciplina', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
-    fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Matemática para edição' } });
+    await screen.findByRole('heading', { name: 'Disciplinas' });
+    create('Nova disciplina');
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Matemática para edição' } });
     fireEvent.change(screen.getByLabelText(/Descrição/), { target: { value: 'Estudo inicial' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
     fireEvent.click(await screen.findByRole('button', { name: /Matemática para edição/ }));
     fireEvent.click(screen.getByText('Gerenciar disciplina'));
     fireEvent.click(screen.getByRole('button', { name: 'Editar disciplina' }));
@@ -144,16 +170,19 @@ describe('App', () => {
   it('permite editar um conteúdo de estudo sem duplicá-lo', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
-    fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Matemática tópicos' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
+    await screen.findByRole('heading', { name: 'Disciplinas' });
+    create('Nova disciplina');
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Matemática tópicos' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
     fireEvent.click(await screen.findByRole('button', { name: /Matemática tópicos/ }));
-    fireEvent.change(await screen.findByLabelText('Novo conteúdo ou tópico'), { target: { value: 'Funções' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Adicionar conteúdo' }));
+    create('Nova unidade');
+    fireEvent.change(screen.getByLabelText('Nome da unidade'), { target: { value: 'Funções' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar unidade' }));
     expect(await screen.findByText('Funções', { selector: 'strong' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
-    fireEvent.change(screen.getByLabelText('Editar conteúdo ou tópico'), { target: { value: 'Funções quadráticas' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+    fireEvent.change(screen.getByLabelText('Nome da unidade'), { target: { value: 'Funções quadráticas' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar unidade' }));
 
     expect(await screen.findByText('Funções quadráticas', { selector: 'strong' })).toBeInTheDocument();
     expect(screen.queryByText('Funções', { selector: 'strong', exact: true })).not.toBeInTheDocument();
@@ -162,8 +191,7 @@ describe('App', () => {
   it('impede envio da Agenda com data inválida sem lançar erro', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /novo compromisso/i }));
+    create('Novo compromisso');
 
     fireEvent.change(screen.getByLabelText('Início'), { target: { value: '' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar compromisso' }).closest('form')!);
@@ -174,8 +202,7 @@ describe('App', () => {
   it('permite editar um compromisso existente sem criar um segundo registro', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^calendário$/i }));
-    fireEvent.click(await screen.findByRole('button', { name: /novo compromisso/i }));
+    create('Novo compromisso');
 
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Revisão de algoritmos' } });
     // Use a date in the currently displayed week; a fixed date becomes invisible over time.
@@ -197,8 +224,10 @@ describe('App', () => {
   it('abre a biblioteca de arquivos', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
-    fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Disciplina da biblioteca' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
+    await screen.findByRole('heading', { name: 'Disciplinas' });
+    create('Nova disciplina');
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Disciplina da biblioteca' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Materiais' }));
     expect(await screen.findByText('Sua biblioteca está vazia.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Materiais' })).toHaveAttribute('aria-current', 'page');

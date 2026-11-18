@@ -2,6 +2,7 @@ export type AssistantRole = 'user' | 'assistant' | 'system';
 
 export interface AssistantMessage {
   id: string;
+  conversationId?: string;
   role: AssistantRole;
   content: string;
   createdAt: string;

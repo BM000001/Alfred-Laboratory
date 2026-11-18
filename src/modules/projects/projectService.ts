@@ -1,5 +1,5 @@
 import type { EntityRepository } from '../../storage/repositories';
-import type { Project } from './types';
+import type { Project, ProjectStage } from './types';
 import { validateProjectName } from './projectRules';
 
 export type CreateProjectInput = Pick<Project, 'name'> &
@@ -38,7 +38,25 @@ export function createProjectService(
     return updated;
   }
 
+  async function changeStages(id: string, change: (current: ProjectStage[]) => ProjectStage[]): Promise<Project> {
+    const item = await repository.getById(id);
+    if (!item) throw new Error('Projeto não encontrado.');
+    const updated = { ...item, stages: change(getProjectStages(item)) };
+    await repository.save(updated);
+    return updated;
+  }
+
   return {
+    async addStage(id: string, input: string): Promise<Project> {
+      const title = input.trim();
+      if (!title || title.length > 120) throw new Error('Informe um nome de etapa de até 120 caracteres.');
+      return changeStages(id, (current) => [...current, { id: createId(), title, completed: false }]);
+    },
+
+    async toggleStage(id: string, stageId: string): Promise<Project> {
+      return changeStages(id, (current) => current.map((stage) => stage.id === stageId ? { ...stage, completed: !stage.completed } : stage));
+    },
+
     async list(): Promise<Project[]> {
       return repository.getAll();
     },
@@ -76,4 +94,9 @@ export function createProjectService(
       await repository.delete(id);
     },
   };
+}
+
+export function getProjectStages(project: Project): ProjectStage[] {
+  return Array.isArray(project.stages) ? project.stages.filter((stage) =>
+    stage && typeof stage.id === 'string' && typeof stage.title === 'string' && typeof stage.completed === 'boolean') : [];
 }

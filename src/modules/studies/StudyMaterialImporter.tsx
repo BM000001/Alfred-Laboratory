@@ -1,3 +1,4 @@
+import { EditDialog } from '../../components/EditDialog';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { createFileService } from '../files/fileService';
 import { fileRepository, disciplineRepository, studyTopicRepository } from '../../storage/repositories';
@@ -31,7 +32,10 @@ async function sameBytes(left: Blob, right: Blob): Promise<boolean> {
   return a.every((byte, index) => byte === b[index]);
 }
 
-export function StudyMaterialImporter({ disciplineId, unit, onProcessed }: { disciplineId: string; unit?: StudyTopic; onProcessed?: () => Promise<void> }) {
+export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadOpen, onCloseUpload }: {
+  disciplineId: string; unit?: StudyTopic; onProcessed?: () => Promise<void>;
+  uploadOpen?: boolean; onCloseUpload?: () => void;
+}) {
   const [pending, setPending] = useState<PendingMaterial[]>([]);
   const [staged, setStaged] = useState<File[]>([]);
   const [statuses, setStatuses] = useState<ProcessingStatus[]>([]);
@@ -172,7 +176,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed }: { dis
   }
 
   const finishedCount = statuses.filter((item) => item.status !== 'processing').length;
-  return <section className="study-material-importer" aria-label="Adicionar material de estudo">
+  const uploadFields = <div className="dialog-form">
     <div>
       <span className="card-label">MATERIAL DA DISCIPLINA</span>
       <h3>{unit ? `Material de ${unit.title}` : 'Adicionar arquivos de estudo'}</h3>
@@ -195,8 +199,15 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed }: { dis
         <span>{file.name} · {(file.size / 1024).toFixed(0)} KB</span>
         <button className="text-action" type="button" disabled={saving} aria-label={`Remover ${file.name}`} onClick={() => setStaged((current) => current.filter((item) => item !== file))}>Remover</button>
       </div>)}
-      <button className="primary-action" type="button" onClick={() => void saveAndProcess()} disabled={saving || !disciplineId}>{saving ? 'Salvando e processando…' : 'Salvar'}</button>
+      <button className="primary-action" type="button" onClick={() => { onCloseUpload?.(); void saveAndProcess(); }} disabled={saving || !disciplineId}>{saving ? 'Salvando e processando…' : 'Salvar'}</button>
     </div>}
+  </div>;
+  if (uploadOpen === false && !saving && !error && !statuses.length && !pending.length && !staged.length) return null;
+
+  return <section className="study-material-importer" aria-label="Adicionar material de estudo">
+    {uploadOpen === undefined ? uploadFields : uploadOpen && <EditDialog title="Adicionar material" onClose={() => {
+      setStaged([]); onCloseUpload?.();
+    }}>{uploadFields}</EditDialog>}
     {error && <p className="module-error" role="alert">{error}</p>}
     {saving && <div className="study-material-progress" aria-live="polite">
       <strong>Processamento local · {finishedCount} de {statuses.length} concluído(s)</strong>

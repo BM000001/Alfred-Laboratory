@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
-import { Studies } from './Studies';
+import App from '../app/App';
+import { create } from '../app/testActions';
 import { disciplineRepository, fileRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../storage/repositories';
 
 const definitions = [
@@ -11,11 +12,16 @@ const definitions = [
 ].join('\n');
 
 it('organiza material na unidade, corrige a atividade e retoma o progresso salvo após reabrir', async () => {
-  const view = render(<Studies />);
-  fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Software sintético' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
-  fireEvent.change(await screen.findByLabelText('Novo conteúdo ou tópico'), { target: { value: 'Orientação a objetos' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Adicionar conteúdo' }));
+  const view = render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Aprender' }));
+  await screen.findByRole('heading', { name: 'Disciplinas' });
+  create('Nova disciplina');
+  fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Software sintético' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
+  await screen.findByRole('heading', { name: 'Software sintético' });
+  create('Nova unidade');
+  fireEvent.change(screen.getByLabelText('Nome da unidade'), { target: { value: 'Orientação a objetos' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar unidade' }));
   const [discipline] = await disciplineRepository.getAll();
   await screen.findByRole('button', { name: 'Materiais de Orientação a objetos' });
   const [unit] = await studyTopicRepository.getAll();
@@ -24,6 +30,7 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
     options: ['a', 'b'], correctOptionIndex: 0, difficulty: 'easy', createdAt: new Date().toISOString(),
   });
   fireEvent.click(screen.getByRole('button', { name: 'Materiais de Orientação a objetos' }));
+  create('Adicionar material');
   fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: {
     files: [new File([definitions], 'conceitos.txt', { type: 'text/plain' })],
   } });
@@ -69,7 +76,9 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
 
   view.unmount();
   await studyQuestionRepository.delete(question.id);
-  render(<Studies />);
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Aprender' }));
+  fireEvent.click(await screen.findByRole('button', { name: /Software sintético/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Praticar Orientação a objetos' }));
   expect(await screen.findByText('3 questão(ões) cadastrada(s) · simulados com até 50 questões')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Desempenho' }));
