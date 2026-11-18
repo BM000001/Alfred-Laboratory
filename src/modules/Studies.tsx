@@ -2,6 +2,7 @@ import { Files } from './Files';
 import { Notes } from './Notes';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { Discipline, StudyTopic } from './studies/types';
+import { StudyLearning } from './studies/StudyLearning';
 import { StudyFlashcards } from './studies/StudyFlashcards';
 import { QuestionBank } from './studies/QuestionBank';
 import { StudyMaterialImporter } from './studies/StudyMaterialImporter';
@@ -161,8 +162,8 @@ export function Studies() {
         </aside>
         <div className="study-content">
           <div className="list-heading study-content-heading"><div><span className="card-label">CONTEÚDOS</span><h2>{disciplines.find((item) => item.id === selectedDiscipline)?.name}</h2></div><div><button className="text-action" type="button" onClick={() => { const item = disciplines.find((entry) => entry.id === selectedDiscipline); if (item) editDiscipline(item); }}>Editar disciplina</button><button className="text-action" type="button" onClick={() => { const item = disciplines.find((entry) => entry.id === selectedDiscipline); if (item) void deleteDiscipline(item); }}>Excluir disciplina</button></div></div>
-          <nav className="workspace-tabs" aria-label="Conteúdo da disciplina">{[['conteudos', 'Conteúdos'], ['materiais', 'Materiais'], ['notas', 'Anotações'], ['praticar', 'Praticar']].map(([key, label]) => <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) setStudyView(key); }}>{label}</button>)}</nav>
-          {(studyView === 'materiais' || studyView === 'praticar') && <div className="study-filter">
+          <nav className="workspace-tabs" aria-label="Conteúdo da disciplina">{[['conteudos', 'Conteúdos'], ['materiais', 'Materiais'], ['notas', 'Anotações'], ['aprender', 'Aprender'], ['praticar', 'Praticar']].map(([key, label]) => <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) setStudyView(key); }}>{label}</button>)}</nav>
+          {(studyView === 'materiais' || studyView === 'praticar' || studyView === 'aprender') && <div className="study-filter">
             <label className="field-label" htmlFor="study-unit">Unidade de estudo</label>
             <select id="study-unit" value={unit?.id ?? ''} onChange={(event) => openUnit(event.target.value)}>
               <option value="">Toda a disciplina</option>
@@ -188,6 +189,8 @@ export function Studies() {
           </div>
           {studyView === 'materiais' && <><StudyMaterialImporter key={`import-${selectedDiscipline}-${unit?.id ?? ""}`} disciplineId={selectedDiscipline} unit={unit} onProcessed={refreshAfterMaterialImport} /><Files key={`files-${selectedDiscipline}-${studyRefreshVersion}`} disciplineId={selectedDiscipline} sourceFileId={unit ? unit.sourceFileId ?? null : undefined} allowUpload={false} /></>}
           {studyView === 'notas' && <Notes key={selectedDiscipline} disciplineId={selectedDiscipline} />}
+          {studyView === 'aprender' && <StudyLearning disciplineId={selectedDiscipline} topicId={unit?.id}
+            topics={unit ? [unit] : disciplineTopics} refreshToken={studyRefreshVersion + practiceVersion + cardVersion} />}
           {studyView === 'praticar' && <div key={`${selectedDiscipline}:${unit?.id ?? ''}`}>
             <StudyFlashcards disciplineId={selectedDiscipline} topicId={unit?.id} refreshToken={studyRefreshVersion + cardVersion} />
             <QuestionBank disciplineId={selectedDiscipline} topics={disciplineTopics} unitId={unit?.id} refreshToken={studyRefreshVersion}

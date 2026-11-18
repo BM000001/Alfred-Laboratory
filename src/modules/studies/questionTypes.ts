@@ -10,6 +10,8 @@ export interface StudyQuestion {
   explanation?: string;
   difficulty: StudyQuestionDifficulty;
   createdAt: string;
+  sourceExcerpt?: string;
+  confidence?: number;
   sourceFileId?: string;
   sourceFileName?: string;
   subject?: string;
@@ -32,7 +34,8 @@ export interface StudyQuizAnswer {
   questionId: string;
   selectedOptionIndex: number | null;
   isCorrect: boolean;
-  questionSnapshot?: StudyQuestion;
+  questionSnapshot?: Omit<StudyQuestion, 'id' | 'disciplineId' | 'createdAt'>
+    & Partial<Pick<StudyQuestion, 'id' | 'disciplineId' | 'createdAt'>>;
 }
 
 export interface StudyQuizAttempt {

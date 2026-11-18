@@ -63,7 +63,7 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File(['Texto de aula sem definições explícitas.'], 'resumo.txt')] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/não encontrei definições explícitas suficientes/)).toBeInTheDocument();
+    expect(await screen.findByText(/não encontrei novas definições explícitas suficientes/)).toBeInTheDocument();
     expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
     expect(await fileRepository.getAll()).toHaveLength(1);
   });
@@ -76,6 +76,7 @@ describe('StudyMaterialImporter', () => {
       createdAt: '2026-11-11T12:00:00.000Z', disciplineId: 'software', blob: savedBlob,
       extraction: { format: 'pdf', text: definitions, characterCount: definitions.length, wordCount: 25, extractedAt: '2026-11-11T12:00:00.000Z', extractionMethod: 'ocr', language: 'por', pageCount: 1, pages: [{ pageNumber: 1, text: definitions, method: 'ocr', confidence: 92 }] },
     };
+    await fileRepository.save(scanned);
     vi.spyOn(fileRepository, 'getAll').mockResolvedValue([scanned]);
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File([pdfBytes], 'apostila.pdf', { type: 'application/pdf' })] } });
@@ -84,4 +85,48 @@ describe('StudyMaterialImporter', () => {
     expect(await fileRepository.getAll()).toHaveLength(1);
     expect((await studyFlashcardRepository.getAll())[0].sourceFileId).toBe('scanned-pdf');
   });
+  it('reabre a revisão de fonte após remontar e continua na unidade original', async () => {
+    const view = render(<StudyMaterialImporter disciplineId="software" />);
+    const source = 'Mitose: divisão celular que mantém o número de cromossomos.';
+    const alternative = 'Mitose: divisão celular que reduz o número de cromossomos.';
+    fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: {
+      files: [new File([source + '\n' + alternative], 'revisao.txt', { type: 'text/plain' })],
+    } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await screen.findByRole('button', { name: `Manter: ${source}` });
+    const [topic] = await studyTopicRepository.getAll();
+    expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
+    view.unmount();
+    render(<StudyMaterialImporter disciplineId="software" unit={topic} />);
+    fireEvent.click(await screen.findByRole('button', { name: `Manter: ${source}` }));
+    await waitFor(async () => {
+      const [card] = await studyFlashcardRepository.getAll();
+      expect(card).toMatchObject({ topicId: topic.id, sourceFileId: topic.sourceFileId });
+      const file = await fileRepository.getById(topic.sourceFileId!);
+      expect(file?.processing?.status).toBe('completed');
+      expect(file?.extraction?.text).toContain(alternative);
+    });
+  });
+
+  it('retoma um checkpoint histórico que ainda não tem unidade vinculada', async () => {
+    const raw = {
+      format: 'txt' as const, text: definitions, characterCount: definitions.length,
+      wordCount: 35, extractedAt: '2026-11-12T12:00:00.000Z',
+    };
+    const blob = new Blob([definitions], { type: 'text/plain' });
+    await fileRepository.save({
+      id: 'material-legado', name: 'legado.txt', type: 'text/plain', size: blob.size, blob,
+      createdAt: raw.extractedAt, disciplineId: 'software',
+      processing: { version: 1, profile: 'printed', status: 'cancelled', stage: 'Texto bruto reconhecido', raw },
+    });
+    render(<StudyMaterialImporter disciplineId="software" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Retomar processamento' }));
+    await waitFor(async () => {
+      const [topic] = await studyTopicRepository.getAll();
+      expect(topic).toMatchObject({ sourceFileId: 'material-legado' });
+      expect((await studyQuestionRepository.getAll()).filter((question) => question.topicId === topic.id)).toHaveLength(4);
+      expect((await fileRepository.getById('material-legado'))?.processing?.status).toBe('completed');
+    });
+  });
+
 });
