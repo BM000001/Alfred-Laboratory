@@ -19,9 +19,9 @@ type Theme = 'system' | 'light' | 'dark';
 
 const appearanceKey = getAlfredLocalStorageKey('appearance');
 const mascotKey = getAlfredLocalStorageKey('mascot-hidden');
-const tabs: [OrganizationTab, string][] = [
-  ['agenda', 'Calendário'], ['tarefas', 'Tarefas'], ['projetos', 'Projetos'],
-  ['notas', 'Notas'], ['arquivos', 'Arquivos'], ['produtividade', 'Foco'],
+const tabs: [OrganizationTab, string, IconName][] = [
+  ['agenda', 'Calendário', 'calendar'], ['tarefas', 'Tarefas', 'check'], ['projetos', 'Projetos', 'layers'],
+  ['notas', 'Notas', 'book'], ['arquivos', 'Arquivos', 'folder'], ['produtividade', 'Foco', 'chart'],
 ];
 const navigation = [
   { id: 'inicio', label: 'Hoje', icon: 'home' },
@@ -30,10 +30,9 @@ const navigation = [
   { id: 'organizacao', label: 'Organização', icon: 'layers' },
   { id: 'assistente', label: 'Alfred', icon: 'sparkles' },
 ] as const;
-const pages: Record<Exclude<Page, 'inicio'>, [string, string]> = {
+const pages: Record<Exclude<Page, 'inicio' | 'assistente'>, [string, string]> = {
   estudos: ['Aprender', 'Disciplinas, materiais e prática por unidade.'],
-  organizacao: ['Organização', 'Compromissos, eventos e prazos no calendário.'],
-  assistente: ['Alfred', 'Converse com seu assistente pessoal.'],
+  organizacao: ['Organização', 'Seu calendário, seus projetos e as ferramentas da rotina.'],
   configuracoes: ['Configurações', 'Aparência, privacidade e seus dados.'],
 };
 
@@ -62,6 +61,7 @@ function Icon({ name }: { name: IconName }) {
 function App() {
   const [page, setPage] = useState<Page>('inicio');
   const [organizationTab, setOrganizationTab] = useState<OrganizationTab>('agenda');
+  const [studyStart, setStudyStart] = useState<{ disciplineId: string; unitId: string }>();
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = readPreference(appearanceKey);
     if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
@@ -112,7 +112,7 @@ function App() {
     catch { setPreferenceError('A preferência foi aplicada nesta sessão.'); }
   }
 
-  function navigate(target: Page | OrganizationTab, create = false) {
+  function navigate(target: Page | OrganizationTab, create = false, study?: typeof studyStart) {
     if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
     const tab = tabs.find(([id]) => id === target)?.[0];
     if (tab) {
@@ -122,6 +122,7 @@ function App() {
       if (target === 'organizacao' && page !== 'organizacao') setOrganizationTab('agenda');
       setPage(target as Page);
     }
+    setStudyStart(study);
     setQuick(create && tab ? { tab, sequence: ++quickSequence.current } : undefined);
     if (dialog.current?.open) {
       closingForNavigation.current = true;
@@ -158,29 +159,30 @@ function App() {
           <div className="day-copy">
             <p className="day-date">{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(now)}</p>
             <h1 id="day-title">{greeting}</h1>
-            <p>Veja o que merece sua atenção hoje.</p>
-            <button className="primary-action" type="button" onClick={() => navigate('assistente')}><Icon name="sparkles" /> Conversar com Alfred</button>
+            <button className="secondary-action" type="button" onClick={() => navigate('assistente')}><Icon name="sparkles" /> Conversar com Alfred</button>
           </div>
           {!mascotHidden && <button className="day-mascot" type="button" aria-label="Abrir assistente Alfred" onClick={() => navigate('assistente')}><img src={mascotImage} alt="" /></button>}
         </section>
-        <Overview onNavigate={navigate} />
+        <Overview onNavigate={navigate} onResumeStudy={(topic) => navigate('estudos', false, { disciplineId: topic.disciplineId, unitId: topic.id })} />
       </> : <>
-        <header className="page-heading"><h1>{pages[page][0]}</h1><p>{pages[page][1]}</p></header>
-        {page === 'estudos' && <Studies />}
+        {page !== 'assistente' && <header className="page-heading"><h1>{pages[page][0]}</h1><p>{pages[page][1]}</p></header>}
+        {page === 'estudos' && <Studies initialUnit={studyStart} />}
         {page === 'assistente' && <Assistant showMascot={!mascotHidden} />}
-        {page === 'organizacao' && <>
-          <nav className="workspace-tabs organization-tabs" aria-label="Ferramentas de organização">
-            {tabs.map(([id, label]) => <button key={id} type="button" aria-current={organizationTab === id ? 'page' : undefined}
-              onClick={() => navigate(id)}>{label}</button>)}
+        {page === 'organizacao' && <div className="organization-workbench">
+          <nav className="tool-rail" aria-label="Ferramentas de organização">
+            {tabs.map(([id, label, icon]) => <button key={id} type="button" aria-current={organizationTab === id ? 'page' : undefined}
+              onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span></button>)}
           </nav>
-          {organizationTab === 'agenda' && <Agenda key={quick?.tab === 'agenda' ? quick.sequence : 0} creationRequest={quick?.tab === 'agenda' ? quick.sequence : 0} />}
-          {organizationTab === 'tarefas' && <PersonalOrganization key={quick?.tab === 'tarefas' ? quick.sequence : 0} section="tarefas" />}
-          {organizationTab === 'projetos' && <ProjectWorkspace key={quick?.tab === 'projetos' ? quick.sequence : 0} />}
-          {organizationTab === 'notas' && <Notes key={quick?.tab === 'notas' ? quick.sequence : 0} />}
-          {organizationTab === 'arquivos' && <Files />}
-          {organizationTab === 'produtividade' && <Productivity />}
-        </>}
-        {page === 'configuracoes' && <>
+          <div className="organization-tool">
+            {organizationTab === 'agenda' && <Agenda key={quick?.tab === 'agenda' ? quick.sequence : 0} creationRequest={quick?.tab === 'agenda' ? quick.sequence : 0} />}
+            {organizationTab === 'tarefas' && <PersonalOrganization key={quick?.tab === 'tarefas' ? quick.sequence : 0} section="tarefas" />}
+            {organizationTab === 'projetos' && <ProjectWorkspace key={quick?.tab === 'projetos' ? quick.sequence : 0} />}
+            {organizationTab === 'notas' && <Notes key={quick?.tab === 'notas' ? quick.sequence : 0} />}
+            {organizationTab === 'arquivos' && <Files />}
+            {organizationTab === 'produtividade' && <Productivity />}
+          </div>
+        </div>}
+        {page === 'configuracoes' && <div className="settings-workbench">
           <section className="entry-panel settings-appearance">
             <h2>Aparência</h2>
             <div className="workspace-tabs" role="group" aria-label="Aparência">
@@ -196,7 +198,7 @@ function App() {
           </section>
           <BackupSettings />
           {build && <p className="build-details">Versão <code>{build}</code></p>}
-        </>}
+        </div>}
       </>}
     </main>
     <dialog className="quick-dialog" ref={dialog} aria-labelledby="quick-title" onClose={() => { if (!closingForNavigation.current) createButton.current?.focus(); closingForNavigation.current = false; }}>

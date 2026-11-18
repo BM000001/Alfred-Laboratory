@@ -32,6 +32,18 @@ async function renderAssistant() {
 }
 
 describe('Assistant task approval UI', () => {
+  it('leva a sugestão escolhida ao campo de mensagem sem enviá-la', async () => {
+    const user = userEvent.setup();
+    render(<Assistant />);
+
+    const suggestion = 'Quais tarefas estão pendentes?';
+    await user.click(await screen.findByRole('button', { name: suggestion }));
+    const prompt = screen.getByRole('textbox', { name: 'Mensagem para Alfred' });
+    expect(prompt).toHaveValue(suggestion);
+    expect(prompt).toHaveFocus();
+    expect(within(screen.getByRole('log')).queryByText(suggestion)).not.toBeInTheDocument();
+  });
+
   it('não altera a tarefa quando uma proposta é preparada ou cancelada', async () => {
     const user = userEvent.setup();
     await renderAssistant();

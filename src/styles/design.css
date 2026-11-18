@@ -69,7 +69,7 @@ input[type=checkbox], input[type=radio] { inline-size: 1.15rem; block-size: 1.15
 .file-upload-button:focus-within { outline: 3px solid var(--accent); outline-offset: 3px; }
 .primary-action, .study-quiz-start:not(.secondary) { background: var(--action); color: var(--on-action); border-color: transparent; font-weight: 650; }
 .primary-action:hover:not(:disabled), .study-quiz-start:not(.secondary):hover:not(:disabled) { background: var(--accent); color: var(--canvas); }
-.text-action, .dashboard-link { background: transparent; border-color: transparent; color: var(--accent); }
+.text-action { background: transparent; border-color: transparent; color: var(--accent); }
 .danger-action, .danger-action:hover:not(:disabled) { background: var(--danger-wash); color: var(--danger); }
 .module-error { color: var(--danger); background: var(--danger-wash); }
 .module-feedback, .module-error, .empty-state { padding: .8rem 1rem; border-radius: var(--small-radius); }

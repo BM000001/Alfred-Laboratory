@@ -90,7 +90,9 @@ test('contraste de texto, botões e controles atende os limites nos dois temas',
     for (const [foreground, background, minimum] of [
       ['ink', 'canvas', 4.5], ['muted', 'surface', 4.5], ['muted', 'surface-raised', 4.5],
       ['muted', 'canvas', 4.5], ['on-action', 'action', 4.5], ['canvas', 'accent', 4.5], ['accent', 'surface', 4.5],
-      ['accent', 'accent-wash', 4.5], ['danger', 'danger-wash', 4.5], ['control-edge', 'surface', 3],
+      ['accent', 'accent-wash', 4.5], ['ink', 'accent-wash', 4.5], ['muted', 'accent-wash', 4.5],
+      ['accent', 'surface-raised', 4.5], ['danger', 'surface', 4.5], ['danger', 'danger-wash', 4.5],
+      ['success', 'success-wash', 4.5], ['control-edge', 'surface', 3],
     ]) {
       const values = [luminance(theme[foreground]), luminance(theme[background])].sort((a, b) => a - b);
       const ratio = (values[1] + .05) / (values[0] + .05);

@@ -37,11 +37,13 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   });
   fireEvent.click(screen.getByRole('button', { name: 'Praticar' }));
   expect(await screen.findByText('4 questão(ões) cadastrada(s) · simulados com até 50 questões')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Revisar flashcards' }));
   const flashcards = screen.getByRole('region', { name: 'Flashcards e revisão espaçada' });
   await within(flashcards).findByText('4 para revisar · 4 no total');
   expect(screen.queryByText('Questão sem unidade')).not.toBeInTheDocument();
   expect((await studyFlashcardRepository.getAll()).every((card) => card.topicId === unit.id)).toBe(true);
   expect((await studyQuestionRepository.getAll()).filter((question) => question.topicId === unit.id)).toHaveLength(4);
+  fireEvent.click(screen.getByRole('button', { name: 'Simulados' }));
   fireEvent.change(screen.getByLabelText('Quantidade de questões'), { target: { value: '1' } });
   fireEvent.click(screen.getByRole('button', { name: 'Iniciar simulado' }));
   expect(screen.getByText('Questão 1 de 1')).toBeInTheDocument();
@@ -52,9 +54,11 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   expect(await screen.findByText(/Resposta incorreta/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Finalizar simulado' }));
   expect(await screen.findByText('0 acerto(s) de 1 questão(ões) · 1 erro(s)')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Desempenho' }));
   const performance = screen.getByRole('region', { name: 'Desempenho por tópico' });
   expect(await within(performance).findByText('1 erro(s) em 1 resposta(s)')).toBeInTheDocument();
   fireEvent.click(within(performance).getByRole('button', { name: 'Revisar com flashcard' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Revisar flashcards' }));
   await within(flashcards).findByText('5 para revisar · 5 no total');
   fireEvent.click(within(flashcards).getByRole('button', { name: 'Revelar resposta' }));
   fireEvent.click(within(flashcards).getByRole('button', { name: 'Bom' }));
@@ -68,8 +72,11 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   render(<Studies />);
   fireEvent.click(await screen.findByRole('button', { name: 'Praticar Orientação a objetos' }));
   expect(await screen.findByText('3 questão(ões) cadastrada(s) · simulados com até 50 questões')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Desempenho' }));
   expect(await screen.findByText('1 erro(s) em 1 resposta(s)')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Revisar flashcards' }));
   expect(await screen.findByText('4 para revisar · 5 no total')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Simulados' }));
   fireEvent.click(screen.getByRole('button', { name: 'Ver correção' }));
   fireEvent.click(await screen.findByText('Revisar respostas e explicações'));
   expect(await screen.findByText(`1. ${prompt}`)).toBeInTheDocument();

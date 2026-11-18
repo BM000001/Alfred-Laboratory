@@ -141,24 +141,37 @@ export function Files({ projectId, disciplineId, sourceFileId, allowUpload = tru
   }
   return <section className="files-module">
     {error && <p className="module-error" role="alert">{error}</p>}
-    {allowUpload && <div className="files-toolbar">
-      <label className="file-upload-button">Adicionar arquivo<input type="file" onChange={addFile} aria-label="Selecionar arquivo" /></label>
-      <span className="optional-label">Armazenamento local · até 10 MB por arquivo</span>
-      <span className="optional-label">OCR em português: processamento neste dispositivo, até 20 páginas por operação. Na primeira utilização, os componentes são carregados do próprio Alfred e ficam em cache para uso offline.</span>
-    </div>}
-    {allowUpload && <><label className="field-label" htmlFor="file-discipline">Vincular novo arquivo à disciplina <span className="optional-label">· opcional</span></label>
-    <select id="file-discipline" disabled={Boolean(disciplineId)} value={disciplineId || uploadDiscipline} onChange={(event) => setUploadDiscipline(event.target.value)}>
-      <option value="">Sem disciplina</option>
-      {disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
-    </select></>}
-    <label className="field-label" htmlFor="file-search">Pesquisar arquivos</label>
-    <input id="file-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite o nome do arquivo..." />
-    <label className="field-label" htmlFor="file-filter-discipline">Filtrar por disciplina</label>
-    <select id="file-filter-discipline" disabled={Boolean(disciplineId)} value={disciplineId || filterDiscipline} onChange={(event) => setFilterDiscipline(event.target.value)}>
-      <option value="all">Todas as disciplinas</option>
-      <option value="unassigned">Sem disciplina</option>
-      {disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
-    </select>
+    {allowUpload && <section className="entry-panel" aria-labelledby="file-add-title">
+      <div className="section-heading">
+        <h2 id="file-add-title">Biblioteca de arquivos</h2>
+        <label className="file-upload-button">Adicionar arquivo<input type="file" onChange={addFile} aria-label="Selecionar arquivo" /></label>
+      </div>
+      <div className="form-grid"><div>
+        <label className="field-label" htmlFor="file-discipline">Vincular novo arquivo à disciplina <span className="optional-label">· opcional</span></label>
+        <select id="file-discipline" disabled={Boolean(disciplineId)} value={disciplineId || uploadDiscipline} onChange={(event) => setUploadDiscipline(event.target.value)}>
+          <option value="">Sem disciplina</option>
+          {disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
+        </select>
+      </div></div>
+      <details className="interface-disclosure">
+        <summary>Limites e OCR</summary>
+        <p>Até 10 MB por arquivo. O OCR em português processa até 20 páginas por operação neste dispositivo. Os componentes baixados na primeira utilização ficam em cache para uso offline.</p>
+      </details>
+    </section>}
+    <div className="form-grid file-filters">
+      <div>
+        <label className="field-label" htmlFor="file-search">Pesquisar arquivos</label>
+        <input id="file-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite o nome do arquivo..." />
+      </div>
+      <div>
+        <label className="field-label" htmlFor="file-filter-discipline">Filtrar por disciplina</label>
+        <select id="file-filter-discipline" disabled={Boolean(disciplineId)} value={disciplineId || filterDiscipline} onChange={(event) => setFilterDiscipline(event.target.value)}>
+          <option value="all">Todas as disciplinas</option>
+          <option value="unassigned">Sem disciplina</option>
+          {disciplines.map((discipline) => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
+        </select>
+      </div>
+    </div>
     {loading ? <p className="module-feedback">Carregando arquivos...</p> : visible.length === 0 ?
       <div className="empty-state"><strong>{scopedItems.length ? 'Nenhum resultado encontrado.' : 'Sua biblioteca está vazia.'}</strong><p>Adicione materiais de estudo, documentos e outros arquivos para mantê-los organizados neste dispositivo.</p></div> :
       <div className="stored-file-list">{visible.map((item) => <article className="stored-file" key={item.id}>
