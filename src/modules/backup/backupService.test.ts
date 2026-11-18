@@ -64,6 +64,28 @@ describe('backupService', () => {
     expect(inspectBackup(JSON.stringify(legacy)).counts.focusSessions).toBe(0);
   });
 
+  it('conserva foco e memórias omitidos em v1 e substitui apenas as coleções presentes', async () => {
+    const original = inspectBackup(await createBackup()).payload;
+    const focus: FocusSession = {
+      id: 'foco-local', startedAt: validBackup.createdAt, completedAt: validBackup.createdAt, durationMinutes: 25, kind: 'focus',
+    };
+    const memory: AssistantMemory = {
+      id: 'memoria-local', title: 'Meta sintética', content: 'Revisar o material', category: 'goal',
+      createdAt: validBackup.createdAt, updatedAt: validBackup.createdAt,
+    };
+    try {
+      await focusSessionRepository.save(focus);
+      await memoryRepository.save(memory);
+      const { focusSessions: _focus, memories: _memories, ...historic } = validBackup.data;
+      await restoreBackup(inspectBackup(JSON.stringify({ ...validBackup, data: historic })).payload);
+      expect(await focusSessionRepository.getById(focus.id)).toEqual(focus);
+      expect(await memoryRepository.getById(memory.id)).toEqual(memory);
+      await restoreBackup(inspectBackup(JSON.stringify(validBackup)).payload);
+      expect(await focusSessionRepository.getById(focus.id)).toBeUndefined();
+      expect(await memoryRepository.getById(memory.id)).toBeUndefined();
+    } finally { await restoreBackup(original); }
+  });
+
   it('inclui o histórico Pomodoro no backup exportado', async () => {
     const id = 'backup-focus-session-test';
     const session: FocusSession = { id, startedAt: '2026-11-02T10:00:00.000Z', completedAt: '2026-11-02T10:25:00.000Z', durationMinutes: 25, kind: 'focus' };
@@ -163,28 +185,72 @@ describe('backupService', () => {
     }
   });
 
-  it('sinaliza v1 legado e preserva estudos mesmo quando a disciplina antiga é substituída', async () => {
+  it.each([
+    ['disciplina', 'disciplines'],
+    ['conteúdo de estudo', 'studyTopics'],
+    ['arquivo de origem', 'files'],
+    ['questão', 'studyQuestions'],
+    ['flashcard da unidade', 'studyFlashcards'],
+  ] as const)('bloqueia v1 que removeria %s de um estudo preservado antes de limpar qualquer store', async (label, key) => {
     const original = inspectBackup(await createBackup()).payload;
+    const disciplines = [{ id: card.disciplineId, name: 'Disciplina anterior', createdAt: validBackup.createdAt }];
+    const studyTopics = [{ id: card.topicId, disciplineId: card.disciplineId, title: 'Tópico', status: 'pending', createdAt: validBackup.createdAt }];
+    const common = { ...validBackup.data, disciplines, studyTopics, files: [documentFile] };
+    const v2 = { ...validBackup, version: 2, data: { ...common,
+      studyFlashcards: [card], studyQuestions: [question], studyQuizAttempts: [attempt],
+      studyLearningProgress: [{ ...progress, lessonId: `lesson:${card.id}` }],
+    } };
     try {
-      await request(STORE_NAMES.disciplines, 'readwrite', (store) => store.put({
-        id: card.disciplineId, name: 'Disciplina anterior', createdAt: validBackup.createdAt,
-      }));
-      await studyFlashcardRepository.save(card);
-      await studyQuestionRepository.save(question);
-      await studyQuizAttemptRepository.save(attempt);
-      await request(STORE_NAMES.studyLearningProgress, 'readwrite', (store) => store.put(progress));
-      const preview = inspectBackup(JSON.stringify({
-        ...validBackup, data: { ...validBackup.data, disciplines: [{ id: 'legacy', name: 'Disciplina do backup' }] },
-      }));
+      await restoreBackup(inspectBackup(JSON.stringify(v2)).payload);
+      const data = { ...common, [key]: [] };
+      const preview = inspectBackup(JSON.stringify({ ...validBackup, data }));
       expect(preview.legacyStudyData).toBe(true);
-      await restoreBackup(preview.payload);
-      const data = inspectBackup(await createBackup()).payload.data;
-      expect(data.disciplines.map(({ id }) => id)).toEqual(['legacy']);
-      expect(data).toMatchObject({
-        studyFlashcards: [card], studyQuestions: [question], studyQuizAttempts: [attempt],
-        studyLearningProgress: [progress],
-      });
+      const before = inspectBackup(await createBackup()).payload.data;
+      const clear = vi.spyOn(IDBObjectStore.prototype, 'clear');
+      try {
+        await expect(restoreBackup(preview.payload)).rejects.toThrow(new RegExp(label));
+        expect(clear).not.toHaveBeenCalled();
+      } finally { clear.mockRestore(); }
+      expect(inspectBackup(await createBackup()).payload.data).toEqual(before);
+    } finally { await restoreBackup(original); }
+  });
+
+  it('restaura v1 cifrado com os vínculos mantidos e conserva os estudos e mensagens locais', async () => {
+    const original = inspectBackup(await createBackup()).payload;
+    const discipline = { id: card.disciplineId, name: 'Disciplina anterior', createdAt: validBackup.createdAt };
+    const message = { id: 'local-message', content: 'Mensagem sintética local' };
+    const data = { ...validBackup.data, disciplines: [discipline] };
+    const password = 'senha-sintetica-123';
+    try {
+      await studyFlashcardRepository.save(card); // topic and source were already absent before restore
+      await request(STORE_NAMES.disciplines, 'readwrite', (store) => store.put(discipline));
+      await request(STORE_NAMES.assistantMessages, 'readwrite', (store) => store.put(message));
+      const encrypted = await encryptBackup(JSON.stringify({ ...validBackup, data }), password);
+      await restoreBackup(inspectBackup(await decryptBackup(encrypted, password)).payload);
+      expect(await studyFlashcardRepository.getById(card.id)).toEqual(card);
+      expect(await request(STORE_NAMES.assistantMessages, 'readonly', (store) => store.get(message.id))).toEqual(message);
     } finally {
+      await request(STORE_NAMES.assistantMessages, 'readwrite', (store) => store.delete(message.id));
+      await restoreBackup(original);
+    }
+  });
+
+  it('usa o estado local após uma escrita concorrente já enfileirada para decidir a restauração v1', async () => {
+    const original = inspectBackup(await createBackup()).payload;
+    const database = await openAlfredDatabase();
+    const write = database.transaction([STORE_NAMES.disciplines, STORE_NAMES.studyFlashcards], 'readwrite');
+    const written = new Promise<void>((resolve, reject) => {
+      write.oncomplete = () => resolve();
+      write.onabort = () => reject(write.error);
+    });
+    write.objectStore(STORE_NAMES.disciplines).put({ id: card.disciplineId });
+    write.objectStore(STORE_NAMES.studyFlashcards).put(card);
+    try {
+      const restored = restoreBackup(inspectBackup(JSON.stringify(validBackup)).payload);
+      await Promise.all([written, expect(restored).rejects.toThrow(/disciplina/)]);
+      expect(await studyFlashcardRepository.getById(card.id)).toEqual(card);
+    } finally {
+      database.close();
       await restoreBackup(original);
     }
   });
@@ -334,6 +400,87 @@ describe('backupService', () => {
       expect(inspectBackup(await createBackup()).payload.data.files).toEqual([image]);
     } finally {
       await restoreBackup(original);
+    }
+  });
+
+  it('mantém o estado anterior se a transação for abortada após a primeira escrita efetiva', async () => {
+    const original = inspectBackup(await createBackup()).payload;
+    const initial = inspectBackup(JSON.stringify({
+      ...validBackup, data: { ...validBackup.data, tasks: [{ id: 'tarefa-anterior' }] },
+    })).payload;
+    const incoming = inspectBackup(JSON.stringify({
+      ...validBackup, data: { ...validBackup.data, tasks: [{ id: 'tarefa-nova' }] },
+    })).payload;
+    await restoreBackup(initial);
+    const before = inspectBackup(await createBackup()).payload.data;
+    const put = IDBObjectStore.prototype.put;
+    const interrupted = vi.fn();
+    const injected = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args) {
+      const write = put.apply(this, args);
+      if (this.name === STORE_NAMES.tasks) {
+        write.addEventListener('success', () => {
+          interrupted();
+          this.transaction.abort();
+        });
+      }
+      return write;
+    });
+    try {
+      await expect(restoreBackup(incoming)).rejects.toThrow(/cancelada/);
+      expect(interrupted).toHaveBeenCalledOnce();
+      expect(inspectBackup(await createBackup()).payload.data).toEqual(before);
+    } finally {
+      injected.mockRestore();
+      await restoreBackup(original);
+    }
+  });
+
+  it.each([
+    {
+      version: 1, profile: 'printed', status: 'cancelled', stage: 'Trecho confirmado; pronto para retomar',
+      raw: documentFile.extraction, corrected: 'Texto sintético',
+      corrections: [{
+        original: 'Definição alternativa', corrected: '', reason: 'Confirmação explícita do usuário',
+        confidence: 100, sourceFileId: documentFile.id, region: { start: 0, end: 20 },
+      }],
+    },
+    { version: -1, status: 'inválido' },
+    null,
+  ])('recusa checkpoint estrangeiro ou inválido antes de qualquer acesso ao banco (%j)', async (processing) => {
+    const invalid = { ...validBackup, data: { ...validBackup.data, files: [{ ...documentFile, processing }] } };
+    expect(() => inspectBackup(JSON.stringify(invalid))).toThrow(/checkpoints/);
+    const transaction = vi.spyOn(IDBDatabase.prototype, 'transaction');
+    try {
+      await expect(restoreBackup(invalid as ReturnType<typeof inspectBackup>['payload'])).rejects.toThrow(/checkpoints/);
+      expect(transaction).not.toHaveBeenCalled();
+    } finally { transaction.mockRestore(); }
+  });
+
+  it('recusa exportar ou substituir arquivo local com checkpoint e conserva os dados existentes', async () => {
+    const original = inspectBackup(await createBackup()).payload;
+    const processing = { version: 1, profile: 'printed', status: 'completed', stage: 'Resultados salvos', raw: documentFile.extraction };
+    const file = { ...documentFile, processing, blob: new Blob(['a'], { type: documentFile.type }) };
+    await request(STORE_NAMES.files, 'readwrite', (store) => store.put(file));
+    const clear = vi.spyOn(IDBObjectStore.prototype, 'clear');
+    try {
+      await expect(createBackup()).rejects.toThrow(/checkpoints/);
+      await expect(restoreBackup(original)).rejects.toThrow(/checkpoints/);
+      expect(clear).not.toHaveBeenCalled();
+      expect(await request(STORE_NAMES.files, 'readonly', (store) => store.get(file.id))).toMatchObject({ processing });
+    } finally {
+      clear.mockRestore();
+      await request(STORE_NAMES.files, 'readwrite', (store) => store.delete(file.id));
+      await restoreBackup(original);
+    }
+  });
+
+  it('recusa dados da Central de IA que não consegue importar e aceita uma coleção vazia', async () => {
+    const compatible = { ...validBackup, data: { ...validBackup.data, aiTasks: [] } };
+    expect(inspectBackup(JSON.stringify(compatible)).legacyStudyData).toBe(true);
+    for (const aiTasks of [[{ id: 'ai-anterior' }], { id: 'ai-inválido' }]) {
+      const incompatible = { ...compatible, data: { ...compatible.data, aiTasks } };
+      expect(() => inspectBackup(JSON.stringify(incompatible))).toThrow(/tarefas de IA/);
+      await expect(restoreBackup(incompatible as ReturnType<typeof inspectBackup>['payload'])).rejects.toThrow(/tarefas de IA/);
     }
   });
 

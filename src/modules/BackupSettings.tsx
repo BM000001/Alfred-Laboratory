@@ -103,7 +103,7 @@ export function BackupSettings() {
   async function confirmRestore() {
     if (!preview) return;
     const warning = preview.legacyStudyData
-      ? 'Este backup antigo não inclui flashcards, questões, tentativas de simulados ou progresso de aprendizagem. Os registros de estudo já presentes serão preservados, mas podem ficar associados a disciplinas antigas. Exporte primeiro um backup atual para evitar perder vínculos.'
+      ? 'Este backup antigo não inclui flashcards, questões, tentativas de simulados ou progresso de aprendizagem. Se a restauração remover vínculos dos registros de estudo preservados, ela será bloqueada. Exporte primeiro um backup atual.'
       : 'As coleções incluídas no backup serão substituídas, inclusive flashcards, questões, tentativas e progresso de aprendizagem.';
     if (!window.confirm('Atenção: a restauração substituirá os dados cobertos pelo backup neste dispositivo. ' + warning + ' A operação não pode ser desfeita. Deseja continuar?')) return;
     setBusy(true); setError(''); setFeedback('');
@@ -146,7 +146,7 @@ export function BackupSettings() {
       {preview && <div className="backup-preview" aria-live="polite">
         <strong>Backup de {new Date(preview.createdAt).toLocaleString('pt-BR')}</strong>
         <ul>{Object.entries(preview.counts).map(([key, count]) => <li key={key}>{labels[key]}: {count}</li>)}</ul>
-        {preview.legacyStudyData && <p role="alert">Atenção: backup antigo sem coleções completas de estudo. Ele não recupera flashcards, questões, tentativas ou progresso omitidos do arquivo. Registros atuais dessas coleções serão preservados, mas poderão manter vínculos com disciplinas anteriores. Exporte seu backup atual antes de restaurar.</p>}
+        {preview.legacyStudyData && <p role="alert">Atenção: backup antigo sem coleções completas de estudo. Ele não recupera flashcards, questões, tentativas ou progresso omitidos do arquivo. A restauração será bloqueada se remover vínculos dos registros de estudo preservados. Exporte seu backup atual antes de restaurar.</p>}
         <button className="primary-action danger-action" type="button" disabled={busy} onClick={() => void confirmRestore()}>Substituir dados e restaurar</button>
       </div>}
     </article>
