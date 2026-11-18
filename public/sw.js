@@ -1,6 +1,6 @@
 const IS_LABORATORY_SCOPE = new URL(self.registration.scope).pathname.startsWith('/Alfred-Laboratory/');
 const CACHE_PREFIX = IS_LABORATORY_SCOPE ? 'laboratory-alfred-' : 'alfred-';
-const APP_CACHE = `${CACHE_PREFIX}app-shell-v1`;
+const APP_CACHE = `${CACHE_PREFIX}app-shell-v2`;
 const OCR_CACHE = `${CACHE_PREFIX}ocr-assets-v1`;
 
 async function cacheAppShell() {
@@ -16,58 +16,36 @@ async function cacheAppShell() {
     new URL('icon-maskable-512.png', scope).href,
   ];
 
-  let html = '';
-  try {
-    const response = await fetch(scope.href);
-    if (response.ok) {
-      await cache.put(scope.href, response.clone());
-      html = await response.clone().text();
-    }
-  } catch {
-    // The shell cache may be populated by the current page's first load instead.
-  }
-
-  const indexUrl = new URL('index.html', scope).href;
-  try {
-    const response = await fetch(indexUrl);
-    if (response.ok) {
-      await cache.put(indexUrl, response.clone());
-      if (!html) html = await response.clone().text();
-    }
-  } catch {
-    // GitHub Pages may serve the root URL without exposing index.html directly.
-  }
-
+  // Only activate once the new shell and its fingerprinted entrypoints are usable.
+  const response = await fetch(new Request(scope.href, { cache: 'reload' }));
+  if (!response.ok) throw new Error('Não foi possível atualizar o shell.');
+  const html = await response.clone().text();
   const assetUrls = [...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)]
-    .map((match) => new URL(match[1], scope).href)
-    .filter((url) => {
-      const parsed = new URL(url);
-      return parsed.origin === scope.origin && parsed.pathname.startsWith(scope.pathname) &&
-        (parsed.pathname.includes('/assets/') || parsed.pathname.endsWith('.webmanifest'));
-    });
-
-  await Promise.all([...new Set([...urls, ...assetUrls])].map(async (url) => {
-    try {
-      const response = await fetch(url);
-      if (response.ok) await cache.put(url, response);
-    } catch {
-      // One optional icon or asset must not prevent installation of the worker.
-    }
+    .map((match) => new URL(match[1], scope))
+    .filter((url) => url.origin === scope.origin && url.pathname.startsWith(scope.pathname + 'assets/'))
+    .map((url) => url.href);
+  if (!assetUrls.some((url) => url.endsWith('.js')) || !assetUrls.some((url) => url.endsWith('.css'))) {
+    throw new Error('O shell não identifica os arquivos da interface.');
+  }
+  await cache.addAll([...new Set(assetUrls)].map((url) => new Request(url, { cache: 'reload' })));
+  await cache.put(scope.href, response.clone());
+  await cache.put(new URL('index.html', scope).href, response);
+  await Promise.allSettled(urls.slice(2).map(async (url) => {
+    const asset = await fetch(new Request(url, { cache: 'reload' }));
+    if (asset.ok) await cache.put(url, asset);
   }));
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    await cacheAppShell();
-    await self.skipWaiting();
-  })());
+  // Let open clients finish using their current UI before changing cache generations.
+  event.waitUntil(cacheAppShell());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys
-      .filter((key) => key.startsWith(CACHE_PREFIX) && ![APP_CACHE, OCR_CACHE].includes(key))
+      .filter((key) => key.startsWith(CACHE_PREFIX + 'app-shell-') && key !== APP_CACHE)
       .map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
@@ -93,7 +71,7 @@ self.addEventListener('fetch', (event) => {
     if (isOcrAsset && cached) return cached;
 
     try {
-      const response = await fetch(request);
+      const response = await fetch(request.mode === 'navigate' ? request.url : request, request.mode === 'navigate' ? { cache: 'reload' } : undefined);
       if (response.ok && response.type === 'basic') await cache.put(request, response.clone());
       return response;
     } catch (error) {
