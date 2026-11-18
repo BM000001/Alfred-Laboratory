@@ -164,7 +164,7 @@ fieldset { min-inline-size: 0; border: 1px solid var(--edge); border-radius: var
   .page-heading h1 { font-size: clamp(2.35rem, 10vw, 4.375rem); }
   .primary-navigation .create-launcher { margin-inline: auto; inline-size: 44px; }
   .page { padding-block-end: calc(5rem + env(safe-area-inset-bottom)); }
-  .page:focus-within:has(input:focus, textarea:focus, select:focus) { padding-block-end: calc(7rem + env(safe-area-inset-bottom)); }
+  html { scroll-padding-block-end: calc(4rem + env(safe-area-inset-bottom)); }
   :is(input,textarea,select) { font-size: 1rem; scroll-margin-bottom: 6rem; }
   .brief-grid, .brief-extra, .study-layout, .study-index-heading, .organization-workbench, .assistant-module, .notes-workspace { grid-template-columns: minmax(0,1fr); }
   .tool-rail { grid-template-columns: repeat(3, minmax(0,1fr)); }
