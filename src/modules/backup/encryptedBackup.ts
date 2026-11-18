@@ -1,3 +1,5 @@
+import { decodeBase64, encodeBase64 } from './backupBase64';
+
 const ENCRYPTED_FORMAT = 'alfred-encrypted-backup';
 const ENCRYPTED_VERSION = 1;
 const KDF_ITERATIONS = 310_000;
@@ -16,22 +18,6 @@ interface EncryptedBackupEnvelope {
   ciphertext: string;
 }
 
-function toBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  }
-  return btoa(binary);
-}
-
-function fromBase64(value: unknown): Uint8Array {
-  if (typeof value !== 'string' || value.length % 4 !== 0 ||
-      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
-    throw new Error('Envelope de backup criptografado inválido.');
-  }
-  return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
-}
-
 async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
@@ -43,7 +29,7 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
   );
 }
 
-function parseEnvelope(raw: string): EncryptedBackupEnvelope {
+function parseEnvelope(raw: string) {
   let value: unknown;
   try { value = JSON.parse(raw); } catch { throw new Error('O arquivo criptografado não contém JSON válido.'); }
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -55,13 +41,19 @@ function parseEnvelope(raw: string): EncryptedBackupEnvelope {
       envelope.iterations !== KDF_ITERATIONS) {
     throw new Error('Formato de backup criptografado inválido ou não compatível.');
   }
-  const salt = fromBase64(envelope.salt);
-  const iv = fromBase64(envelope.iv);
-  const ciphertext = fromBase64(envelope.ciphertext);
-  if (salt.length !== SALT_BYTES || iv.length !== IV_BYTES || ciphertext.length < 16) {
+  const { salt, iv, ciphertext } = envelope;
+  if (typeof salt !== 'string' || typeof iv !== 'string' || typeof ciphertext !== 'string') {
     throw new Error('Envelope de backup criptografado inválido.');
   }
-  return envelope as unknown as EncryptedBackupEnvelope;
+  try {
+    const decoded = { salt: decodeBase64(salt), iv: decodeBase64(iv), ciphertext: decodeBase64(ciphertext) };
+    if (decoded.salt.length === SALT_BYTES && decoded.iv.length === IV_BYTES && decoded.ciphertext.length >= 16) {
+      return decoded;
+    }
+  } catch {
+    throw new Error('Envelope de backup criptografado inválido.');
+  }
+  throw new Error('Envelope de backup criptografado inválido.');
 }
 
 export function isEncryptedBackup(raw: string): boolean {
@@ -91,20 +83,17 @@ export async function encryptBackup(plaintext: string, password: string): Promis
     algorithm: 'AES-GCM',
     kdf: 'PBKDF2-SHA-256',
     iterations: KDF_ITERATIONS,
-    salt: toBase64(salt),
-    iv: toBase64(iv),
-    ciphertext: toBase64(new Uint8Array(ciphertext)),
+    salt: encodeBase64(salt),
+    iv: encodeBase64(iv),
+    ciphertext: encodeBase64(new Uint8Array(ciphertext)),
   };
   return JSON.stringify(envelope);
 }
 
 export async function decryptBackup(raw: string, password: string): Promise<string> {
   if (!password) throw new Error('Informe a senha do backup.');
-  const envelope = parseEnvelope(raw);
+  const { salt, iv, ciphertext } = parseEnvelope(raw);
   try {
-    const salt = fromBase64(envelope.salt);
-    const iv = fromBase64(envelope.iv);
-    const ciphertext = fromBase64(envelope.ciphertext);
     const key = await deriveKey(password, salt);
     const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
     return new TextDecoder().decode(plaintext);

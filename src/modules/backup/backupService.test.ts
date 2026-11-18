@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+// @vitest-environment node
+import { describe, expect, it, vi } from 'vitest';
+import { decryptBackup, encryptBackup } from './encryptedBackup';
 import { createBackup, inspectBackup, restoreBackup } from './backupService';
 import { focusSessionRepository, memoryRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
 import { openAlfredDatabase, runStoreRequest, STORE_NAMES } from '../../storage/database';
@@ -32,11 +34,21 @@ const progress = {
   completedAt: '2026-11-15T12:03:00.000Z', context: 'technical' as const,
 };
 
-async function progressRequest<T>(mode: IDBTransactionMode, operation: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+async function request<T>(name: string, mode: IDBTransactionMode, operation: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   const db = await openAlfredDatabase();
-  try { return await runStoreRequest<T>(db, STORE_NAMES.studyLearningProgress, mode, operation); }
+  try { return await runStoreRequest<T>(db, name, mode, operation); }
   finally { db.close(); }
 }
+
+const documentFile = {
+  id: 'file-59', name: 'material.pdf', type: 'application/pdf', size: 1, createdAt: validBackup.createdAt,
+  projectId: 'project-59', disciplineId: card.disciplineId, contentBase64: 'YQ==',
+  extraction: {
+    format: 'pdf', text: 'Trecho de teste', characterCount: 15, wordCount: 3, extractedAt: validBackup.createdAt,
+    extractionMethod: 'ocr', pageCount: 2,
+    pages: [{ pageNumber: 2, text: 'Trecho de teste', method: 'text', confidence: null }],
+  },
+};
 
 describe('backupService', () => {
   it('inspeciona um backup válido e contabiliza os dados', () => {
@@ -125,7 +137,7 @@ describe('backupService', () => {
       await studyFlashcardRepository.save(card);
       await studyQuestionRepository.save(question);
       await studyQuizAttemptRepository.save(attempt);
-      await progressRequest('readwrite', (store) => store.put(progress));
+      await request(STORE_NAMES.studyLearningProgress, 'readwrite', (store) => store.put(progress));
       const serialized = await createBackup();
       const preview = inspectBackup(serialized);
       expect(JSON.parse(serialized).version).toBe(2);
@@ -137,29 +149,43 @@ describe('backupService', () => {
       await studyFlashcardRepository.delete(card.id);
       await studyQuestionRepository.delete(question.id);
       await studyQuizAttemptRepository.delete(attempt.id);
-      await progressRequest('readwrite', (store) => store.delete(progress.id));
+      await request(STORE_NAMES.studyLearningProgress, 'readwrite', (store) => store.delete(progress.id));
       await restoreBackup(preview.payload);
       expect(await studyFlashcardRepository.getById(card.id)).toEqual(card);
       expect(await studyQuestionRepository.getById(question.id)).toEqual(question);
       expect(await studyQuizAttemptRepository.getById(attempt.id)).toEqual(attempt);
-      expect(await progressRequest('readonly', (store) => store.get(progress.id))).toEqual(progress);
+      expect(await request(STORE_NAMES.studyLearningProgress, 'readonly', (store) => store.get(progress.id))).toEqual(progress);
     } finally {
       await studyFlashcardRepository.delete(card.id);
       await studyQuestionRepository.delete(question.id);
       await studyQuizAttemptRepository.delete(attempt.id);
-      await progressRequest('readwrite', (store) => store.delete(progress.id));
+      await request(STORE_NAMES.studyLearningProgress, 'readwrite', (store) => store.delete(progress.id));
     }
   });
 
-  it('preserves existing study records when a legacy v1 backup omitted the collections', async () => {
+  it('sinaliza v1 legado e preserva estudos mesmo quando a disciplina antiga é substituída', async () => {
+    const original = inspectBackup(await createBackup()).payload;
     try {
+      await request(STORE_NAMES.disciplines, 'readwrite', (store) => store.put({
+        id: card.disciplineId, name: 'Disciplina anterior', createdAt: validBackup.createdAt,
+      }));
       await studyFlashcardRepository.save(card);
-      const preview = inspectBackup(JSON.stringify(validBackup));
+      await studyQuestionRepository.save(question);
+      await studyQuizAttemptRepository.save(attempt);
+      await request(STORE_NAMES.studyLearningProgress, 'readwrite', (store) => store.put(progress));
+      const preview = inspectBackup(JSON.stringify({
+        ...validBackup, data: { ...validBackup.data, disciplines: [{ id: 'legacy', name: 'Disciplina do backup' }] },
+      }));
       expect(preview.legacyStudyData).toBe(true);
       await restoreBackup(preview.payload);
-      expect(await studyFlashcardRepository.getById(card.id)).toEqual(card);
+      const data = inspectBackup(await createBackup()).payload.data;
+      expect(data.disciplines.map(({ id }) => id)).toEqual(['legacy']);
+      expect(data).toMatchObject({
+        studyFlashcards: [card], studyQuestions: [question], studyQuizAttempts: [attempt],
+        studyLearningProgress: [progress],
+      });
     } finally {
-      await studyFlashcardRepository.delete(card.id);
+      await restoreBackup(original);
     }
   });
 
@@ -197,6 +223,118 @@ describe('backupService', () => {
     broken.data.studyLearningProgress = [progress, { ...progress }];
     expect(() => inspectBackup(JSON.stringify(broken))).toThrow('studyLearningProgress');
     await expect(restoreBackup(broken)).rejects.toThrow('studyLearningProgress');
+  });
+
+  it.each([1, 2])('restaura anexo de 10 MiB com e sem AES-GCM em v%i', async (version) => {
+    const original = inspectBackup(await createBackup()).payload;
+    const password = 'senha-sintetica-123';
+    const bytes = new Uint8Array(10 * 1024 * 1024);
+    for (let index = 0; index < bytes.length; index++) bytes[index] = index % 251;
+    const study = version === 2 ? {
+      studyFlashcards: [card], studyQuestions: [question], studyQuizAttempts: [attempt], studyLearningProgress: [progress],
+    } : {};
+    const note = {
+      ...documentFile, id: 'note', name: 'Nota sintética', type: 'text/plain', kind: 'note',
+      noteText: 'a', updatedAt: validBackup.createdAt, extraction: undefined,
+    };
+    try {
+      const { contentBase64: _contentBase64, ...metadata } = documentFile;
+      await restoreBackup(inspectBackup(JSON.stringify({
+        ...validBackup, version, data: { ...validBackup.data, ...study, files: [note],
+          disciplines: [{ id: card.disciplineId, name: 'Matéria sintética', createdAt: validBackup.createdAt }],
+        },
+      })).payload);
+      await request(STORE_NAMES.files, 'readwrite', (store) => store.put({
+        ...metadata, size: bytes.length, blob: new Blob([bytes], { type: metadata.type }),
+      }));
+      const exported = inspectBackup(await createBackup()).payload;
+      const expected = version === 2 ? exported : { ...exported, version, data: {
+        ...exported.data, studyFlashcards: undefined, studyQuestions: undefined,
+        studyQuizAttempts: undefined, studyLearningProgress: undefined,
+      } };
+      const json = JSON.stringify(expected);
+      const encrypted = await encryptBackup(json, password);
+      for (const raw of [json, await decryptBackup(encrypted, password)]) {
+        await restoreBackup(original);
+        await restoreBackup(inspectBackup(raw).payload);
+        const restored = await request(STORE_NAMES.files, 'readonly', (store) => store.get(metadata.id));
+        const restoredBytes = new Uint8Array(await restored.blob.arrayBuffer());
+        expect(restoredBytes.length).toBe(bytes.length);
+        expect(restoredBytes.every((byte, index) => byte === bytes[index])).toBe(true);
+        const restoredPayload = inspectBackup(await createBackup()).payload;
+        expect(restoredPayload.data).toMatchObject({
+          ...study, disciplines: expected.data.disciplines, files: expected.data.files,
+        });
+      }
+    } finally {
+      await restoreBackup(original);
+    }
+  }, 30_000);
+
+  it.each(['clear', 'put'] as const)('reverte toda a restauração quando %s lança após operações enfileiradas', async (operation) => {
+    const original = inspectBackup(await createBackup()).payload;
+    const initial = { ...original, data: { ...original.data,
+      tasks: [{ id: 'tarefa-anterior' }], projects: [{ id: 'projeto-anterior' }],
+    } } as typeof original;
+    const incoming = { ...initial, data: { ...initial.data,
+      tasks: [{ id: 'tarefa-nova' }], projects: [{ id: 'projeto-novo' }],
+    } } as typeof initial;
+    await restoreBackup(initial);
+    const before = inspectBackup(await createBackup()).payload.data;
+    const normal = IDBObjectStore.prototype[operation];
+    const fault = new DOMException('Falha sintética', 'DataCloneError');
+    const injected = vi.spyOn(IDBObjectStore.prototype, operation).mockImplementation(function (this: IDBObjectStore, ...args: unknown[]) {
+      if (this.name === STORE_NAMES.projects) throw fault;
+      return Reflect.apply(normal, this, args);
+    });
+    try {
+      await expect(restoreBackup(incoming)).rejects.toBe(fault);
+      expect(injected.mock.contexts.some((store) => (store as IDBObjectStore).name === STORE_NAMES.tasks)).toBe(true);
+      expect(inspectBackup(await createBackup()).payload.data).toEqual(before);
+    } finally {
+      injected.mockRestore();
+      await restoreBackup(original);
+    }
+  });
+
+  it.each([
+    ['disciplinas duplicadas', { disciplines: [{ id: 'd' }, { id: 'd' }] }, /disciplines/],
+    ['arquivos duplicados', { files: [documentFile, documentFile] }, /files/],
+    ['texto numérico', { files: [{ ...documentFile, extraction: { ...documentFile.extraction, text: 123 } }] }, /extração/],
+    ['extração nula', { files: [{ ...documentFile, extraction: null }] }, /extração/],
+    ['página inválida', { files: [{ ...documentFile, extraction: { ...documentFile.extraction, pages: [{ pageNumber: 0, text: 'x' }] } }] }, /extração/],
+    ['padding interno', { files: [{ ...documentFile, contentBase64: 'Y=Q=' }] }, /Base64/],
+    ['Base64 com quebra de linha', { files: [{ ...documentFile, contentBase64: 'YQ=\n' }] }, /Base64/],
+  ])('rejeita %s antes de abrir uma transação de escrita', async (_label, data, message) => {
+    const original = inspectBackup(await createBackup()).payload;
+    for (const base of [validBackup, original]) {
+      const invalid = { ...base, data: { ...base.data, ...data } };
+      expect(() => inspectBackup(JSON.stringify(invalid))).toThrow(message);
+      const startTransaction = vi.spyOn(IDBDatabase.prototype, 'transaction');
+      try {
+        await expect(restoreBackup(invalid as typeof original)).rejects.toThrow(message);
+        expect(startTransaction).not.toHaveBeenCalled();
+      } finally {
+        startTransaction.mockRestore();
+      }
+    }
+  });
+
+  it('preserva metadados opcionais de OCR de imagem dos PRs de Estudos', async () => {
+    const original = inspectBackup(await createBackup()).payload;
+    const image = {
+      ...documentFile, extraction: {
+        ...documentFile.extraction, format: 'image', confidence: 82, imageQuality: 90, preprocessing: 'contrast',
+      },
+    };
+    try {
+      await restoreBackup(inspectBackup(JSON.stringify({
+        ...validBackup, data: { ...validBackup.data, files: [image] },
+      })).payload);
+      expect(inspectBackup(await createBackup()).payload.data.files).toEqual([image]);
+    } finally {
+      await restoreBackup(original);
+    }
   });
 
 });
