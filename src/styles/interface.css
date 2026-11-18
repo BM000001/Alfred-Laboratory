@@ -109,7 +109,7 @@
 fieldset { min-inline-size: 0; border: 1px solid var(--edge); border-radius: var(--small-radius); }
 @media (max-width: 720px) {
   .masthead { grid-template-columns: 1fr auto; }
-  .primary-navigation { z-index: 3; position: fixed; inset: auto 0 0; display: grid; grid-template-columns: repeat(5,minmax(0, 1fr)); gap: 0; border-block-start: 1px solid var(--edge); background: var(--surface); padding: .35rem env(safe-area-inset-right) calc(.35rem + env(safe-area-inset-bottom)) env(safe-area-inset-left); }
+  .primary-navigation { z-index: 3; position: fixed; inset: auto 0 0; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,.85fr) minmax(0,1.3fr) minmax(0,1fr); gap: 0; border-block-start: 1px solid var(--edge); background: var(--surface); padding: .35rem env(safe-area-inset-right) calc(.35rem + env(safe-area-inset-bottom)) env(safe-area-inset-left); }
   .primary-navigation button { flex-direction: column; justify-content: center; gap: .18rem; border-radius: .5rem; padding: .3rem .1rem; min-block-size: 48px; font-size: clamp(.65rem, 2.6vw, .78rem); line-height: 1.2; }
   .primary-navigation button span { max-inline-size: 100%; overflow-wrap: anywhere; }
   .workspace-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); }
