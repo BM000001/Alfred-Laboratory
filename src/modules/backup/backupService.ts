@@ -13,6 +13,7 @@ import { base64ByteLength, decodeBase64, encodeBase64 } from './backupBase64';
 const BACKUP_FORMAT = 'alfred-local-backup';
 // Version 2 includes the complete study state. Version 1 remains readable.
 const BACKUP_VERSION = 2;
+const CHECKPOINT_ERROR = 'O backup não pode ser criado ou restaurado com checkpoints de processamento. Use a versão que criou esses checkpoints para preservar o trabalho.';
 const STUDY_BACKUP_KEYS = ['studyFlashcards', 'studyQuestions', 'studyQuizAttempts', 'studyLearningProgress'] as const;
 
 type StudyLearningProgressBackup = {
@@ -38,8 +39,8 @@ type BackupPayload = {
     studyQuestions?: StudyQuestion[];
     studyQuizAttempts?: StudyQuizAttempt[];
     studyLearningProgress?: StudyLearningProgressBackup[];
-    focusSessions: FocusSession[];
-    memories: AssistantMemory[];
+    focusSessions?: FocusSession[];
+    memories?: AssistantMemory[];
     files: Array<Omit<StoredFile, 'blob'> & { contentBase64: string }>;
   };
 };
@@ -59,6 +60,10 @@ function assertEntities(value: unknown, label: string): void {
   }
 }
 
+function assertPortableFile(file: object): void {
+  if ('processing' in file && file.processing !== undefined) throw new Error(CHECKPOINT_ERROR);
+}
+
 export async function createBackup(): Promise<string> {
   const database = await openAlfredDatabase();
   try {
@@ -75,6 +80,7 @@ export async function createBackup(): Promise<string> {
       request.onerror = () => reject(request.error ?? new Error('Falha ao ler os dados locais.'));
     }));
     const [tasks, projects, appointments, disciplines, studyTopics, studyFlashcards, studyQuestions, studyQuizAttempts, studyLearningProgress, files, focusSessions, , memories] = await Promise.all(requests);
+    (files as StoredFile[]).forEach(assertPortableFile);
     const filePayload = await Promise.all((files as StoredFile[]).map(async (file) => ({
       id: file.id, name: file.name, type: file.type, size: file.size, createdAt: file.createdAt,
       ...(file.projectId ? { projectId: file.projectId } : {}),
@@ -187,14 +193,19 @@ function validateBackupPayload(value: unknown): asserts value is BackupPayload {
     throw new Error('Formato de backup inválido ou versão não compatível.');
   }
   const data = value.data;
-  // Historic v1 files predate these fields; do not invent study data that was never exported.
-  if (data.focusSessions === undefined) data.focusSessions = [];
-  if (data.memories === undefined) data.memories = [];
-  for (const name of ['tasks', 'projects', 'appointments', 'disciplines', 'studyTopics', 'focusSessions', 'memories', 'files']) {
+  // The experimental AI branch produced v1 backups with data this build cannot restore.
+  if (data.aiTasks !== undefined && (!Array.isArray(data.aiTasks) || data.aiTasks.length > 0)) {
+    throw new Error('Este backup contém tarefas de IA. Use uma versão compatível para restaurar esses dados.');
+  }
+  for (const name of ['tasks', 'projects', 'appointments', 'disciplines', 'studyTopics', 'files']) {
     assertEntities(data[name], name);
   }
+  // Historic backups can omit these stores. Absence differs from an explicit empty array.
+  for (const name of ['focusSessions', 'memories']) {
+    if (data[name] !== undefined) assertEntities(data[name], name);
+  }
   const validCategories = ['preference', 'goal', 'project', 'routine', 'other'];
-  if (!(data.memories as unknown[]).every((item) =>
+  if (!((data.memories ?? []) as unknown[]).every((item) =>
     isRecord(item) && hasId(item.title) && item.title.length <= 80
     && hasId(item.content) && item.content.length <= 500
     && validCategories.includes(String(item.category))
@@ -212,6 +223,7 @@ function validateBackupPayload(value: unknown): asserts value is BackupPayload {
       if (file[field] !== undefined && typeof file[field] !== 'string') throw new Error('Metadados de arquivo inválidos.');
     }
     if (file.kind !== undefined && file.kind !== 'note') throw new Error('Tipo de anotação inválido.');
+    assertPortableFile(file);
     if (file.extraction !== undefined && !isValidExtraction(file.extraction)) {
       throw new Error('O backup contém uma extração de arquivo inválida.');
     }
@@ -237,10 +249,88 @@ export function inspectBackup(raw: string): { createdAt: string; counts: Record<
       disciplines: data.disciplines.length, studyTopics: data.studyTopics.length,
       studyFlashcards: data.studyFlashcards?.length ?? 0, studyQuestions: data.studyQuestions?.length ?? 0,
       studyQuizAttempts: data.studyQuizAttempts?.length ?? 0, studyLearningProgress: data.studyLearningProgress?.length ?? 0,
-      focusSessions: data.focusSessions.length, memories: data.memories.length, files: data.files.length,
+      focusSessions: data.focusSessions?.length ?? 0, memories: data.memories?.length ?? 0, files: data.files.length,
     },
     payload: parsed,
     legacyStudyData,
+  };
+}
+
+type RestoreRows = Partial<Record<string, { id: string }[]>>;
+const KEY_TARGETS = ['disciplines', 'studyTopics', 'studyQuestions', 'studyFlashcards'] as const;
+type ReferenceTarget = typeof KEY_TARGETS[number] | 'files';
+
+function assertRetainedStudyLinks(
+  retained: Record<string, unknown[]>,
+  removed: Record<ReferenceTarget, Set<IDBValidKey>>,
+): void {
+  function assertLink(id: unknown, target: ReferenceTarget, label: string, collection: string) {
+    if (typeof id === 'string' && removed[target].has(id)) {
+      throw new Error(`Restauração bloqueada: o backup removeria ${label} ("${id}") usado em ${collection} preservados. Exporte os dados atuais e use um backup v2 completo ou um backup que mantenha esses vínculos.`);
+    }
+  }
+  for (const [key, records] of Object.entries(retained)) {
+    for (const record of records) {
+      if (!isRecord(record)) continue;
+      assertLink(record.disciplineId, 'disciplines', 'o vínculo com a disciplina', key);
+      if (key === STORE_NAMES.studyFlashcards || key === STORE_NAMES.studyQuestions) {
+        assertLink(record.topicId, 'studyTopics', 'o vínculo com o conteúdo de estudo', key);
+        assertLink(record.sourceFileId, 'files', 'o vínculo com o arquivo de origem', key);
+      }
+      if (key === STORE_NAMES.studyLearningProgress && typeof record.lessonId === 'string' && record.lessonId.startsWith('lesson:')) {
+        // In the study branches, units are derived from cards rather than stored independently.
+        assertLink(record.lessonId.slice('lesson:'.length), 'studyFlashcards', 'o vínculo com o flashcard da unidade', key);
+      }
+      if (key === STORE_NAMES.studyQuizAttempts && Array.isArray(record.answers)) {
+        for (const answer of record.answers) {
+          if (isRecord(answer)) assertLink(answer.questionId, 'studyQuestions', 'o vínculo com a questão', key);
+        }
+      }
+    }
+  }
+}
+
+function queueRestore(
+  transaction: IDBTransaction,
+  rows: RestoreRows,
+  abort: (error: unknown) => void,
+): void {
+  const retained = STUDY_BACKUP_KEYS.filter((key) => rows[key] === undefined);
+  const studyReads = retained.map((key) => [key, transaction.objectStore(key).getAll()] as const);
+  const targetReads = KEY_TARGETS.flatMap((key) =>
+    retained.length && rows[key] !== undefined ? [[key, transaction.objectStore(key).getAllKeys()] as const] : []);
+  // IndexedDB runs requests in enqueue order. The final cursor checks for local
+  // checkpoints, then queues writes in its event callback while the transaction is active.
+  const fileKeys: IDBValidKey[] = [];
+  const files = transaction.objectStore(STORE_NAMES.files).openCursor();
+  files.onsuccess = () => {
+    try {
+      const cursor = files.result;
+      if (cursor) {
+        assertPortableFile(cursor.value);
+        if (retained.length) fileKeys.push(cursor.primaryKey);
+        cursor.continue();
+        return;
+      }
+      if (retained.length) {
+        const removed: Record<ReferenceTarget, Set<IDBValidKey>> = {
+          disciplines: new Set(), studyTopics: new Set(), files: new Set(), studyQuestions: new Set(), studyFlashcards: new Set(),
+        };
+        const previousKeys = [...targetReads.map(([key, request]) => [key, request.result] as const), ['files', fileKeys] as const];
+        for (const [key, before] of previousKeys) {
+          const after = new Set<IDBValidKey>(rows[key]?.map(({ id }) => id));
+          removed[key] = new Set(before.filter((id) => !after.has(id)));
+        }
+        assertRetainedStudyLinks(Object.fromEntries(studyReads.map(([key, request]) => [key, request.result])), removed);
+      }
+      for (const [name, entities] of Object.entries(rows)) {
+        const store = transaction.objectStore(name);
+        store.clear();
+        for (const entity of entities ?? []) store.put(entity);
+      }
+    } catch (error) {
+      abort(error);
+    }
   };
 }
 
@@ -253,40 +343,34 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
     return { ...metadata, blob: new Blob([decodeBase64(contentBase64)], { type: file.type }) };
   });
   const database = await openAlfredDatabase();
-  const names = Object.values(STORE_NAMES);
   try {
-    const transaction = database.transaction(names, 'readwrite');
-    const completion = new Promise<void>((resolve, reject) => {
-      transaction.oncomplete = () => resolve();
-      transaction.onabort = () => reject(transaction.error ?? new Error('A restauração foi cancelada.'));
-    });
-    const rows: Record<string, unknown[]> = {
+    const rows: RestoreRows = {
       [STORE_NAMES.tasks]: payload.data.tasks,
       [STORE_NAMES.projects]: payload.data.projects,
       [STORE_NAMES.appointments]: payload.data.appointments,
       [STORE_NAMES.disciplines]: payload.data.disciplines,
       [STORE_NAMES.studyTopics]: payload.data.studyTopics,
-      [STORE_NAMES.focusSessions]: payload.data.focusSessions ?? [],
       [STORE_NAMES.files]: restoredFiles,
-      [STORE_NAMES.memories]: payload.data.memories ?? [],
     };
+    if (payload.data.focusSessions !== undefined) rows[STORE_NAMES.focusSessions] = payload.data.focusSessions;
+    if (payload.data.memories !== undefined) rows[STORE_NAMES.memories] = payload.data.memories;
     // Old backups never included these collections. Keep existing study records
     // rather than clearing them without data to restore; the UI warns about legacy files.
     if (payload.data.studyFlashcards !== undefined) rows[STORE_NAMES.studyFlashcards] = payload.data.studyFlashcards;
     if (payload.data.studyQuestions !== undefined) rows[STORE_NAMES.studyQuestions] = payload.data.studyQuestions;
     if (payload.data.studyQuizAttempts !== undefined) rows[STORE_NAMES.studyQuizAttempts] = payload.data.studyQuizAttempts;
     if (payload.data.studyLearningProgress !== undefined) rows[STORE_NAMES.studyLearningProgress] = payload.data.studyLearningProgress;
-    try {
-      for (const [name, entities] of Object.entries(rows)) {
-        const store = transaction.objectStore(name);
-        store.clear();
-        for (const entity of entities) store.put(entity);
-      }
-    } catch (error) {
-      transaction.abort();
-      await completion.catch(() => undefined);
-      throw error;
-    }
-    await completion;
+    const transaction = database.transaction([...new Set([...Object.keys(rows), ...STUDY_BACKUP_KEYS])], 'readwrite');
+    await new Promise<void>((resolve, reject) => {
+      let failure: unknown;
+      transaction.oncomplete = () => resolve();
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('A restauração foi cancelada.'));
+      const abort = (error: unknown) => {
+        failure = error;
+        transaction.abort();
+      };
+      try { queueRestore(transaction, rows, abort); }
+      catch (error) { abort(error); }
+    });
   } finally { database.close(); }
 }
