@@ -118,6 +118,11 @@ it('evita nova solicitação automática se o navegador exige confirmação ou n
   view.unmount();
 
   const withPrompt = mockLocation('prompt');
+  const fresh = render(<TodayWeather />);
+  await waitFor(() => expect(screen.queryByText('Consultando o tempo…')).not.toBeInTheDocument());
+  expect(screen.queryByText(/Toque em Atualizar/)).not.toBeInTheDocument();
+  fresh.unmount();
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + FORECAST_TTL + 1);
   const reopened = render(<TodayWeather />);
   expect(await screen.findByText(/Toque em Atualizar/)).toBeVisible();
   expect(screen.getByText('24°')).toBeVisible();

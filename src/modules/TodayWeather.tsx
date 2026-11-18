@@ -73,7 +73,7 @@ export function TodayWeather({ settings = false, onSettings }: { settings?: bool
         if (permission?.state === 'denied') { denyLocation(); return; }
         if (permission?.state !== 'granted') {
 
-          if (permission || !cached || Date.now() - cached.savedAt >= FORECAST_TTL) {
+          if (!cached || Date.now() - cached.savedAt >= FORECAST_TTL) {
             setNotice('Toque em Atualizar para confirmar a localização neste navegador.');
           }
           return;
