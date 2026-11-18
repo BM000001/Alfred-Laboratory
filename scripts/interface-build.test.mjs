@@ -3,15 +3,17 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import vm from 'node:vm';
 
-const worker = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
+const build = '1234567890abcdef';
+const worker = (await readFile(new URL('../public/sw.js', import.meta.url), 'utf8')).replace('__ALFRED_SHELL_BUILD__', build);
 const base = 'https://example.test/Alfred-Laboratory/';
 test('versions only the shell and validates its assets before activating', async () => {
   const listeners = new Map();
   const writes = [];
   const deleted = [];
   let network = true;
+  let servedBuild = '0000000000000000';
   let failAssets = true;
-  const html = '<script src="assets/app.js"></script><link href="assets/new.css">';
+  const entry = '<script src="assets/app.js"></script><link href="assets/new.css">';
   const cache = {
     addAll: async (requests) => {
       assert.deepEqual(Array.from(requests, ({ url }) => url), [base + 'assets/app.js', base + 'assets/new.css']);
@@ -28,14 +30,14 @@ test('versions only the shell and validates its assets before activating', async
     self: { registration: { scope: base }, addEventListener: (type, handler) => listeners.set(type, handler),
       clients: { claim: async () => {} } },
     caches: { open: async (name) => {
-      assert.equal(name, 'laboratory-alfred-app-shell-v2');
+      assert.equal(name, 'laboratory-alfred-app-shell-v3-' + build);
       return cache;
-    }, keys: async () => ['laboratory-alfred-app-shell-v1', 'laboratory-alfred-app-shell-v2', 'laboratory-alfred-ocr-assets-v1', 'alfred-app-shell-v1'],
+    }, keys: async () => ['laboratory-alfred-app-shell-v1', 'laboratory-alfred-app-shell-v2', 'laboratory-alfred-app-shell-v3-' + build, 'laboratory-alfred-ocr-assets-v1', 'alfred-app-shell-v1'],
     delete: async (key) => deleted.push(key) },
     fetch: async (_request, opts) => {
       if (!network) throw new Error('offline');
       if (opts) assert.equal(opts.cache, 'reload');
-      return new Response(html);
+      return new Response(entry + `<meta name="alfred-build" content="6fd78be · ${servedBuild}" />`);
     },
   });
   function run(type, options = {}) {
@@ -43,15 +45,21 @@ test('versions only the shell and validates its assets before activating', async
     listeners.get(type)({ waitUntil: (task) => { pending = task; }, respondWith: (task) => { pending = task; }, ...options });
     return pending;
   }
+  await assert.rejects(run('install'), /outra versão/);
+  servedBuild = build;
   await assert.rejects(run('install'), /asset missing/);
   assert.equal(writes.length, 0);
   failAssets = false;
   await run('install');
   await run('activate');
-  assert.deepEqual(deleted, ['laboratory-alfred-app-shell-v1']);
+  assert.deepEqual(deleted, ['laboratory-alfred-app-shell-v1', 'laboratory-alfred-app-shell-v2']);
+  const beforeNavigation = writes.length;
+  servedBuild = '9999999999999999';
+  await run('fetch', { request: { method: 'GET', url: base, mode: 'navigate' } });
+  assert.equal(writes.length, beforeNavigation);
   network = false;
   const offline = await run('fetch', { request: { method: 'GET', url: base + '?offline', mode: 'navigate' } });
-  assert.equal(await offline.text(), html);
+  assert.match(await offline.text(), new RegExp(build));
 });
 
 test('imports only the new visual system and uses the same base for PWA links', async () => {
@@ -66,5 +74,27 @@ test('imports only the new visual system and uses the same base for PWA links', 
   assert.equal(JSON.parse(manifest).scope, './');
   for (const content of [manifest, html, design, interfaceStyles]) {
     assert.doesNotMatch(content, /#(?:00f\b|007bff|0d6efd|1e3a8a|3978d5|91b4f5)|var\(--blue\)/i);
+  }
+});
+
+test('contraste de texto, botões e controles atende os limites nos dois temas', async () => {
+  const css = await readFile(new URL('../src/styles/design.css', import.meta.url), 'utf8');
+  function luminance(hex) {
+    const channels = hex.match(/../g).map((channel) => parseInt(channel, 16) / 255)
+      .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+  }
+  const tokens = (rules) => Object.fromEntries([...rules.matchAll(/--([\w-]+): #([0-9a-f]{6});/g)].map(([, name, rgb]) => [name, rgb]));
+  const [light, dark] = css.split('* { box-sizing')[0].split(':root[data-theme=dark]');
+  for (const theme of [tokens(light), { ...tokens(light), ...tokens(dark) }]) {
+    for (const [foreground, background, minimum] of [
+      ['ink', 'canvas', 4.5], ['muted', 'surface', 4.5], ['muted', 'surface-raised', 4.5],
+      ['muted', 'canvas', 4.5], ['on-action', 'action', 4.5], ['canvas', 'accent', 4.5], ['accent', 'surface', 4.5],
+      ['accent', 'accent-wash', 4.5], ['danger', 'danger-wash', 4.5], ['control-edge', 'surface', 3],
+    ]) {
+      const values = [luminance(theme[foreground]), luminance(theme[background])].sort((a, b) => a - b);
+      const ratio = (values[1] + .05) / (values[0] + .05);
+      assert.ok(ratio >= minimum, `${foreground}/${background}: ${ratio.toFixed(2)} < ${minimum}`);
+    }
   }
 });

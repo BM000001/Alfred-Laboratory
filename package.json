@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "node scripts/copy-ocr-assets.mjs && tsc -b && vite build",
+    "build": "node scripts/copy-ocr-assets.mjs && tsc -b && vite build && node scripts/stamp-release.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run && node scripts/validate-apps-script.mjs && node --test scripts/interface-build.test.mjs",
     "test:watch": "vitest",
-    "build:pages": "node scripts/copy-ocr-assets.mjs && tsc -b && vite build --mode github-pages",
+    "build:pages": "node scripts/copy-ocr-assets.mjs && tsc -b && vite build --mode github-pages && node scripts/stamp-release.mjs",
     "predev": "node scripts/copy-ocr-assets.mjs",
     "test:google-calendar": "node scripts/validate-apps-script.mjs"
   },

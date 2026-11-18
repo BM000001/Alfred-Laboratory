@@ -1,6 +1,7 @@
 const IS_LABORATORY_SCOPE = new URL(self.registration.scope).pathname.startsWith('/Alfred-Laboratory/');
 const CACHE_PREFIX = IS_LABORATORY_SCOPE ? 'laboratory-alfred-' : 'alfred-';
-const APP_CACHE = `${CACHE_PREFIX}app-shell-v2`;
+const SHELL_BUILD = '__ALFRED_SHELL_BUILD__';
+const APP_CACHE = `${CACHE_PREFIX}app-shell-v3-${SHELL_BUILD}`;
 const OCR_CACHE = `${CACHE_PREFIX}ocr-assets-v1`;
 
 async function cacheAppShell() {
@@ -20,6 +21,8 @@ async function cacheAppShell() {
   const response = await fetch(new Request(scope.href, { cache: 'reload' }));
   if (!response.ok) throw new Error('Não foi possível atualizar o shell.');
   const html = await response.clone().text();
+  const servedBuild = html.match(/<meta name="alfred-build" content="(?:[a-f0-9]{7}|local) · ([a-f0-9]{16})"\s*\/>/)?.[1];
+  if (servedBuild !== SHELL_BUILD) throw new Error('O HTML publicado ainda pertence a outra versão.');
   const assetUrls = [...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)]
     .map((match) => new URL(match[1], scope))
     .filter((url) => url.origin === scope.origin && url.pathname.startsWith(scope.pathname + 'assets/'))
@@ -72,7 +75,9 @@ self.addEventListener('fetch', (event) => {
 
     try {
       const response = await fetch(request.mode === 'navigate' ? request.url : request, request.mode === 'navigate' ? { cache: 'reload' } : undefined);
-      if (response.ok && response.type === 'basic') await cache.put(request, response.clone());
+      // The offline navigation shell and its entrypoints are installed together.
+      // A live request may be ahead of this worker during a Pages rollout.
+      if (request.mode !== 'navigate' && response.ok && response.type === 'basic') await cache.put(request, response.clone());
       return response;
     } catch (error) {
       if (cached) return cached;
