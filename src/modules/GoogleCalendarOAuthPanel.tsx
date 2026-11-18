@@ -8,7 +8,11 @@ const agenda = createAgendaService(appointmentRepository);
 const configuredClientId: string = import.meta.env.VITE_GOOGLE_CALENDAR_CLIENT_ID ?? '';
 let sessionClientId = configuredClientId;
 
-export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Promise<void> }) {
+export function hasGoogleCalendarSession() {
+  return client.connected();
+}
+
+export function GoogleCalendarOAuthPanel({ onImported, focusOnMount }: { onImported: () => Promise<void>; focusOnMount?: boolean }) {
   const [clientId, setClientId] = useState(() => sessionClientId);
   const [identityReady, setIdentityReady] = useState(Boolean(window.google?.accounts.oauth2));
   const [connected, setConnected] = useState(client.connected());
@@ -19,6 +23,8 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   const [error, setError] = useState('');
   const [lastSync, setLastSync] = useState<string | null>(null);
   const active = useRef(true);
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (focusOnMount) heading.current?.focus(); }, [focusOnMount]);
   const inFlight = useRef(false);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
 
@@ -63,7 +69,7 @@ export function GoogleCalendarOAuthPanel({ onImported }: { onImported: () => Pro
   }
 
   return <section className="entry-panel apple-calendar-panel" aria-labelledby="google-calendar-title">
-    <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM GOOGLE</span><h3 id="google-calendar-title">Google Calendar</h3></div><span>{connected ? 'Sessão conectada' : 'Desconectado'}</span></div>
+    <div className="apple-calendar-heading"><div><span className="card-label">INTEGRAÇÃO COM GOOGLE</span><h3 id="google-calendar-title" tabIndex={-1} ref={heading}>Google Calendar</h3></div><span>{connected ? 'Sessão conectada' : 'Desconectado'}</span></div>
     <p>Conexão direta por OAuth, somente leitura. Traga os próximos 90 dias de eventos, incluindo hoje. O Alfred consulta o Google com sua autorização e salva os eventos neste aparelho. Não cria nem altera eventos no Google.</p>
     <p className="apple-calendar-note">Alterações feitas aqui nos eventos importados afetam apenas a cópia local e podem ser substituídas na próxima sincronização.</p>
     <p className="apple-calendar-note">A conexão funciona enquanto esta página estiver aberta e a autorização estiver válida. Ao recarregar ou quando a sessão expirar, conecte novamente. Os eventos importados continuam disponíveis.</p>

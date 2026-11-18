@@ -54,8 +54,9 @@ async function loadResume(): Promise<StudyResume | undefined> {
   }
 }
 
-export function Overview({ greeting, onCalendar, onAssistant, onResumeStudy, revision }: {
+export function Overview({ greeting, onCalendar, onAssistant, onResumeStudy, onWeatherSettings, googleInvite, revision }: {
   greeting: string; onCalendar: (date?: string) => void; onAssistant: () => void; onResumeStudy: (start: StudyStart) => void; revision: number;
+  onWeatherSettings: () => void; googleInvite?: { connect: () => void; dismiss: () => void };
 }) {
   const [routine, setRoutine] = useState<{ tasks: Task[]; appointments: Appointment[] }>();
   const [resume, setResume] = useState<StudyResume>();
@@ -93,8 +94,15 @@ export function Overview({ greeting, onCalendar, onAssistant, onResumeStudy, rev
   return <section className="daily-brief" aria-label="Resumo do Alfred">
     <header className="day-hero">
       <div><p className="day-date">{date}</p><h1>{greeting}</h1></div>
-      <TodayWeather />
+      <TodayWeather onSettings={onWeatherSettings} />
     </header>
+    {googleInvite && <aside className="calendar-invite" aria-label="Convite do Google Calendar">
+      <p><strong>Google Calendar</strong> · Veja seus compromissos na agenda do Alfred.</p>
+      <div className="weather-actions">
+        <button className="secondary-action" type="button" onClick={googleInvite.connect}>Conectar</button>
+        <button className="text-action" type="button" onClick={googleInvite.dismiss}>Agora não</button>
+      </div>
+    </aside>}
     {error ? <p className="module-error" role="alert">{error}</p> : !routine ? <p role="status">Reunindo sua rotina…</p> : <>
       {(priorities.length > 0 || preparation.length > 0) && <section className="brief-feature today-priorities" aria-labelledby="today-priorities">
         <h2 id="today-priorities">Prioridades</h2>

@@ -4,6 +4,10 @@
   padding: max(.25rem, env(safe-area-inset-top)) max(var(--space), env(safe-area-inset-right)) .25rem max(var(--space), env(safe-area-inset-left));
   border-block-end: 1px solid var(--edge); background: var(--surface);
 }
+@media (min-width: 721px) {
+  .masthead { position: sticky; inset-block-start: 0; z-index: 4; }
+  html { scroll-padding-block-start: calc(4rem + env(safe-area-inset-top)); }
+}
 .wordmark { justify-self: start; display: inline-flex; align-items: center; gap: .6rem; color: var(--ink); text-decoration: none; font: 1.7rem/1 var(--display-font); letter-spacing: -.055em; }
 .wordmark img { inline-size: 1.6rem; }
 .settings-launcher { justify-self: end; display: grid; place-items: center; aspect-ratio: 1; }
@@ -241,6 +245,17 @@ button.calendar-day { display: grid; align-content: start; text-align: start; mi
 .calendar-workbench, .alfred-workbench, .dialog-form, .dialog-actions { display: grid; gap: var(--space); min-inline-size: 0; }
 .calendar-workbench > *, .alfred-workbench > * { min-inline-size: 0; }
 .calendar-workbench .agenda-module { padding: var(--space); }
+.calendar-day-section { display: grid; gap: var(--space); min-inline-size: 0; }
+.calendar-invite {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .35rem .8rem;
+  padding: .65rem var(--space); border: 1px solid var(--edge); border-radius: var(--small-radius);
+}
+@media (max-width: 720px) {
+  .calendar-day-section { border-block-start: 1px solid var(--edge); padding-block-start: 1rem; }
+  .calendar-day-tasks { margin-block-start: .35rem; }
+  .calendar-day-tasks h2 { font-size: 1.15rem; }
+  .calendar-general-notes { margin-block-start: .65rem; }
+}
 .edit-dialog { max-block-size: calc(100dvh - 2rem); overscroll-behavior: contain; }
 .edit-dialog > h2 { margin-block-end: .85rem; }
 .edit-dialog > .text-action { margin-block-start: .45rem; }

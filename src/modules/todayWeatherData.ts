@@ -6,7 +6,6 @@ export type SavedForecast = { source: string; savedAt: number; name: string; wea
 
 const cacheKey = getAlfredLocalStorageKey('weather-forecast-v1');
 export const FORECAST_TTL = 30 * 60_000;
-const STALE_LIMIT = 24 * 60 * 60_000;
 const sourceKey = (source: WeatherSource) => source.kind === 'local' ? 'local' : 'city:' + source.city.toLocaleLowerCase('pt-BR');
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const rounded = (value: unknown) => isNumber(value) ? Math.round(value) : undefined;
@@ -15,8 +14,7 @@ export function readForecast(source: WeatherSource, now = Date.now()): SavedFore
   try {
     const record = JSON.parse(localStorage.getItem(cacheKey) ?? 'null') as SavedForecast | null;
     if (record?.source !== sourceKey(source) || typeof record.name !== 'string' || !isNumber(record.savedAt)) return;
-    const age = now - record.savedAt;
-    if (age < 0 || age >= STALE_LIMIT || !hasWeather(record.weather)) return;
+    if (record.savedAt > now || !hasWeather(record.weather)) return;
     return record;
   } catch { return undefined; }
 }
