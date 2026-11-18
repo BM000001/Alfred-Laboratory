@@ -1,0 +1,77 @@
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { expect, it } from 'vitest';
+import { Studies } from './Studies';
+import { disciplineRepository, fileRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../storage/repositories';
+
+const definitions = [
+  'Encapsulamento: mecanismo que protege os dados internos de um objeto.',
+  'Herança: relação que permite reutilizar características definidas em outra classe.',
+  'Polimorfismo: capacidade de responder de formas diferentes a uma mesma operação.',
+  'Abstração: processo que representa somente aspectos importantes de uma entidade.',
+].join('\n');
+
+it('organiza material na unidade, corrige a atividade e retoma o progresso salvo após reabrir', async () => {
+  const view = render(<Studies />);
+  fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Software sintético' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
+  fireEvent.change(await screen.findByLabelText('Novo conteúdo ou tópico'), { target: { value: 'Orientação a objetos' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Adicionar conteúdo' }));
+  const [discipline] = await disciplineRepository.getAll();
+  await screen.findByRole('button', { name: 'Materiais de Orientação a objetos' });
+  const [unit] = await studyTopicRepository.getAll();
+  await studyQuestionRepository.save({
+    id: 'unassigned', disciplineId: discipline.id, prompt: 'Questão sem unidade',
+    options: ['a', 'b'], correctOptionIndex: 0, difficulty: 'easy', createdAt: new Date().toISOString(),
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Materiais de Orientação a objetos' }));
+  fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: {
+    files: [new File([definitions], 'conceitos.txt', { type: 'text/plain' })],
+  } });
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+  expect(await screen.findByText(/4 flashcard\(s\) e 4 questão\(ões\) gerados/)).toBeInTheDocument();
+  await screen.findByRole('button', { name: 'Ler texto de conceitos.txt' });
+  await waitFor(async () => {
+    const [material] = await fileRepository.getAll();
+    expect(material).toMatchObject({ disciplineId: discipline.id, extraction: { text: definitions } });
+    expect(await studyTopicRepository.getById(unit.id)).toMatchObject({ sourceFileId: material.id });
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Praticar' }));
+  expect(await screen.findByText('4 questão(ões) cadastrada(s) · simulados com até 50 questões')).toBeInTheDocument();
+  const flashcards = screen.getByRole('region', { name: 'Flashcards e revisão espaçada' });
+  await within(flashcards).findByText('4 para revisar · 4 no total');
+  expect(screen.queryByText('Questão sem unidade')).not.toBeInTheDocument();
+  expect((await studyFlashcardRepository.getAll()).every((card) => card.topicId === unit.id)).toBe(true);
+  expect((await studyQuestionRepository.getAll()).filter((question) => question.topicId === unit.id)).toHaveLength(4);
+  fireEvent.change(screen.getByLabelText('Quantidade de questões'), { target: { value: '1' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Iniciar simulado' }));
+  expect(screen.getByText('Questão 1 de 1')).toBeInTheDocument();
+  const prompt = screen.getByRole('heading', { level: 4 }).textContent;
+  const question = (await studyQuestionRepository.getAll()).find((item) => item.prompt === prompt)!;
+  fireEvent.click(screen.getAllByRole('radio')[question.correctOptionIndex === 0 ? 1 : 0]);
+  fireEvent.click(screen.getByRole('button', { name: 'Corrigir resposta' }));
+  expect(await screen.findByText(/Resposta incorreta/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Finalizar simulado' }));
+  expect(await screen.findByText('0 acerto(s) de 1 questão(ões) · 1 erro(s)')).toBeInTheDocument();
+  const performance = screen.getByRole('region', { name: 'Desempenho por tópico' });
+  expect(await within(performance).findByText('1 erro(s) em 1 resposta(s)')).toBeInTheDocument();
+  fireEvent.click(within(performance).getByRole('button', { name: 'Revisar com flashcard' }));
+  await within(flashcards).findByText('5 para revisar · 5 no total');
+  fireEvent.click(within(flashcards).getByRole('button', { name: 'Revelar resposta' }));
+  fireEvent.click(within(flashcards).getByRole('button', { name: 'Bom' }));
+  await within(flashcards).findByText('4 para revisar · 5 no total');
+  expect((await studyFlashcardRepository.getAll()).some((card) => card.topicId === unit.id && card.reviewCount === 1)).toBe(true);
+  const [attempt] = await studyQuizAttemptRepository.getAll();
+  expect(attempt.answers[0]).toMatchObject({ isCorrect: false, questionSnapshot: { topicId: unit.id, prompt } });
+
+  view.unmount();
+  await studyQuestionRepository.delete(question.id);
+  render(<Studies />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Praticar Orientação a objetos' }));
+  expect(await screen.findByText('3 questão(ões) cadastrada(s) · simulados com até 50 questões')).toBeInTheDocument();
+  expect(await screen.findByText('1 erro(s) em 1 resposta(s)')).toBeInTheDocument();
+  expect(await screen.findByText('4 para revisar · 5 no total')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Ver correção' }));
+  fireEvent.click(await screen.findByText('Revisar respostas e explicações'));
+  expect(await screen.findByText(`1. ${prompt}`)).toBeInTheDocument();
+  expect(await screen.findByText(`Correta: ${question.options[question.correctOptionIndex]}`)).toBeInTheDocument();
+});

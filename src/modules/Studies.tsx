@@ -23,6 +23,9 @@ export function Studies() {
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [editingDisciplineId, setEditingDisciplineId] = useState<string | null>(null);
   const [selectedDiscipline, setSelectedDiscipline] = useState('');
+  const [unitId, setUnitId] = useState('');
+  const [practiceVersion, setPracticeVersion] = useState(0);
+  const [cardVersion, setCardVersion] = useState(0);
   const [studyRefreshVersion, setStudyRefreshVersion] = useState(0);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -32,7 +35,7 @@ export function Studies() {
     const [loadedDisciplines, loadedTopics] = await Promise.all([studies.listDisciplines(), studies.listTopics()]);
     setDisciplines(loadedDisciplines.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
     setTopics(loadedTopics);
-    setSelectedDiscipline((current) => current || loadedDisciplines[0]?.id || '');
+    setSelectedDiscipline((current) => loadedDisciplines.find((item) => item.id === current)?.id || loadedDisciplines[0]?.id || '');
   }
 
   async function refreshAfterMaterialImport() {
@@ -54,6 +57,14 @@ export function Studies() {
     return () => { active = false; };
   }, []);
 
+  const disciplineTopics = topics.filter((topic) => topic.disciplineId === selectedDiscipline);
+  const unit = disciplineTopics.find((topic) => topic.id === unitId);
+  function openUnit(id: string, view = studyView) {
+    if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
+    setUnitId(id);
+    setStudyView(view);
+  }
+
   const progress = useMemo(() => summarizeStudyProgress(topics), [topics]);
   const visibleTopics = topics.filter((topic) =>
     (filter === 'all' || topic.status === filter) && (!selectedDiscipline || topic.disciplineId === selectedDiscipline),
@@ -67,7 +78,7 @@ export function Studies() {
         setSelectedDiscipline(editingDisciplineId);
       } else {
         const created = await studies.createDiscipline({ name: disciplineName, ...(disciplineDescription.trim() ? { description: disciplineDescription } : {}) });
-        setSelectedDiscipline(created.id);
+        setSelectedDiscipline(created.id); setUnitId('');
       }
       setDisciplineName(''); setDisciplineDescription(''); setEditingDisciplineId(null); await refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível salvar a disciplina.'); }
@@ -143,7 +154,7 @@ export function Studies() {
           <div className="list-heading"><div><span className="card-label">MATÉRIAS</span><h2>Disciplinas</h2></div></div>
           {disciplines.map((discipline) => {
             const summary = summarizeStudyProgress(topics.filter((topic) => topic.disciplineId === discipline.id));
-            return <button type="button" key={discipline.id} className={selectedDiscipline === discipline.id ? 'discipline-option selected' : 'discipline-option'} aria-pressed={selectedDiscipline === discipline.id} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) { setSelectedDiscipline(discipline.id); setEditingTopicId(null); setTopicTitle(''); setTopicNotes(''); } }}>
+            return <button type="button" key={discipline.id} className={selectedDiscipline === discipline.id ? 'discipline-option selected' : 'discipline-option'} aria-pressed={selectedDiscipline === discipline.id} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) { setSelectedDiscipline(discipline.id); setUnitId(''); setEditingTopicId(null); setTopicTitle(''); setTopicNotes(''); } }}>
               <strong>{discipline.name}</strong><span>{summary.completed}/{summary.total} conteúdos · {summary.percentage}%</span>
             </button>;
           })}
@@ -151,6 +162,13 @@ export function Studies() {
         <div className="study-content">
           <div className="list-heading study-content-heading"><div><span className="card-label">CONTEÚDOS</span><h2>{disciplines.find((item) => item.id === selectedDiscipline)?.name}</h2></div><div><button className="text-action" type="button" onClick={() => { const item = disciplines.find((entry) => entry.id === selectedDiscipline); if (item) editDiscipline(item); }}>Editar disciplina</button><button className="text-action" type="button" onClick={() => { const item = disciplines.find((entry) => entry.id === selectedDiscipline); if (item) void deleteDiscipline(item); }}>Excluir disciplina</button></div></div>
           <nav className="workspace-tabs" aria-label="Conteúdo da disciplina">{[['conteudos', 'Conteúdos'], ['materiais', 'Materiais'], ['notas', 'Anotações'], ['praticar', 'Praticar']].map(([key, label]) => <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) setStudyView(key); }}>{label}</button>)}</nav>
+          {(studyView === 'materiais' || studyView === 'praticar') && <div className="study-filter">
+            <label className="field-label" htmlFor="study-unit">Unidade de estudo</label>
+            <select id="study-unit" value={unit?.id ?? ''} onChange={(event) => openUnit(event.target.value)}>
+              <option value="">Toda a disciplina</option>
+              {disciplineTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.title}</option>)}
+            </select>
+          </div>}
           <div hidden={studyView !== 'conteudos'}>
           {studyView === 'conteudos' && <>
           <form className="entry-panel topic-form" onSubmit={createTopic}>
@@ -164,13 +182,19 @@ export function Studies() {
           {visibleTopics.length === 0 ? <div className="empty-state"><strong>Nenhum conteúdo nesta lista.</strong><p>Adicione um tópico ou altere o filtro para visualizar seus estudos.</p></div> : <div className="study-topic-list">{visibleTopics.map((topic) => <article className={topic.status === 'completed' ? 'study-topic completed' : 'study-topic'} key={topic.id}>
             <input type="checkbox" aria-label={`Marcar ${topic.title} como concluído`} checked={topic.status === 'completed'} onChange={() => void toggleTopic(topic)} />
             <div><strong>{topic.title}</strong>{topic.notes && <p>{topic.notes}</p>}</div>
-            <div><button className="text-action" type="button" onClick={() => editTopic(topic)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteTopic(topic)}>Excluir</button></div>
+            <div className="study-topic-actions"><button className="text-action" type="button" aria-label={`Materiais de ${topic.title}`} onClick={() => openUnit(topic.id, 'materiais')}>Materiais</button><button className="text-action" type="button" aria-label={`Praticar ${topic.title}`} onClick={() => openUnit(topic.id, 'praticar')}>Praticar</button><button className="text-action" type="button" onClick={() => editTopic(topic)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteTopic(topic)}>Excluir</button></div>
           </article>)}</div>}
           </>}
           </div>
-          {studyView === 'materiais' && <><StudyMaterialImporter key={`import-${selectedDiscipline}`} disciplineId={selectedDiscipline} onProcessed={refreshAfterMaterialImport} /><Files key={`files-${selectedDiscipline}`} disciplineId={selectedDiscipline} allowUpload={false} /></>}
+          {studyView === 'materiais' && <><StudyMaterialImporter key={`import-${selectedDiscipline}-${unit?.id ?? ""}`} disciplineId={selectedDiscipline} unit={unit} onProcessed={refreshAfterMaterialImport} /><Files key={`files-${selectedDiscipline}-${studyRefreshVersion}`} disciplineId={selectedDiscipline} sourceFileId={unit ? unit.sourceFileId ?? null : undefined} allowUpload={false} /></>}
           {studyView === 'notas' && <Notes key={selectedDiscipline} disciplineId={selectedDiscipline} />}
-          {studyView === 'praticar' && <><StudyFlashcards disciplineId={selectedDiscipline} refreshToken={studyRefreshVersion} /><QuestionBank disciplineId={selectedDiscipline} topics={topics.filter((topic) => topic.disciplineId === selectedDiscipline)} refreshToken={studyRefreshVersion} /><StudyPerformance disciplineId={selectedDiscipline} topics={topics} /></>}
+          {studyView === 'praticar' && <div key={`${selectedDiscipline}:${unit?.id ?? ''}`}>
+            <StudyFlashcards disciplineId={selectedDiscipline} topicId={unit?.id} refreshToken={studyRefreshVersion + cardVersion} />
+            <QuestionBank disciplineId={selectedDiscipline} topics={disciplineTopics} unitId={unit?.id} refreshToken={studyRefreshVersion}
+              onChanged={() => setPracticeVersion((version) => version + 1)} />
+            <StudyPerformance disciplineId={selectedDiscipline} topics={unit ? [unit] : disciplineTopics} unitId={unit?.id}
+              refreshToken={studyRefreshVersion + practiceVersion} onCardCreated={() => setCardVersion((version) => version + 1)} />
+          </div>}
         </div>
       </div>
     </>}

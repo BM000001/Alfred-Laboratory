@@ -1,3 +1,4 @@
+import { getQuestionSnapshot } from './questionService';
 import type { StudyTopic } from './types';
 import type { StudyQuestion, StudyQuizAttempt } from './questionTypes';
 
@@ -30,41 +31,46 @@ export function summarizeStudyPerformance(
   questions: StudyQuestion[],
   attempts: StudyQuizAttempt[],
 ): TopicPerformance[] {
-  const questionsByTopic = new Map<string, StudyQuestion[]>();
+  const questionsByTopic = new Map<string, Map<string, QuestionPerformance>>();
   const questionById = new Map(questions.map(question => [question.id, question]));
-  for (const question of questions) {
-    if (!question.topicId) continue;
-    const group = questionsByTopic.get(question.topicId) ?? [];
-    group.push(question);
-    questionsByTopic.set(question.topicId, group);
-  }
-
-  const perQuestion = new Map<string, { answered: number; correct: number; incorrect: number; lastAttemptAt?: string }>();
-  for (const attempt of attempts) {
-    for (const answer of attempt.answers) {
-      if (!questionById.has(answer.questionId)) continue;
-      const current = perQuestion.get(answer.questionId) ?? { answered: 0, correct: 0, incorrect: 0 };
-      current.answered++;
-      if (answer.isCorrect) current.correct++;
-      else current.incorrect++;
-      if (!current.lastAttemptAt || attempt.completedAt > current.lastAttemptAt) current.lastAttemptAt = attempt.completedAt;
-      perQuestion.set(answer.questionId, current);
+  function getStats(question: StudyQuestion) {
+    if (!question.topicId) return;
+    let group = questionsByTopic.get(question.topicId);
+    if (!group) {
+      group = new Map();
+      questionsByTopic.set(question.topicId, group);
     }
-  }
-
-  return topics.map(topic => {
-    const topicQuestions = questionsByTopic.get(topic.id) ?? [];
-    const questionStats: QuestionPerformance[] = topicQuestions.map(question => {
-      const stats = perQuestion.get(question.id) ?? { answered: 0, correct: 0, incorrect: 0 };
-      return {
+    let stats = group.get(question.id);
+    if (!stats) {
+      stats = {
         questionId: question.id,
         prompt: question.prompt,
         correctAnswer: question.options[question.correctOptionIndex] ?? 'Resposta não disponível',
         ...(question.explanation ? { explanation: question.explanation } : {}),
-        ...stats,
-        accuracy: stats.answered ? Math.round(stats.correct / stats.answered * 100) : 0,
+        answered: 0, correct: 0, incorrect: 0, accuracy: 0,
       };
-    });
+      group.set(question.id, stats);
+    }
+    return stats;
+  }
+  questions.forEach(getStats);
+  for (const attempt of attempts) {
+    for (const answer of attempt.answers) {
+      const question = getQuestionSnapshot(answer, attempt.disciplineId) ?? questionById.get(answer.questionId);
+      const stats = question && question.disciplineId === attempt.disciplineId ? getStats(question) : undefined;
+      if (!stats) continue;
+      stats.answered++;
+      if (answer.isCorrect) stats.correct++;
+      else stats.incorrect++;
+      if (!stats.lastAttemptAt || attempt.completedAt > stats.lastAttemptAt) stats.lastAttemptAt = attempt.completedAt;
+    }
+  }
+
+  return topics.map(topic => {
+    const questionStats = Array.from(questionsByTopic.get(topic.id)?.values() ?? []);
+    for (const stats of questionStats) {
+      stats.accuracy = stats.answered ? Math.round(stats.correct / stats.answered * 100) : 0;
+    }
     const answered = questionStats.reduce((sum, item) => sum + item.answered, 0);
     const correct = questionStats.reduce((sum, item) => sum + item.correct, 0);
     const incorrect = answered - correct;
@@ -72,7 +78,7 @@ export function summarizeStudyPerformance(
     return {
       topicId: topic.id,
       title: topic.title,
-      questionCount: topicQuestions.length,
+      questionCount: questionStats.length,
       answered,
       correct,
       incorrect,

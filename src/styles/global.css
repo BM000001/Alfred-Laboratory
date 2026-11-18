@@ -1081,6 +1081,10 @@ button:disabled { opacity:.48; cursor:not-allowed; }
 .study-content-heading > div:last-child { display:flex; gap:4px; flex-wrap:wrap; }
 .study-topic { display:grid; grid-template-columns:18px minmax(0,1fr) auto; align-items:start; gap:11px; padding:12px; border:1px solid var(--alfred-border); background:rgba(13,23,38,.72); }
 .study-topic > div:nth-child(2) { min-width:0; }
+.study-topic-actions { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+@media (max-width: 560px) {
+  .study-topic-actions { grid-column: 2 / -1; }
+}
 .study-topic strong { color:#e0e9f7; font-size:11px; }
 .study-topic p { margin:5px 0 0; color:#899ab2; font-size:10px; line-height:1.55; overflow-wrap:anywhere; }
 .study-topic.completed strong { color:#8798ae; text-decoration:line-through; }

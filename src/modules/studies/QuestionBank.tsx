@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
 import type { StudyTopic } from './types';
 import type { StudyQuestion, StudyQuizAnswer, StudyQuizAttempt, StudyQuestionDifficulty } from './questionTypes';
-import { createQuestionService, gradeStudyAnswer, summarizeQuiz, selectQuizQuestions } from './questionService';
+import { createQuestionService, gradeStudyAnswer, getQuestionSnapshot, summarizeQuiz, selectQuizQuestions } from './questionService';
 
 const service = createQuestionService(studyQuestionRepository, studyQuizAttemptRepository);
 const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
-export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disciplineId: string; topics: StudyTopic[]; refreshToken?: number }) {
+export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; onChanged?: () => void }) {
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [history, setHistory] = useState<StudyQuizAttempt[]>([]);
   const [prompt, setPrompt] = useState('');
@@ -28,6 +28,9 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
   const [quizAnswers, setQuizAnswers] = useState<StudyQuizAnswer[]>([]);
   const [quizStartedAt, setQuizStartedAt] = useState('');
   const [lastAttempt, setLastAttempt] = useState<StudyQuizAttempt | null>(null);
+  const [saving, setSaving] = useState(false);
+  const saveInFlight = useRef(false);
+  const attemptId = useRef('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -57,12 +60,22 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
     return () => { active = false; };
   }, [disciplineId, refreshToken]);
 
-  const availableQuizQuestions = useMemo(() => selectQuizQuestions(questions, {
+  const unitQuestions = useMemo(() => unitId ? questions.filter((question) => question.topicId === unitId) : questions, [questions, unitId]);
+  const unitHistory = useMemo(() => {
+    if (!unitId) return history;
+    const questionIds = new Set(unitQuestions.map((question) => question.id));
+    return history.filter((attempt) => attempt.answers.some((answer) => {
+      const snapshot = getQuestionSnapshot(answer, disciplineId);
+      return snapshot ? snapshot.topicId === unitId : questionIds.has(answer.questionId);
+    }));
+  }, [disciplineId, history, unitId, unitQuestions]);
+
+  const availableQuizQuestions = useMemo(() => selectQuizQuestions(unitQuestions, {
     topicId: quizTopicFilter === 'all' ? undefined : quizTopicFilter,
     difficulty: quizDifficultyFilter,
     limit: 50,
     random: () => 0.5,
-  }), [questions, quizTopicFilter, quizDifficultyFilter]);
+  }), [unitQuestions, quizTopicFilter, quizDifficultyFilter]);
   const currentQuestion = quizQuestions[questionIndex];
   const currentFeedback = currentQuestion && revealed ? gradeStudyAnswer(currentQuestion, selectedOptionIndex) : false;
   const resultSummary = useMemo(() => lastAttempt ? summarizeQuiz(lastAttempt.answers) : null, [lastAttempt]);
@@ -73,7 +86,7 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
     try {
       await service.create({
         disciplineId,
-        ...(topicId ? { topicId } : {}),
+        topicId: unitId ?? (topicId || undefined),
         prompt,
         options,
         correctOptionIndex,
@@ -87,6 +100,7 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
       setExplanation('');
       setDifficulty('medium');
       await refresh();
+      onChanged?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível salvar a questão.');
     }
@@ -94,17 +108,19 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
 
   async function deleteQuestion(question: StudyQuestion) {
     if (!window.confirm('Excluir esta questão do banco?')) return;
-    try { await service.delete(question.id); await refresh(); }
+    try { await service.delete(question.id); await refresh(); onChanged?.(); }
     catch { setError('Não foi possível excluir a questão.'); }
   }
 
   function startQuiz() {
-    const session = selectQuizQuestions(questions, {
+    const session = selectQuizQuestions(unitQuestions, {
       topicId: quizTopicFilter === 'all' ? undefined : quizTopicFilter,
       difficulty: quizDifficultyFilter,
       limit: quizQuestionCount,
     });
     if (!session.length) return;
+    attemptId.current = crypto.randomUUID();
+    setError('');
     setQuizQuestions(session);
     setQuestionIndex(0);
     setSelectedOptionIndex(null);
@@ -125,11 +141,12 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
   }
 
   async function advanceQuiz() {
-    if (!currentQuestion || selectedOptionIndex === null) return;
+    if (!currentQuestion || selectedOptionIndex === null || !revealed || saveInFlight.current) return;
     const answer: StudyQuizAnswer = {
       questionId: currentQuestion.id,
       selectedOptionIndex,
       isCorrect: gradeStudyAnswer(currentQuestion, selectedOptionIndex),
+      questionSnapshot: currentQuestion,
     };
     const updatedAnswers = [...quizAnswers, answer];
     if (questionIndex + 1 < quizQuestions.length) {
@@ -142,7 +159,7 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
 
     const summary = summarizeQuiz(updatedAnswers);
     const attempt: StudyQuizAttempt = {
-      id: crypto.randomUUID(),
+      id: attemptId.current,
       disciplineId,
       startedAt: quizStartedAt,
       completedAt: new Date().toISOString(),
@@ -150,15 +167,28 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
       correctAnswers: summary.correct,
       answers: updatedAnswers,
     };
+    saveInFlight.current = true;
+    setSaving(true);
+    setError('');
     try {
       await service.saveAttempt(attempt);
       setQuizAnswers(updatedAnswers);
       setLastAttempt(attempt);
       setPhase('result');
-      await refresh();
+      setHistory((previous) => [attempt, ...previous.filter((item) => item.id !== attempt.id)]);
+      onChanged?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o resultado do simulado.');
+    } finally {
+      saveInFlight.current = false;
+      setSaving(false);
     }
+  }
+
+  function openAttempt(attempt: StudyQuizAttempt) {
+    setQuizQuestions([]);
+    setLastAttempt(attempt);
+    setPhase('result');
   }
 
   function exitQuiz() {
@@ -171,14 +201,14 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
 
   return <section className="study-question-bank" aria-label="Banco de questões e simulados">
     <div className="study-question-header">
-      <div><span className="card-label">PRÁTICA E AUTOAVALIAÇÃO</span><h3>Questões e simulados</h3><p>{questions.length} questão(ões) cadastrada(s) · simulados com até 50 questões</p></div>
+      <div><span className="card-label">PRÁTICA E AUTOAVALIAÇÃO</span><h3>Questões e simulados</h3><p>{unitQuestions.length} questão(ões) cadastrada(s) · simulados com até 50 questões</p></div>
       {phase === 'idle' && <button className="study-quiz-start" type="button" disabled={!availableQuizQuestions.length} onClick={startQuiz}>Iniciar simulado</button>}
-      {phase !== 'idle' && <button className="study-quiz-start secondary" type="button" onClick={exitQuiz}>Sair do simulado</button>}
+      {phase !== 'idle' && <button className="study-quiz-start secondary" type="button" onClick={exitQuiz} disabled={saving}>Sair do simulado</button>}
     </div>
     {phase === 'idle' && <div className="study-quiz-filters">
-      <label htmlFor="study-quiz-topic-filter">Tópico do simulado
+      {!unitId && <label htmlFor="study-quiz-topic-filter">Tópico do simulado
         <select id="study-quiz-topic-filter" value={quizTopicFilter} onChange={event => setQuizTopicFilter(event.target.value)}><option value="all">Todos os tópicos</option>{topics.map(topic => <option key={topic.id} value={topic.id}>{topic.title}</option>)}</select>
-      </label>
+      </label>}
       <label htmlFor="study-quiz-difficulty-filter">Dificuldade
         <select id="study-quiz-difficulty-filter" value={quizDifficultyFilter} onChange={event => setQuizDifficultyFilter(event.target.value as StudyQuestionDifficulty | 'all')}><option value="all">Todas</option><option value="easy">Fácil</option><option value="medium">Média</option><option value="hard">Difícil</option></select>
       </label>
@@ -199,11 +229,11 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
           <span>{String.fromCharCode(65 + index)}.</span>{option}
         </label>)}
       </div>
-      {revealed && <div className={currentFeedback ? 'study-quiz-feedback correct' : 'study-quiz-feedback incorrect'}>
+      {revealed && <div role="status" className={currentFeedback ? 'study-quiz-feedback correct' : 'study-quiz-feedback incorrect'}>
         <strong>{currentFeedback ? 'Resposta correta.' : `Resposta incorreta. Alternativa correta: ${String.fromCharCode(65 + currentQuestion.correctOptionIndex)}.`}</strong>
         {currentQuestion.explanation && <p>{currentQuestion.explanation}</p>}
       </div>}
-      {!revealed ? <button className="primary-action" type="button" onClick={revealAnswer}>Corrigir resposta</button> : <button className="primary-action" type="button" onClick={() => void advanceQuiz()}>{questionIndex + 1 === quizQuestions.length ? 'Finalizar simulado' : 'Próxima questão'}</button>}
+      {!revealed ? <button className="primary-action" type="button" onClick={revealAnswer}>Corrigir resposta</button> : <button className="primary-action" type="button" onClick={() => void advanceQuiz()} disabled={saving}>{questionIndex + 1 === quizQuestions.length ? 'Finalizar simulado' : 'Próxima questão'}</button>}
     </article>}
 
     {phase === 'result' && lastAttempt && resultSummary && <article className="study-quiz-result">
@@ -213,11 +243,12 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
       <div className="progress-track"><span style={{ width: `${resultSummary.percentage}%` }} /></div>
       <div className="study-quiz-result-actions"><button className="primary-action" type="button" onClick={startQuiz}>Refazer simulado</button><button className="text-action" type="button" onClick={exitQuiz}>Voltar ao banco</button></div>
       <details className="study-quiz-review"><summary>Revisar respostas e explicações</summary>
-        {quizQuestions.map((question, index) => {
-          const answer = lastAttempt.answers.find((item) => item.questionId === question.id);
-          return <article key={question.id}>
+        {lastAttempt.answers.map((answer, index) => {
+          const question = getQuestionSnapshot(answer, lastAttempt.disciplineId) ?? quizQuestions.find((item) => item.id === answer.questionId);
+          if (!question) return <p key={index}>Questão {index + 1} · {answer.isCorrect ? 'Acerto' : 'Erro'} · enunciado original indisponível</p>;
+          return <article key={index}>
             <strong>{index + 1}. {question.prompt}</strong>
-            <p>Sua resposta: {answer?.selectedOptionIndex === null || answer?.selectedOptionIndex === undefined ? 'Sem resposta' : question.options[answer.selectedOptionIndex]}</p>
+            <p>Sua resposta: {answer.selectedOptionIndex === null ? 'Sem resposta' : question.options[answer.selectedOptionIndex]}</p>
             <p>Correta: {question.options[question.correctOptionIndex]}</p>
             {question.explanation && <p>{question.explanation}</p>}
           </article>;
@@ -230,9 +261,9 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
         <label htmlFor="study-question-prompt">Enunciado da questão</label>
         <textarea id="study-question-prompt" rows={3} maxLength={1000} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Digite uma pergunta objetiva..." required />
         <div className="study-question-form-grid">
-          <label htmlFor="study-question-topic">Vincular a tópico <span>· opcional</span>
+          {!unitId && <label htmlFor="study-question-topic">Vincular a tópico <span>· opcional</span>
             <select id="study-question-topic" value={topicId} onChange={(event) => setTopicId(event.target.value)}><option value="">Sem tópico específico</option>{topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.title}</option>)}</select>
-          </label>
+          </label>}
           <label htmlFor="study-question-difficulty">Dificuldade
             <select id="study-question-difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value as StudyQuestionDifficulty)}><option value="easy">Fácil</option><option value="medium">Média</option><option value="hard">Difícil</option></select>
           </label>
@@ -249,14 +280,14 @@ export function QuestionBank({ disciplineId, topics, refreshToken = 0 }: { disci
         </label>
         <button className="primary-action" type="submit">Salvar questão</button>
       </form>
-      {loading ? <p className="module-feedback">Carregando questões...</p> : questions.length ? <div className="study-question-list">
+      {loading ? <p className="module-feedback">Carregando questões...</p> : unitQuestions.length ? <div className="study-question-list">
         <div className="study-question-list-heading"><strong>Banco desta disciplina</strong><span>As questões mais recentes aparecem primeiro</span></div>
-        {questions.map((question) => <article className="study-question-item" key={question.id}>
+        {unitQuestions.map((question) => <article className="study-question-item" key={question.id}>
           <div><span className="study-question-difficulty">{difficultyLabels[question.difficulty]}</span><strong>{question.prompt}</strong><p>{question.options.length} alternativas{question.topicId ? ` · ${topics.find((topic) => topic.id === question.topicId)?.title ?? 'Tópico vinculado'}` : ''}</p></div>
           <button className="text-action" type="button" onClick={() => void deleteQuestion(question)}>Excluir</button>
         </article>)}
       </div> : <div className="study-flashcard-empty">Cadastre questões objetivas acima. Depois, inicie um simulado para responder e receber a correção automaticamente.</div>}
-      {history.length > 0 && <div className="study-quiz-history"><strong>Histórico de simulados</strong>{history.slice(0, 5).map((attempt) => <div key={attempt.id}><span>{new Date(attempt.completedAt).toLocaleDateString('pt-BR')}</span><strong>{attempt.correctAnswers}/{attempt.totalQuestions} acertos · {Math.round(attempt.correctAnswers / attempt.totalQuestions * 100)}%</strong></div>)}</div>}
+      {unitHistory.length > 0 && <div className="study-quiz-history"><strong>Histórico de simulados</strong>{unitHistory.slice(0, 5).map((attempt) => <div key={attempt.id}><span>{new Date(attempt.completedAt).toLocaleDateString('pt-BR')}</span><strong>{attempt.correctAnswers}/{attempt.totalQuestions} acertos · {summarizeQuiz(attempt.answers).percentage}%</strong><button type="button" className="text-action" onClick={() => openAttempt(attempt)}>Ver correção</button></div>)}</div>}
     </>}
   </section>;
 }
