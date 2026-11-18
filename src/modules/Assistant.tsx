@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { ActionProposal, ApprovalDecision, AssistantMessage, ToolDefinition } from './assistant/contracts';
-import './assistant/assistant.css';
 import { AlfredMascot } from '../components/AlfredMascot';
 import { ActionApprovalError, executeApprovedProposal } from './assistant/actionApproval';
 import { prepareTaskCompletion } from './assistant/actionProposals';
@@ -26,7 +25,7 @@ type PendingTaskProposal =
   | { action: 'due-date'; task: Task; dueDate: string; proposal: ActionProposal }
   | { action: 'description'; task: Task; description: string; proposal: ActionProposal };
 
-export function Assistant() {
+export function Assistant({ showMascot = true }: { showMascot?: boolean } = {}) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [historyReady, setHistoryReady] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -373,7 +372,7 @@ export function Assistant() {
     <section className="assistant-module" aria-label="Assistente Alfred">
       <header className="assistant-heading">
         <div className="assistant-heading-main">
-          <AlfredMascot compact mood={error ? 'warning' : pendingProposal ? 'curious' : loading || approving ? 'thinking' : 'idle'} />
+          {showMascot && <AlfredMascot compact mood={error ? 'warning' : pendingProposal ? 'curious' : loading || approving ? 'thinking' : 'idle'} />}
           <div><span className="card-label">ALFRED · ASSISTENTE</span><h2>Como posso ajudar?</h2><p>Modo local: seus dados permanecem neste dispositivo. Para usar uma IA externa, utilize a exportação manual após revisar e autorizar o conteúdo.</p></div>
         </div>
         <div className="assistant-heading-actions">

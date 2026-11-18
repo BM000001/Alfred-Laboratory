@@ -28,8 +28,8 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Organização' })).toBeInTheDocument();
     expect(screen.getByText(/compromissos, eventos e prazos/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /^estudos$/i }));
-    expect(screen.getByRole('heading', { name: 'Estudos' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
+    expect(screen.getByRole('heading', { name: 'Aprender' })).toBeInTheDocument();
   });
 
   it('abre a Agenda funcional e permite iniciar um novo compromisso', async () => {
@@ -70,6 +70,7 @@ describe('App', () => {
   it('abre a área funcional de projetos', async () => {
     render(<App />);
 
+    fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^projetos$/i }));
 
     expect(await screen.findByRole('heading', { name: 'Um objetivo de cada vez.' })).toBeInTheDocument();
@@ -78,7 +79,7 @@ describe('App', () => {
 
   it('permite cadastrar disciplina e conteúdo em Estudos', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^estudos$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
 
     fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Estrutura de Dados' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
@@ -90,7 +91,7 @@ describe('App', () => {
   });
   it('permite editar o nome e a descrição de uma disciplina', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^estudos$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
     fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Matemática para edição' } });
     fireEvent.change(screen.getByLabelText(/Descrição/), { target: { value: 'Estudo inicial' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
@@ -107,7 +108,7 @@ describe('App', () => {
 
   it('permite editar um conteúdo de estudo sem duplicá-lo', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^estudos$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
     fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Matemática tópicos' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
     fireEvent.click(await screen.findByRole('button', { name: /Matemática tópicos/ }));
@@ -160,7 +161,7 @@ describe('App', () => {
 
   it('abre a biblioteca de arquivos', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^estudos$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^aprender$/i }));
     fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Disciplina da biblioteca' } });
     fireEvent.click(screen.getByRole('button', { name: 'Criar disciplina' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Materiais' }));
