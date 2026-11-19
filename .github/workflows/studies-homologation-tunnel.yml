@@ -1,0 +1,69 @@
+name: Estudos 2.0 — prévia HTTPS temporária
+on:
+  push:
+    branches: [codex/studies-2-iphone-homologacao]
+    paths: [.github/workflows/studies-homologation-tunnel.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/codex/studies-2-iphone-homologacao'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund && npm run build
+      - name: Start static preview and verify revision
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-linux-amd64 -o "$work/cloudflared"
+          echo "97bb3b02d23a5980fc9c15a1a270e692da1923f103f920d5b16d4931d5ab55e7  $work/cloudflared" | sha256sum --check
+          chmod +x "$work/cloudflared"
+          nohup python3 -m http.server 8080 --bind 127.0.0.1 --directory dist >"$work/http.log" 2>&1 </dev/null &
+          nohup "$work/cloudflared" tunnel --url http://127.0.0.1:8080 --protocol http2 --no-autoupdate >"$work/tunnel.log" 2>&1 </dev/null &
+          for attempt in {1..45}; do
+            url="$(grep -Eom1 'https://[a-z0-9-]+\.trycloudflare\.com' "$work/tunnel.log" || true)"
+            if [[ -n "$url" ]] && curl -fsS --max-time 8 "$url/version.json" | jq -e --arg sha "$GITHUB_SHA" '.revision == $sha' >/dev/null; then
+              echo "url=$url" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$work/tunnel.log"
+          exit 1
+      - name: Record the verified preview URL
+        id: deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: |
+          id="$(gh api "repos/$GITHUB_REPOSITORY/deployments" --method POST --input <(jq -n --arg sha "$GITHUB_SHA" '{ref:$sha,environment:"estudos-iphone-temporaria",auto_merge:false,production_environment:false,transient_environment:true,required_contexts:[]}') --jq .id)"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" -f state=success -f environment_url="$PREVIEW_URL" -f log_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --silent
+          echo "[Abrir prévia temporária]($PREVIEW_URL)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the preview online for up to five hours
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: |
+          for interval in {1..60}; do
+            sleep 300
+            curl -fsS --retry 2 --max-time 10 "$PREVIEW_URL/version.json" >/dev/null
+          done
+      - name: Mark the URL expired
+        if: always() && steps.deployment.outputs.id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.id }}
+        run: gh api "repos/$GITHUB_REPOSITORY/deployments/$DEPLOYMENT_ID/statuses" -f state=inactive --silent
