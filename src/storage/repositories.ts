@@ -21,7 +21,7 @@ export interface EntityRepository<T extends { id: string }> {
   clear(): Promise<void>;
 }
 
-function createRepository<T extends { id: string }>(storeName: string): EntityRepository<T> {
+function createRepository<T extends { id: string }>(storeName: string, insertOnly = false): EntityRepository<T> {
   async function withDatabase<R>(operation: (database: IDBDatabase) => Promise<R>): Promise<R> {
     const database = await openAlfredDatabase();
     try {
@@ -39,7 +39,7 @@ function createRepository<T extends { id: string }>(storeName: string): EntityRe
       runStoreRequest<T | undefined>(database, storeName, 'readonly', (store) => store.get(id)),
     ),
     save: (entity) => withDatabase(async (database) => {
-      await runStoreRequest<IDBValidKey>(database, storeName, 'readwrite', (store) => store.put(entity));
+      await runStoreRequest<IDBValidKey>(database, storeName, 'readwrite', (store) => insertOnly ? store.add(entity) : store.put(entity));
     }),
     delete: (id) => withDatabase(async (database) => {
       await runStoreRequest<undefined>(database, storeName, 'readwrite', (store) => store.delete(id));
@@ -60,7 +60,7 @@ export const studyTopicRepository = createRepository<StudyTopic>(STORE_NAMES.stu
 export const studyFlashcardRepository = createRepository<StudyFlashcard>(STORE_NAMES.studyFlashcards);
 export const studyQuestionRepository = createRepository<StudyQuestion>(STORE_NAMES.studyQuestions);
 export const studyLearningProgressRepository = createRepository<StudyLearningProgress>(STORE_NAMES.studyLearningProgress);
-export const studyQuizAttemptRepository = createRepository<StudyQuizAttempt>(STORE_NAMES.studyQuizAttempts);
+export const studyQuizAttemptRepository = createRepository<StudyQuizAttempt>(STORE_NAMES.studyQuizAttempts, true);
 
 export const fileRepository = createRepository<StoredFile>(STORE_NAMES.files);
 export const focusSessionRepository = createRepository<FocusSession>(STORE_NAMES.focusSessions);

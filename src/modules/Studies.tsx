@@ -260,7 +260,7 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
                 onClick={() => setPracticeView(key)}>{label}</button>)}
             </div>
             <div hidden={practiceView !== 'questions'}>
-              <QuestionBank disciplineId={selectedDiscipline} topics={disciplineTopics} unitId={unit?.id} refreshToken={studyRefreshVersion}
+              <QuestionBank key={JSON.stringify([selectedDiscipline, unit?.id])} disciplineId={selectedDiscipline} topics={disciplineTopics} unitId={unit?.id} refreshToken={studyRefreshVersion}
                 onChanged={() => setPracticeVersion((version) => version + 1)} />
             </div>
             <div hidden={practiceView !== 'cards'}>
