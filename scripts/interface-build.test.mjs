@@ -10,17 +10,19 @@ test('versions only the shell and validates its assets before activating', async
   const listeners = new Map();
   const writes = [];
   const deleted = [];
+  const staticAsset = base + 'assets/app-AbCd1234.js';
   let network = true;
   let servedBuild = '0000000000000000';
   let failAssets = true;
-  const entry = '<script src="assets/app.js"></script><link href="assets/new.css">';
+  const entry = '<script src="assets/app-AbCd1234.js"></script><link href="assets/new.css">';
   const cache = {
     addAll: async (requests) => {
-      assert.deepEqual(Array.from(requests, ({ url }) => url), [base + 'assets/app.js', base + 'assets/new.css']);
+      assert.deepEqual(Array.from(requests, ({ url }) => url), [base + 'assets/app-AbCd1234.js', base + 'assets/new.css']);
       if (failAssets) throw new Error('asset missing');
     },
     put: async (url, response) => { writes.push([url, await response.text()]); },
-    match: async (request) => {
+    match: async (request, options) => {
+      if (request.url === staticAsset && options?.ignoreVary) return new Response('cached module');
       const found = writes.find(([url]) => url === (request.url ?? request));
       return found && new Response(found[1]);
     },
@@ -60,6 +62,8 @@ test('versions only the shell and validates its assets before activating', async
   network = false;
   const offline = await run('fetch', { request: { method: 'GET', url: base + '?offline', mode: 'navigate' } });
   assert.match(await offline.text(), new RegExp(build));
+  const module = await run('fetch', { request: { method: 'GET', url: staticAsset, mode: 'cors' } });
+  assert.equal(await module.text(), 'cached module');
 });
 
 test('imports only the new visual system and uses the same base for PWA links', async () => {

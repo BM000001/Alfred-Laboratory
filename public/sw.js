@@ -63,6 +63,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
 
   const isOcrAsset = url.pathname.includes(scope.pathname + 'ocr/');
+  const isFingerprintedEntrypoint = url.pathname.startsWith(scope.pathname + 'assets/') && /-[\w-]{8,}\.(?:m?js|css)$/.test(url.pathname);
   const isAppAsset = request.mode === 'navigate' || url.pathname.includes('/assets/') ||
     url.pathname.endsWith('.webmanifest') || /\/(?:apple-touch-icon-180|icon-192|icon-512|icon-maskable-512)\.png$/.test(url.pathname);
   if (!isOcrAsset && !isAppAsset) return;
@@ -81,6 +82,12 @@ self.addEventListener('fetch', (event) => {
       return response;
     } catch (error) {
       if (cached) return cached;
+      // The precache fetch omits Origin, while a module request can send it.
+      // This fallback is only for immutable same-origin JS/CSS build assets.
+      if (isFingerprintedEntrypoint) {
+        const staticAsset = await cache.match(request, { ignoreVary: true });
+        if (staticAsset) return staticAsset;
+      }
       if (request.mode === 'navigate') {
         const indexUrl = new URL('index.html', scope).href;
         const fallback = await cache.match(indexUrl) ?? await cache.match(scope.href);
