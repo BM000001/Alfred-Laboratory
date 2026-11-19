@@ -5,6 +5,7 @@ import { QuestionBank } from './QuestionBank';
 import { studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
 
 beforeEach(async () => {
+  localStorage.clear();
   await Promise.all([studyQuestionRepository.clear(), studyQuizAttemptRepository.clear()]);
   for (let index = 0; index < 3; index += 1) {
     await studyQuestionRepository.save({
@@ -43,5 +44,26 @@ describe('QuestionBank quiz flow', () => {
     expect(await screen.findByText(/Histórico de simulados/)).toBeInTheDocument();
     await waitFor(async () => expect(await studyQuizAttemptRepository.getAll()).toHaveLength(1));
     expect((await studyQuizAttemptRepository.getAll())[0]).toMatchObject({ totalQuestions: 2, correctAnswers: 2 });
+  });
+  it('recovers an interrupted quiz with its corrected answer and saves it once', async () => {
+    const props = { disciplineId: 'software', topics: [] };
+    const first = render(<QuestionBank {...props} />);
+    await screen.findByText('3 questão(ões) cadastrada(s) · simulados com até 50 questões');
+    fireEvent.change(screen.getByLabelText('Quantidade de questões'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar simulado' }));
+    fireEvent.click(screen.getAllByRole('radio')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir resposta' }));
+    first.unmount();
+    const second = render(<QuestionBank {...props} />);
+    expect(await screen.findByText('Resposta correta.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima questão' }));
+    fireEvent.click(screen.getAllByRole('radio')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir resposta' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar simulado' }));
+    expect(await screen.findByText('100%')).toBeInTheDocument();
+    second.unmount();
+    render(<QuestionBank {...props} />);
+    expect(await screen.findByText('Histórico de simulados')).toBeInTheDocument();
+    expect(await studyQuizAttemptRepository.getAll()).toHaveLength(1);
   });
 });

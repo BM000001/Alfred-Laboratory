@@ -62,7 +62,7 @@ export function correctMaterial(raw: string, sourceFileId: string, profile: Proc
   return { corrected, corrections };
 }
 
-export function validateMaterialResources(source: string, confidence: number, profile: ProcessingProfile) {
+export function validateMaterialResources(source: string, confidence: number, profile: ProcessingProfile, original = source) {
   const definitions = extractStudyDefinitions(source);
   const generated = generateStudyResources(source);
   const seen = new Set<string>();
@@ -81,7 +81,25 @@ export function validateMaterialResources(source: string, confidence: number, pr
     if (supportedAnswers.length !== 1 || question.options[question.correctOptionIndex] !== entry.definition || question.explanation !== `Trecho de origem: ${entry.sourceExcerpt}`) return false;
     seen.add(key); return true;
   }).map(question => ({ ...question, sourceExcerpt: evidence(question.subject)[0].sourceExcerpt, confidence }));
-  const total = generated.flashcards.length + generated.questions.length;
+  const literal = eligible ? literalStudyResources(source).filter(item => original.includes(item.sourceExcerpt)) : [];
+  const answers = [...new Set(literal.filter(item => item.explicitAnswer).map(item => item.back))]
+    .filter(answer => answer.length <= 300);
+  for (const item of literal) {
+    const key = normalizeMaterial(item.front);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const { explicitAnswer, ...card } = item;
+    flashcards.push({ ...card, confidence });
+    if (!explicitAnswer || item.back.length > 300 || answers.filter(answer => normalizeMaterial(answer) === normalizeMaterial(item.back)).length !== 1) continue;
+    const otherAnswers = [...new Map(answers.filter(answer => normalizeMaterial(answer) !== normalizeMaterial(item.back))
+      .map(answer => [normalizeMaterial(answer), answer])).values()].slice(0, 3);
+    if (otherAnswers.length < 3) continue;
+    const index = questions.length % 4;
+    otherAnswers.splice(index, 0, item.back);
+    questions.push({ prompt: item.front, options: otherAnswers, correctOptionIndex: index, difficulty: 'medium',
+      explanation: `Trecho de origem: ${item.sourceExcerpt}`, subject: item.subject, sourceExcerpt: item.sourceExcerpt, confidence });
+  }
+  const total = generated.flashcards.length + generated.questions.length + literal.length + questions.filter(question => literal.some(item => item.front === question.prompt)).length;
   return { flashcards, questions, rejected: total - flashcards.length - questions.length, validity: total ? Math.round((flashcards.length + questions.length) / total * 100) : 0 };
 }
 
@@ -111,4 +129,60 @@ export function structureMaterial(source: string) {
     offset += line.length + 1;
   }
   return blocks;
+}
+
+
+/** Literal recall only. Blocks are used as cues, without filling gaps or inferring relations. */
+function literalStudyResources(source: string) {
+  type Candidate = { front: string; back: string; subject: string; sourceExcerpt: string; explicitAnswer: boolean };
+  const candidates: Candidate[] = [];
+  const blocks = structureMaterial(source);
+  function add(front: string, back: string, excerpt: string, explicitAnswer = false) {
+    if (front.length > 500 || back.length < 2 || back.length > 500 || excerpt.length > 800) return;
+    candidates.push({ front, back, subject: front, sourceExcerpt: excerpt, explicitAnswer });
+  }
+  for (let index = 0; index < blocks.length && candidates.length < 30; index++) {
+    const block = blocks[index];
+    if (block.kind === 'question' && /^Pergunta:\s*/iu.test(block.text)) {
+      const next = source.slice(block.region.end).match(/^(?:[ \t]*\r?\n)[ \t]*Resposta:[ \t]*([^\r\n]+)/iu);
+      if (next) add(block.text.replace(/^Pergunta:\s*/iu, ''), next[1].trim(), source.slice(block.region.start, block.region.end + next[0].length), true);
+      continue;
+    }
+    if (block.kind === 'title') {
+      const list = [];
+      let end = block.region.end;
+      const kind = blocks[index + 1]?.kind;
+      for (let cursor = index + 1; cursor < blocks.length && list.length < 12; cursor++) {
+        const item = blocks[cursor];
+        if (item.kind !== kind || (kind !== 'list' && kind !== 'step') ||
+            !/^[ \t]*\r?\n[ \t]*$/u.test(source.slice(end, item.region.start))) break;
+        list.push(item.text);
+        end = item.region.end;
+      }
+      if (list.length >= 2) add(`Quais itens aparecem em “${block.text}”?`, list.join('\n'), source.slice(block.region.start, end));
+      continue;
+    }
+    if (block.kind === 'formula') {
+      const match = block.text.match(/^(Fórmula (?:de|da|do) [^:]{2,80}):\s*(.{2,200}=.{1,200})$/iu);
+      if (match) add(`Qual expressão o material apresenta como “${match[1]}”?`, match[2], block.text);
+      continue;
+    }
+    const separator = block.kind === 'comparison' ? /\s+enquanto\s+/iu
+      : block.kind === 'cause' ? /\s+porque\s+/iu
+      : block.kind === 'example' ? /\s+por exemplo,?\s+/iu : undefined;
+    const match = separator?.exec(block.text);
+    if (match && match.index >= 12 && /[.!?]$/u.test(block.text)) {
+      const left = block.text.slice(0, match.index);
+      const cue = (left + match[0]).trimEnd();
+      add(`Como o material completa o trecho “${cue}…”?`, block.text.slice(match.index + match[0].length), block.text);
+    }
+  }
+  const answersByPrompt = new Map<string, Set<string>>();
+  for (const { front, back } of candidates) {
+    const key = normalizeMaterial(front);
+    const answers = answersByPrompt.get(key) ?? new Set<string>();
+    answers.add(normalizeMaterial(back));
+    answersByPrompt.set(key, answers);
+  }
+  return candidates.filter(({ front }) => answersByPrompt.get(normalizeMaterial(front))?.size === 1);
 }

@@ -17,6 +17,7 @@ export function extractStudyDefinitions(source: string): StudyDefinition[] {
     .filter(Boolean);
 
   for (const line of lines) {
+    if (/^(?:Pergunta|Resposta|Fórmula (?:de|da|do) [^:]+):/iu.test(line)) continue;
     // Local generation is deliberately conservative: only explicit “term: definition”
     // statements and simple “term é/são ...” sentences become study resources.
     const colon = line.match(/^([^:]{2,90}):\s*(.{20,500})$/u);

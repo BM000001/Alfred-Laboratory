@@ -4,11 +4,15 @@ import type { StudyTopic } from './types';
 import type { StudyQuestion, StudyQuizAnswer, StudyQuizAttempt, StudyQuestionDifficulty } from './questionTypes';
 import { createQuestionService, gradeStudyAnswer, getQuestionSnapshot, summarizeQuiz, selectQuizQuestions } from './questionService';
 
+import { clearQuizDraft, readQuizDraft, writeQuizDraft } from './quizDraft';
+
 const service = createQuestionService(studyQuestionRepository, studyQuizAttemptRepository);
 const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
 export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; onChanged?: () => void }) {
+  const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]);
+  const [draftWarning, setDraftWarning] = useState(false);
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [history, setHistory] = useState<StudyQuizAttempt[]>([]);
   const [prompt, setPrompt] = useState('');
@@ -31,6 +35,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
   const [saving, setSaving] = useState(false);
   const saveInFlight = useRef(false);
   const attemptId = useRef('');
+  const restoredDraft = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -50,15 +55,32 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       })
       .catch(() => { if (active) setError('Não foi possível carregar o banco de questões.'); })
       .finally(() => { if (active) setLoading(false); });
-    setTopicId('');
-    setQuizTopicFilter('all');
-    setQuizDifficultyFilter('all');
-    setPhase('idle');
-    setQuizQuestions([]);
-    setQuizAnswers([]);
-    setLastAttempt(null);
     return () => { active = false; };
   }, [disciplineId, refreshToken]);
+
+  useEffect(() => {
+    if (loading || restoredDraft.current) return;
+    restoredDraft.current = true;
+    const draft = readQuizDraft(draftKey, disciplineId, unitId);
+    if (!draft || history.some(attempt => attempt.id === draft.id)) return;
+    attemptId.current = draft.id;
+    setQuizStartedAt(draft.startedAt);
+    setQuizQuestions(draft.questions);
+    setQuizAnswers(draft.answers);
+    setQuestionIndex(draft.answers.length);
+    setSelectedOptionIndex(draft.selected);
+    setRevealed(draft.revealed);
+    setPhase('quiz');
+  // Load only after the initial history is available, including after remount.
+  }, [loading, draftKey, disciplineId, unitId, history]);
+
+  useEffect(() => {
+    if (phase !== 'quiz') return;
+    setDraftWarning(!writeQuizDraft(draftKey, {
+      id: attemptId.current, startedAt: quizStartedAt, questions: quizQuestions,
+      answers: quizAnswers, selected: selectedOptionIndex, revealed,
+    }));
+  }, [phase, draftKey, quizStartedAt, quizQuestions, quizAnswers, selectedOptionIndex, revealed]);
 
   const unitQuestions = useMemo(() => unitId ? questions.filter((question) => question.topicId === unitId) : questions, [questions, unitId]);
   const unitHistory = useMemo(() => {
@@ -117,6 +139,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       topicId: quizTopicFilter === 'all' ? undefined : quizTopicFilter,
       difficulty: quizDifficultyFilter,
       limit: quizQuestionCount,
+      recentQuestionIds: history.slice(0, 5).flatMap(attempt => attempt.answers.map(answer => answer.questionId)),
     });
     if (!session.length) return;
     attemptId.current = crypto.randomUUID();
@@ -171,11 +194,20 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
     setSaving(true);
     setError('');
     try {
-      await service.saveAttempt(attempt);
+      let saved = attempt;
+      try {
+        await service.saveAttempt(attempt);
+      } catch (cause) {
+        if (!(cause instanceof DOMException) || cause.name !== 'ConstraintError') throw cause;
+        const existing = await studyQuizAttemptRepository.getById(attempt.id);
+        if (!existing || existing.disciplineId !== disciplineId) throw cause;
+        saved = existing;
+      }
+      clearQuizDraft(draftKey, attempt.id);
       setQuizAnswers(updatedAnswers);
-      setLastAttempt(attempt);
+      setLastAttempt(saved);
       setPhase('result');
-      setHistory((previous) => [attempt, ...previous.filter((item) => item.id !== attempt.id)]);
+      setHistory((previous) => [saved, ...previous.filter((item) => item.id !== saved.id)]);
       onChanged?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o resultado do simulado.');
@@ -192,6 +224,8 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
   }
 
   function exitQuiz() {
+    if (phase === 'quiz' && !window.confirm('Descartar o simulado em andamento?')) return;
+    if (phase === 'quiz') clearQuizDraft(draftKey, attemptId.current);
     setPhase('idle');
     setQuizQuestions([]);
     setQuizAnswers([]);
@@ -202,7 +236,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
   return <section className="study-question-bank" aria-label="Banco de questões e simulados">
     <div className="study-question-header">
       <div><span className="card-label">PRÁTICA E AUTOAVALIAÇÃO</span><h3>Questões e simulados</h3><p>{unitQuestions.length} questão(ões) cadastrada(s) · simulados com até 50 questões</p></div>
-      {phase === 'idle' && <button className="study-quiz-start" type="button" disabled={!availableQuizQuestions.length} onClick={startQuiz}>Iniciar simulado</button>}
+      {phase === 'idle' && <button className="study-quiz-start" type="button" disabled={loading || !availableQuizQuestions.length} onClick={startQuiz}>Iniciar simulado</button>}
       {phase !== 'idle' && <button className="study-quiz-start secondary" type="button" onClick={exitQuiz} disabled={saving}>Sair do simulado</button>}
     </div>
     {phase === 'idle' && <div className="study-quiz-filters">
@@ -219,6 +253,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
     </div>}
     {error && <p className="module-error" role="alert">{error}</p>}
 
+    {phase === 'quiz' && draftWarning && <p role="status">O navegador não conseguiu guardar este simulado em andamento.</p>}
     {phase === 'quiz' && currentQuestion && <article className="study-quiz-card">
       <div className="study-quiz-progress"><span>Questão {questionIndex + 1} de {quizQuestions.length}</span><span>{difficultyLabels[currentQuestion.difficulty]}</span></div>
       <div className="progress-track"><span style={{ width: `${((questionIndex + 1) / quizQuestions.length) * 100}%` }} /></div>
