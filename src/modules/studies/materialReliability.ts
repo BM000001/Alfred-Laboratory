@@ -1,4 +1,4 @@
-import { extractStudyDefinitions, generateStudyResources } from './studyMaterialGeneration';
+import { extractStudyDefinitions, generateStudyResources, isConcreteConcept } from './studyMaterialGeneration';
 
 export const PROCESSING_PROFILES = {
   board: { label: 'Quadro manuscrito', minimum: 82, layout: 'sparse', variants: 3 },
@@ -25,12 +25,7 @@ export function assessMaterial(text: string, ocr?: number, imageQuality?: number
   for (const count of frequencies.values()) largestFrequency = Math.max(largestFrequency, count);
   const repetition = largestFrequency / Math.max(1, words.length);
   const definitions = extractStudyDefinitions(text);
-  const topics = new Map<string, Set<string>>();
-  for (const entry of definitions) {
-    const key = normalizeMaterial(entry.term);
-    const values = topics.get(key) ?? new Set<string>(); values.add(normalizeMaterial(entry.definition)); topics.set(key, values);
-  }
-  const conflicts = [...topics.values()].some(values => values.size > 1);
+  const conflicts = relevantAmbiguities(text).length > 0;
   const signals = {
     image: Math.max(0, Math.min(100, imageQuality ?? (ocr === undefined ? 100 : 50))),
     ocr: Math.max(0, Math.min(100, Number.isFinite(ocr) ? ocr! : ocr === undefined ? 100 : 0)),
@@ -40,7 +35,7 @@ export function assessMaterial(text: string, ocr?: number, imageQuality?: number
     topics: conflicts ? 0 : definitions.length ? 100 : 50,
   };
   const score = Math.round(signals.image * .15 + signals.ocr * .3 + signals.coherence * .2 + signals.completeWords * .15 + signals.repetition * .1 + signals.topics * .1);
-  return { score: Math.min(score, incomplete > .1 ? 60 : 100, conflicts ? 60 : 100, signals.ocr < 65 ? 64 : 100), signals, conflicts };
+  return { score: Math.min(score, incomplete > .1 ? 60 : 100, signals.ocr < 65 ? 64 : 100), signals, conflicts };
 }
 
 export function correctMaterial(raw: string, sourceFileId: string, profile: ProcessingProfile) {
@@ -70,46 +65,57 @@ export function validateMaterialResources(source: string, confidence: number, pr
   const evidence = (subject: string) => definitions.filter(entry => normalizeMaterial(entry.term) === normalizeMaterial(subject));
   const flashcards = generated.flashcards.filter(card => {
     const matches = evidence(card.subject), key = normalizeMaterial(card.front);
-    if (!eligible || matches.length !== 1 || !/[.!?;]$/.test(matches[0].definition) || assessMaterial(matches[0].sourceExcerpt, confidence, 100).score < PROCESSING_PROFILES[profile].minimum || !source.includes(matches[0].sourceExcerpt) || card.back !== matches[0].definition || seen.has(key)) return false;
+    if (!eligible || matches.length !== 1 || !original.includes(matches[0].sourceExcerpt) || !/[.!?;]$/.test(matches[0].definition) || assessMaterial(matches[0].sourceExcerpt, confidence, 100).score < PROCESSING_PROFILES[profile].minimum || card.back !== matches[0].definition || seen.has(key)) return false;
     seen.add(key); return true;
   }).map(card => ({ ...card, sourceExcerpt: evidence(card.subject)[0].sourceExcerpt, confidence }));
   const questions = generated.questions.filter(question => {
     const matches = evidence(question.subject), key = normalizeMaterial(question.prompt);
-    if (!eligible || matches.length !== 1 || !/[.!?;]$/.test(matches[0].definition) || assessMaterial(matches[0].sourceExcerpt, confidence, 100).score < PROCESSING_PROFILES[profile].minimum || seen.has(key) || new Set(question.options.map(normalizeMaterial)).size !== question.options.length) return false;
+    if (!eligible || matches.length !== 1 || !original.includes(matches[0].sourceExcerpt) || !/[.!?;]$/.test(matches[0].definition) || assessMaterial(matches[0].sourceExcerpt, confidence, 100).score < PROCESSING_PROFILES[profile].minimum || seen.has(key) || new Set(question.options.map(normalizeMaterial)).size !== question.options.length) return false;
     const entry = matches[0];
+    if (!question.options.every(option => definitions.some(definition =>
+      definition.definition === option && original.includes(definition.sourceExcerpt) && evidence(definition.term).length === 1))) return false;
     const supportedAnswers = definitions.filter(candidate => normalizeMaterial(candidate.definition) === normalizeMaterial(entry.definition));
     if (supportedAnswers.length !== 1 || question.options[question.correctOptionIndex] !== entry.definition || question.explanation !== `Trecho de origem: ${entry.sourceExcerpt}`) return false;
     seen.add(key); return true;
   }).map(question => ({ ...question, sourceExcerpt: evidence(question.subject)[0].sourceExcerpt, confidence }));
-  const literal = eligible ? literalStudyResources(source).filter(item => original.includes(item.sourceExcerpt)) : [];
-  const answers = [...new Set(literal.filter(item => item.explicitAnswer).map(item => item.back))]
-    .filter(answer => answer.length <= 300);
-  for (const item of literal) {
+  const reasons: Record<string, number> = {};
+  const reject = (reason: string, count = 1) => { if (count) reasons[reason] = (reasons[reason] ?? 0) + count; };
+  extractStudyDefinitions(source, reject);
+  reject('definition_evidence_or_ambiguity', generated.flashcards.length + generated.questions.length - flashcards.length - questions.length);
+  const reserved = new Set(flashcards.map(card => normalizeMaterial(card.front)));
+  for (const item of literalStudyResources(source, reject)) {
     const key = normalizeMaterial(item.front);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const { explicitAnswer, ...card } = item;
-    flashcards.push({ ...card, confidence });
-    if (!explicitAnswer || item.back.length > 300 || answers.filter(answer => normalizeMaterial(answer) === normalizeMaterial(item.back)).length !== 1) continue;
-    const otherAnswers = [...new Map(answers.filter(answer => normalizeMaterial(answer) !== normalizeMaterial(item.back))
-      .map(answer => [normalizeMaterial(answer), answer])).values()].slice(0, 3);
-    if (otherAnswers.length < 3) continue;
-    const index = questions.length % 4;
-    otherAnswers.splice(index, 0, item.back);
-    questions.push({ prompt: item.front, options: otherAnswers, correctOptionIndex: index, difficulty: 'medium',
-      explanation: `Trecho de origem: ${item.sourceExcerpt}`, subject: item.subject, sourceExcerpt: item.sourceExcerpt, confidence });
+    if (!eligible || !original.includes(item.sourceExcerpt)) { reject('insufficient_evidence'); continue; }
+    if (reserved.has(key)) { reject('duplicate'); continue; }
+    reserved.add(key);
+    flashcards.push({ ...item, confidence });
   }
-  const total = generated.flashcards.length + generated.questions.length + literal.length + questions.filter(question => literal.some(item => item.front === question.prompt)).length;
-  return { flashcards, questions, rejected: total - flashcards.length - questions.length, validity: total ? Math.round((flashcards.length + questions.length) / total * 100) : 0 };
+  const rejected = Object.values(reasons).reduce((sum, count) => sum + count, 0);
+  const total = flashcards.length + questions.length + rejected;
+  return { flashcards, questions, rejected, reasons, validity: total ? Math.round((flashcards.length + questions.length) / total * 100) : 0 };
 }
 
-export function relevantAmbiguities(text: string) {
+export function definitionDifferences(text: string) {
   const groups = new Map<string, ReturnType<typeof extractStudyDefinitions>>();
   for (const entry of extractStudyDefinitions(text)) {
     const key = normalizeMaterial(entry.term);
     groups.set(key, [...(groups.get(key) ?? []), entry]);
   }
   return [...groups.values()].filter(entries => new Set(entries.map(entry => normalizeMaterial(entry.definition))).size > 1);
+}
+
+/** Opposing predicates are signals for review, not proof of a contradiction. */
+export function relevantAmbiguities(text: string) {
+  return definitionDifferences(text).filter(entries => {
+    const definitions = entries.map(entry => normalizeMaterial(entry.definition));
+    return definitions.some((left, leftIndex) => definitions.some((right, rightIndex) => {
+      if (entries[leftIndex].context !== entries[rightIndex].context) return false;
+      const bare = (value: string) => value.replace(/\bnao\s+/g, '');
+      if (left !== right && bare(left) === bare(right)) return true;
+      return /\b(?:mantem|aumenta)\b/.test(left) &&
+        left.replace(/\b(?:mantem|aumenta)\b/, 'reduz') === right;
+    }));
+  });
 }
 
 export function structureMaterial(source: string) {
@@ -133,19 +139,23 @@ export function structureMaterial(source: string) {
 
 
 /** Literal recall only. Blocks are used as cues, without filling gaps or inferring relations. */
-function literalStudyResources(source: string) {
-  type Candidate = { front: string; back: string; subject: string; sourceExcerpt: string; explicitAnswer: boolean };
+function literalStudyResources(source: string, reject: (reason: string) => void) {
+  type Candidate = { front: string; back: string; subject: string; sourceExcerpt: string };
   const candidates: Candidate[] = [];
   const blocks = structureMaterial(source);
-  function add(front: string, back: string, excerpt: string, explicitAnswer = false) {
+  function add(front: string, back: string, excerpt: string) {
     if (front.length > 500 || back.length < 2 || back.length > 500 || excerpt.length > 800) return;
-    candidates.push({ front, back, subject: front, sourceExcerpt: excerpt, explicitAnswer });
+    candidates.push({ front, back, subject: front, sourceExcerpt: excerpt });
   }
   for (let index = 0; index < blocks.length && candidates.length < 30; index++) {
     const block = blocks[index];
     if (block.kind === 'question' && /^Pergunta:\s*/iu.test(block.text)) {
       const next = source.slice(block.region.end).match(/^(?:[ \t]*\r?\n)[ \t]*Resposta:[ \t]*([^\r\n]+)/iu);
-      if (next) add(block.text.replace(/^Pergunta:\s*/iu, ''), next[1].trim(), source.slice(block.region.start, block.region.end + next[0].length), true);
+      const prompt = block.text.replace(/^Pergunta:\s*/iu, '');
+      if (next && prompt.split(/\s+/).length >= 4 &&
+          !/^(?:o que|qual|segundo)\s+(?:(?:diz|mostra|apresenta)\s+)?(?:o texto|o material|o trecho|a informação|isso)/iu.test(prompt)) {
+        add(prompt, next[1].trim(), source.slice(block.region.start, block.region.end + next[0].length));
+      } else reject('vague_prompt');
       continue;
     }
     if (block.kind === 'title') {
@@ -159,7 +169,7 @@ function literalStudyResources(source: string) {
         list.push(item.text);
         end = item.region.end;
       }
-      if (list.length >= 2) add(`Quais itens aparecem em “${block.text}”?`, list.join('\n'), source.slice(block.region.start, end));
+      if (list.length >= 2 && isConcreteConcept(block.text)) add(`Quais são as etapas ou elementos de “${block.text}”?`, list.join('\n'), source.slice(block.region.start, end));
       continue;
     }
     if (block.kind === 'formula') {
@@ -173,8 +183,15 @@ function literalStudyResources(source: string) {
     const match = separator?.exec(block.text);
     if (match && match.index >= 12 && /[.!?]$/u.test(block.text)) {
       const left = block.text.slice(0, match.index);
-      const cue = (left + match[0]).trimEnd();
-      add(`Como o material completa o trecho “${cue}…”?`, block.text.slice(match.index + match[0].length), block.text);
+      const answer = block.text.slice(match.index + match[0].length);
+      if (!isConcreteConcept(left) || /^\s*(?:ele|ela|isso|isto|aquilo|eles|elas)\b/iu.test(left) || answer.split(/\s+/).length < 4) {
+        reject('vague_prompt');
+        continue;
+      }
+      const front = block.kind === 'cause' ? `Por que ocorre esta situação: “${left}”?`
+        : block.kind === 'comparison' ? `Que situação se contrapõe a “${left}”?`
+        : `Qual exemplo ilustra “${left}”?`;
+      add(front, answer, block.text);
     }
   }
   const answersByPrompt = new Map<string, Set<string>>();
@@ -184,5 +201,9 @@ function literalStudyResources(source: string) {
     answers.add(normalizeMaterial(back));
     answersByPrompt.set(key, answers);
   }
-  return candidates.filter(({ front }) => answersByPrompt.get(normalizeMaterial(front))?.size === 1);
+  return candidates.filter(({ front }) => {
+    const unique = answersByPrompt.get(normalizeMaterial(front))?.size === 1;
+    if (!unique) reject('ambiguous_answer');
+    return unique;
+  });
 }

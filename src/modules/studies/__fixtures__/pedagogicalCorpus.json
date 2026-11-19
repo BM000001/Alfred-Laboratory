@@ -1,0 +1,14 @@
+{
+  "definicoes": "Encapsulamento: mecanismo que protege os dados internos de um objeto.\nHerança: relação que permite reutilizar características definidas em outra classe.\nPolimorfismo: capacidade de responder de formas diferentes a uma mesma operação.\nAbstração: processo que representa somente aspectos importantes de uma entidade.",
+  "instrucao": "Existem várias respostas certas: selecione todas as opções aplicáveis para continuar.",
+  "estados": "Heroi | Vida: 30 | Posição: (0, 0)\nHeroi | Vida: 27 | Posição: (2, 1)",
+  "codigo": "p2 continua igual: o valor exibido nesta etapa continua exatamente como antes.",
+  "referencias": "Referências em Python: duas variáveis apontam para o mesmo objeto e ambas observam a alteração do atributo compartilhado.",
+  "lista": "ETAPAS DO EXPERIMENTO\n1. Preparar a lâmina.\n2. Ajustar a iluminação.",
+  "narrativa": "Uma placa de metal aquece porque absorve energia da luz solar.",
+  "pouco_contexto": "Isso mudou porque era assim naquele exemplo.",
+  "complementares": "Recursão: técnica para resolver um problema usando casos menores.\nRecursão: técnica cujo caso base determina quando a execução termina.",
+  "oposicao": "Mitose: divisão celular que mantém o número de cromossomos.\nMitose: divisão celular que reduz o número de cromossomos.",
+  "versoes": "Versão 1\nMitose: divisão celular que mantém o número de cromossomos.\nVersão 2\nMitose: divisão celular que reduz o número de cromossomos.",
+  "duplicados": "Mitose: divisão celular que mantém o número de cromossomos.\nMitose: divisão celular que mantém o número de cromossomos."
+}

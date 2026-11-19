@@ -7,14 +7,14 @@ import { createStudyService } from './studyService';
 import { attachStudyMaterial } from './attachStudyMaterial';
 import type { StudyTopic } from './types';
 import { confirmMaterialDefinition, processStoredMaterial } from './materialProcessor';
-import { PROCESSING_PROFILES, relevantAmbiguities, type ProcessingProfile } from './materialReliability';
+import { PROCESSING_PROFILES, definitionDifferences, relevantAmbiguities, type ProcessingProfile } from './materialReliability';
 
 const files = createFileService(fileRepository);
 const study = createStudyService(disciplineRepository, studyTopicRepository);
 
 type PendingMaterial = { file: StoredFile; topic?: StudyTopic };
 
-interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'error'; detail: string; }
+interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'insufficient' | 'error'; detail: string; contextSources?: string[]; }
 
 function readBlob(blob: Blob): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -63,7 +63,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     processingController.current?.abort();
   }, []);
 
-  async function resume(file: StoredFile, topic?: StudyTopic, excerpt?: string) {
+  async function resume(file: StoredFile, topic?: StudyTopic, excerpt?: string | null) {
     if (saving) return;
     setSaving(true);
     setError('');
@@ -104,8 +104,8 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     setSaving(true); setError(''); cancelRef.current = false;
     const queue = [...staged];
     const prepared: { index: number; file: File; sourceId: string; topic: StudyTopic }[] = [];
-    function updateStatus(index: number, status: ProcessingStatus['status'], detail: string) {
-      setStatuses(current => current.map((item, position) => position === index ? { ...item, status, detail } : item));
+    function updateStatus(index: number, status: ProcessingStatus['status'], detail: string, contextSources?: string[]) {
+      setStatuses(current => current.map((item, position) => position === index ? { ...item, status, detail, contextSources } : item));
     }
     let storedChanges = false;
     const storedOriginals = new Set<File>();
@@ -159,10 +159,13 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
           const { state, cardsAdded, questionsAdded } = await processStoredMaterial(
             sourceId, profile, controller.signal, detail => updateStatus(index, 'processing', detail), file, topic,
           );
-          const resourceMessage = state.status === 'review' ? 'Confirme o trecho de origem para continuar.'
+          const resourceMessage = state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
             : cardsAdded || questionsAdded ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados.`
             : `Texto salvo (${state.raw?.wordCount ?? 0} palavras), mas não encontrei novas definições explícitas ou outros trechos adequados para gerar cartões ou questões com segurança. O enriquecimento semântico depende de IA.`;
-          updateStatus(index, state.status === 'review' ? 'review' : 'success', `${resourceMessage} Original e texto extraído estão associados à disciplina.`);
+          const differences = state.corrected && state.status !== 'review' ? definitionDifferences(state.corrected) : [];
+          const contextSources = differences.flat().map(entry => entry.sourceExcerpt).slice(0, 8);
+          const contextNote = differences && differences.length ? ' Há definições diferentes para um mesmo termo. Podem ser complementares ou pertencer a contextos diferentes. Confira os trechos na fonte; esse termo ficou fora da geração automática.' : '';
+          updateStatus(index, state.status === 'review' ? 'review' : state.generated && !state.generated.flashcards.length && !state.generated.questions.length ? 'insufficient' : 'success', `${resourceMessage}${contextNote} Original e texto extraído estão associados à disciplina.`, contextSources);
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : 'Falha inesperada ao processar este arquivo.';
           updateStatus(index, 'error', `${message} O original foi preservado na biblioteca.`);
@@ -228,7 +231,10 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     </div>}
     {statuses.length > 0 && <div className="study-material-results" aria-live="polite">
       {statuses.map((item, index) => <article key={`${item.name}:${index}`} className={`study-material-result ${item.status}`}>
-        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : item.status === 'review' ? 'Revisão necessária' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
+        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : item.status === 'review' ? 'Revisão recomendada' : item.status === 'insufficient' ? 'Evidência insuficiente' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
+        {!!item.contextSources?.length && <details><summary>Comparar trechos da fonte</summary><ul>
+          {item.contextSources.map(excerpt => <li key={excerpt}>{excerpt}</li>)}
+        </ul></details>}
       </article>)}
     </div>}
     {pending.map(({ file, topic }) => {
@@ -236,9 +242,9 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         ? relevantAmbiguities(file.processing.corrected)[0] : undefined;
       return <article className="study-material-result" key={topic?.id ?? file.id}>
         <strong>{file.name}</strong><p>{file.processing?.stage}</p>
-        {choices?.length ? choices.map(({ sourceExcerpt }) =>
+        {choices?.length ? <><p>Os trechos usam o mesmo termo com predicados opostos. Confira o contexto antes de escolher.</p>{choices.map(({ sourceExcerpt }) =>
           <button className="text-action" type="button" key={sourceExcerpt} disabled={saving}
-            onClick={() => void resume(file, topic, sourceExcerpt)}>Manter: {sourceExcerpt}</button>)
+            onClick={() => void resume(file, topic, sourceExcerpt)}>Manter: {sourceExcerpt}</button>)}<button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic, null)}>Continuar sem usar as definições em disputa</button></>
           : <button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic)}>Retomar processamento</button>}
       </article>;
     })}

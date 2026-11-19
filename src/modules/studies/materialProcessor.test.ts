@@ -84,3 +84,30 @@ it('mantém uma retomada na unidade original quando duas unidades usam o mesmo a
   expect((await studyFlashcardRepository.getAll()).map((card) => card.topicId).sort()).toEqual([first.id, second.id]);
   expect(extractTextDocument).toHaveBeenCalledTimes(1);
 });
+
+it('continua sem escolher um trecho e preserva ambas as definições em disputa', async () => {
+  const { confirmMaterialDefinition } = await import('./materialProcessor');
+  await save();
+  const text = extraction.text + '\nMitose: divisão celular que reduz o número de cromossomos.\nOsmose: fluxo de água através de uma membrana semipermeável.';
+  vi.mocked(extractTextDocument).mockResolvedValueOnce({ ...extraction, text, fileName: 'a.txt' });
+  const run = () => processStoredMaterial('f', 'printed', new AbortController().signal, () => {});
+  expect((await run()).state.status).toBe('review');
+  await confirmMaterialDefinition('f', null);
+  const { state } = await run();
+  expect(state).toMatchObject({ status: 'completed', corrected: text, raw: { text } });
+  expect((await studyFlashcardRepository.getAll()).map(card => card.subject)).toEqual(['Osmose']);
+});
+
+it('retoma um checkpoint legado marcado por estados de execução sem pedir escolha', async () => {
+  await save();
+  const stored = (await fileRepository.getById('f'))!;
+  const text = 'Heroi | Vida: 30 | Posição: (0, 0)\nHeroi | Vida: 27 | Posição: (2, 1)';
+  await fileRepository.save({ ...stored, processing: {
+    version: 1, profile: 'printed', status: 'review', stage: 'Revisão',
+    raw: { ...extraction, text }, corrected: text,
+  } });
+  const { state } = await processStoredMaterial('f', 'printed', new AbortController().signal, () => {});
+  expect(state).toMatchObject({ status: 'completed', corrected: text, raw: { text } });
+  expect(state.generated?.flashcards).toHaveLength(0);
+  expect(extractTextDocument).not.toHaveBeenCalled();
+});

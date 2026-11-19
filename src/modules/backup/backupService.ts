@@ -184,6 +184,7 @@ function portableProcessing(value: unknown, fileId: string, legacy = false): Mat
     || !Object.hasOwn(PROCESSING_PROFILES, value.profile)
     || typeof value.status !== 'string' || !['running', 'cancelled', 'failed', 'review', 'completed'].includes(value.status)
     || (value.topicId !== undefined && !hasId(value.topicId)) || typeof value.stage !== 'string' || (value.error !== undefined && typeof value.error !== 'string')
+    || (value.skipDefinitionReview !== undefined && typeof value.skipDefinitionReview !== 'boolean')
     || (value.raw !== undefined && !isValidExtraction(value.raw))
     || (value.corrected !== undefined && (typeof value.corrected !== 'string' || !value.raw))
     || ((value.status === 'review' || value.status === 'completed') && (value.corrected === undefined || !value.raw))) {
@@ -206,6 +207,7 @@ function portableProcessing(value: unknown, fileId: string, legacy = false): Mat
     stage: interrupted ? 'Pronto para retomar processamento' : value.stage,
     ...(typeof value.topicId === 'string' ? { topicId: value.topicId } : {}),
     ...(typeof value.error === 'string' ? { error: value.error } : {}),
+    ...(value.skipDefinitionReview === true ? { skipDefinitionReview: true } : {}),
     ...(raw ? { raw } : {}),
     ...(typeof value.corrected === 'string' ? { corrected: value.corrected } : {}),
     ...(corrections !== undefined ? { corrections: corrections as MaterialProcessingState['corrections'] } : {}),

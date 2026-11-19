@@ -286,3 +286,13 @@ button.calendar-day { display: grid; align-content: start; text-align: start; mi
   .alfred-workbench .assistant-module { grid-template-columns: minmax(0, 1fr); }
   .alfred-workbench .assistant-heading.with-mascot { grid-template-columns: auto 1fr; align-items: center; }
 }
+
+/* Keep study metadata distinct and long evidence readable on narrow screens. */
+.study-learning-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem .65rem; }
+.study-learning-body h5 { margin: 0 0 .35rem; font-size: .95rem; }
+.study-learning-body pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.study-learning-body blockquote { margin: .45rem 0; padding-inline-start: .65rem; border-inline-start: 2px solid var(--edge); }
+.study-learning-body summary, .study-material-result button { min-block-size: 44px; padding-block: .55rem; }
+.study-material-result > strong, .study-material-result > span { display: block; overflow-wrap: anywhere; }
+.study-material-result > span { margin-block-start: .25rem; color: var(--muted); }
+.study-material-result button { display: block; max-inline-size: 100%; text-align: start; overflow-wrap: anywhere; }

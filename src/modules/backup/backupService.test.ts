@@ -465,7 +465,7 @@ describe('backupService', () => {
   it('transporta evidência e revisão em AES-GCM, descarta cache e bloqueia substituição que perderia o checkpoint', async () => {
     const original = inspectBackup(await createBackup()).payload;
     const processing = { version: 1, profile: 'printed', status: 'running', stage: 'Etapa intermediária',
-      raw: documentFile.extraction, corrected: 'Trecho revisto', generated: { flashcards: ['cache'] },
+      raw: documentFile.extraction, corrected: 'Trecho revisto', skipDefinitionReview: true, generated: { flashcards: ['cache'] },
       corrections: [{ original: 'Trecho', corrected: 'Trecho revisto', reason: 'Revisão sintética',
         confidence: 100, sourceFileId: documentFile.id, region: { start: 0, end: 6 } }],
     };
@@ -477,7 +477,7 @@ describe('backupService', () => {
       const raw = await createBackup();
       const exported = inspectBackup(await decryptBackup(await encryptBackup(raw, password), password)).payload;
       expect(exported.data.files[0].processing).toMatchObject({
-        raw: processing.raw, corrected: processing.corrected, corrections: processing.corrections, status: 'cancelled',
+        raw: processing.raw, corrected: processing.corrected, corrections: processing.corrections, status: 'cancelled', skipDefinitionReview: true,
       });
       expect(exported.data.files[0].processing).not.toHaveProperty('generated');
       await restoreBackup(exported);

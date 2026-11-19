@@ -63,12 +63,8 @@ it('generates cards from literal lists and explicit question-answer pairs', () =
     ...pairs.flatMap(([question, answer]) => [`Pergunta: ${question}`, `Resposta: ${answer}`])].join('\n');
   const result = validateMaterialResources(text, 100, 'printed');
   expect(result.flashcards).toHaveLength(5);
-  expect(result.questions).toHaveLength(4);
-  for (const question of result.questions) {
-    const pair = pairs.find(([prompt]) => prompt === question.prompt);
-    expect(question.options[question.correctOptionIndex]).toBe(pair?.[1]);
-    expect(text).toContain(question.sourceExcerpt);
-  }
+  expect(result.questions).toHaveLength(0);
+  for (const card of result.flashcards) expect(text).toContain(card.sourceExcerpt);
   expect(validateMaterialResources(text, 100, 'printed', '').flashcards).toEqual([]);
 });
 

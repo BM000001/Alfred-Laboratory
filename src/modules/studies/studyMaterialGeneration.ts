@@ -4,22 +4,38 @@ export interface StudyDefinition {
   term: string;
   definition: string;
   sourceExcerpt: string;
+  context?: string;
 }
 
-export function extractStudyDefinitions(source: string): StudyDefinition[] {
+export function isConcreteConcept(term: string): boolean {
+  return /\p{L}{3}/u.test(term) && !/[|=!?();]/u.test(term) &&
+    !/^(?:existem?|há|temos?|exemplos?|respostas?|observações?|nota|atenção|dica|introdução|conclusão|resumo|resultados?|versão|estado|etapa|passo|o que|segundo|neste|aqui)\b/iu.test(term) &&
+    !/\b(?:respostas? certas?|continua[m]? igual|mudou|aumentou|diminuiu|foi|ficou|não muda)\b/iu.test(term);
+}
+
+export function extractStudyDefinitions(source: string, rejected?: (reason: 'context' | 'duplicate') => void): StudyDefinition[] {
   const definitions: StudyDefinition[] = [];
   const seen = new Set<string>();
-  const lines = source
-    .replace(/\[Página\s+\d+\]/gi, '')
-    .replace(/\r/g, '\n')
-    .split(/(?<=[.!?])\s+|\n+/u)
-    .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim())
-    .filter(Boolean);
+  let context: string | undefined;
+  const lines = source.replace(/\[Página\s+\d+\]/gi, '').split(/\r?\n|\r/u).flatMap(raw => {
+    const heading = raw.trim();
+    if (/^(?:antes|depois|versão|etapa|passo|estado|cenário|exemplo)(?:\s+|:|$)/iu.test(heading)) {
+      context = heading;
+    } else if (/^[\p{Lu}\d ]{4,80}$/u.test(heading) && /\p{Lu}/u.test(heading)) {
+      context = undefined;
+    }
+    return raw.split(/(?<=[.!?])\s+/u).map(line => ({
+      line: line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim(), context,
+    }));
+  });
 
-  for (const line of lines) {
+  for (const { line, context } of lines) {
     if (/^(?:Pergunta|Resposta|Fórmula (?:de|da|do) [^:]+):/iu.test(line)) continue;
     // Local generation is deliberately conservative: only explicit “term: definition”
     // statements and simple “term é/são ...” sentences become study resources.
+    if (line.includes('|') || /^(?:antes|depois|versão|etapa|passo|estado|cenário|exemplo)\s*[:\d(]/iu.test(line)) {
+      rejected?.('context'); continue;
+    }
     const colon = line.match(/^([^:]{2,90}):\s*(.{20,500})$/u);
     const copula = line.match(/^(.{2,90}?)\s+(?:é|são|significa|consiste em|corresponde a)\s+(.{20,500})$/iu);
     const match = colon ?? copula;
@@ -27,10 +43,11 @@ export function extractStudyDefinitions(source: string): StudyDefinition[] {
     const term = match[1].trim().replace(/[.,;]+$/, '');
     const definition = match[2].trim();
     if (term.split(/\s+/).length > 10 || definition.split(/\s+/).length < 4) continue;
-    const key = `${term.toLocaleLowerCase('pt-BR')}|${definition.toLocaleLowerCase('pt-BR')}`;
-    if (seen.has(key)) continue;
+    if (!isConcreteConcept(term)) { rejected?.('context'); continue; }
+    const key = [term, definition].map(value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ')).join('|');
+    if (seen.has(key)) { rejected?.('duplicate'); continue; }
     seen.add(key);
-    definitions.push({ term, definition, sourceExcerpt: line });
+    definitions.push({ term, definition, sourceExcerpt: line, ...(context ? { context } : {}) });
   }
   return definitions;
 }
@@ -41,7 +58,7 @@ export function generateStudyResources(source: string): {
 } {
   const definitions = extractStudyDefinitions(source);
   const flashcards = definitions.map(({ term, definition }) => ({
-    front: `O que o material define como “${term}”?`,
+    front: `Como você explicaria o conceito de “${term}”?`,
     back: definition,
     subject: term,
   }));
@@ -60,7 +77,7 @@ export function generateStudyResources(source: string): {
       const correctOptionIndex = (index * 3 + 1) % options.length;
       [options[0], options[correctOptionIndex]] = [options[correctOptionIndex], options[0]];
       return [{
-        prompt: `Qual alternativa corresponde à definição de “${entry.term}” apresentada no material?`,
+        prompt: `Qual alternativa descreve corretamente “${entry.term}”?`,
         options,
         correctOptionIndex,
         explanation: `Trecho de origem: ${entry.sourceExcerpt}`,
