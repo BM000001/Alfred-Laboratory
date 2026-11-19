@@ -70,15 +70,20 @@ export async function processStoredMaterial(id: string, profile: ProcessingProfi
     }
     if (!state.structured) {
       const definitions = extractStudyDefinitions(state.corrected);
-      state.structured = { blocks: structureMaterial(state.corrected), definitions, formulas: state.corrected.split('\n').filter(line => /[=∑∫√]/u.test(line)), summary: definitions.slice(0, 5).map(entry => entry.sourceExcerpt).join('\n') };
+      const blocks = structureMaterial(state.corrected);
+      const summary = [...new Set([
+        ...definitions.map(entry => entry.sourceExcerpt),
+        ...blocks.filter(block => block.kind !== 'title').map(block => block.text),
+      ])].filter(excerpt => excerpt.length <= 500 && state!.raw!.text.includes(excerpt)).slice(0, 5).join('\n');
+      state.structured = { blocks, definitions, formulas: state.corrected.split('\n').filter(line => /[=∑∫√]/u.test(line)), summary };
       await checkpoint('Conteúdo estruturado e resumo extraído');
     }
     if (!state.generated) {
-      state.generated = validateMaterialResources(state.corrected, state.assessment.score, profile);
+      state.generated = validateMaterialResources(state.corrected, state.assessment.score, profile, state.raw.text);
       // Resource validity can lower confidence, never increase source confidence.
       const combined = Math.min(state.assessment.score, Math.round(state.assessment.score * .9 + state.generated.validity * .1));
       state.assessment.score = combined;
-      state.generated = validateMaterialResources(state.corrected, combined, profile);
+      state.generated = validateMaterialResources(state.corrected, combined, profile, state.raw.text);
       await checkpoint('Flashcards e questões validados');
     }
     // Stable IDs make recovery idempotent even if the page closes during saving.

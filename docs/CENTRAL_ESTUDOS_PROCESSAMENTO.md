@@ -17,7 +17,9 @@
 
 ## Geração e precisão
 
-Não há provedor de IA conectado neste fluxo e nenhum documento é enviado pela rede. O gerador local é determinístico e conservador: só transforma declarações explícitas `termo: definição` ou `termo é/são/significa/...` em cartões; só cria questão objetiva se houver pelo menos quatro definições distintas e cada alternativa vier do texto extraído. A explicação registra o trecho de origem. Se o material não tiver esse formato, o texto fica disponível na biblioteca e a interface informa que nenhum recurso automático confiável foi encontrado. A geração semântica geral permanece dependente de um provedor de IA futuramente autorizado.
+A importação em lote salva os originais e os checkpoints antes da extração. Uma interrupção deixa os materiais já gravados disponíveis para retomada. O processamento é local. Além das definições explícitas, o gerador usa listas e etapas sob um título, pares explícitos de pergunta/resposta e completamento literal de comparações, causas e exemplos. Fórmulas rotuladas podem produzir cartões em material elegível. Questões objetivas requerem pelo menos quatro respostas distintas no material. A explicação registra o trecho de origem. O resumo seleciona trechos do próprio material. Quando faltam evidências para criar atividades com segurança, o texto continua na biblioteca e a interface informa a limitação. A geração semântica geral depende de integração futura autorizada.
+
+Consulte [a auditoria da Central de Estudos 2.0](AUDITORIA_ESTUDOS_2.md) para decisões sobre bibliotecas, riscos e homologação.
 
 Flashcards, respostas, intervalos de revisão, questões e tentativas usam os repositórios IndexedDB atuais. Questões geradas ficam vinculadas ao tópico do arquivo, e materiais e cartões guardam metadados de origem.
 

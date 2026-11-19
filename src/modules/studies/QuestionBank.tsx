@@ -117,6 +117,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       topicId: quizTopicFilter === 'all' ? undefined : quizTopicFilter,
       difficulty: quizDifficultyFilter,
       limit: quizQuestionCount,
+      recentQuestionIds: history.slice(0, 5).flatMap(attempt => attempt.answers.map(answer => answer.questionId)),
     });
     if (!session.length) return;
     attemptId.current = crypto.randomUUID();

@@ -14,7 +14,7 @@ const study = createStudyService(disciplineRepository, studyTopicRepository);
 
 type PendingMaterial = { file: StoredFile; topic?: StudyTopic };
 
-interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'error'; detail: string; }
+interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'error'; detail: string; }
 
 function readBlob(blob: Blob): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -106,18 +106,17 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     if (!staged.length || saving || !disciplineId) return;
     setSaving(true); setError(''); cancelRef.current = false;
     const queue = [...staged];
-    const nextStatuses: ProcessingStatus[] = [];
+    const prepared: { index: number; file: File; sourceId: string; topic: StudyTopic }[] = [];
+    function updateStatus(index: number, status: ProcessingStatus['status'], detail: string) {
+      setStatuses(current => current.map((item, position) => position === index ? { ...item, status, detail } : item));
+    }
     let storedChanges = false;
-    const processedSuccessfully = new Set<File>();
+    const storedOriginals = new Set<File>();
     setStatuses(queue.map((file) => ({ name: file.name, status: 'processing', detail: 'Aguardando processamento local.' })));
     try {
       const [existingTopics, savedFiles] = await Promise.all([study.listTopics(), fileRepository.getAll()]);
       for (const [index, file] of queue.entries()) {
-          if (cancelRef.current) {
-            setStatuses((current) => current.map((status, statusIndex) => statusIndex >= index && status.status === 'processing' ? { ...status, status: 'error', detail: 'Cancelado antes deste arquivo; permaneceu na preparação para uma nova tentativa.' } : status));
-            break;
-          }
-        setStatuses((current) => current.map((status, statusIndex) => statusIndex === index ? { ...status, detail: 'Salvando original e extraindo texto no dispositivo…' } : status));
+        updateStatus(index, 'processing', 'Salvando original no dispositivo…');
         let sourceId = '';
         try {
           // Save the original first. A format/extraction failure must not erase the user's file.
@@ -137,27 +136,43 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
             : existingTopics.find((item) => item.disciplineId === disciplineId && item.sourceFileId === sourceId)
             ?? await study.createTopic({ disciplineId, title: file.name.slice(0, 120), sourceFileId: sourceId, sourceFileName: file.name });
           if (!existingTopics.some((item) => item.id === topic.id)) existingTopics.push(topic);
-          const controller = new AbortController();
-          processingController.current = controller;
-          if (cancelRef.current) controller.abort();
+          const saved = savedFiles.find(item => item.id === sourceId);
+          if (saved && !saved.processing) {
+            const pending = { ...saved, processing: {
+              version: 1 as const, profile, status: 'cancelled' as const, stage: 'Original salvo. Aguardando processamento.', topicId: topic.id,
+            } };
+            await fileRepository.save(pending);
+            savedFiles[savedFiles.indexOf(saved)] = pending;
+          }
+          prepared.push({ index, sourceId, file, topic });
+          storedOriginals.add(file);
+        } catch (cause) {
+          const message = cause instanceof Error ? cause.message : 'Falha inesperada ao salvar este arquivo.';
+          updateStatus(index, 'error', message + (sourceId ? ' O original foi preservado na biblioteca.' : ''));
+        }
+      }
+      for (const { file, index, sourceId, topic } of prepared) {
+        if (cancelRef.current) {
+          updateStatus(index, 'error', 'Original salvo. Retome o processamento quando desejar.');
+          continue;
+        }
+        const controller = new AbortController();
+        processingController.current = controller;
+        try {
           const { state, cardsAdded, questionsAdded } = await processStoredMaterial(
-            sourceId, profile, controller.signal,
-            (detail) => setStatuses((current) => current.map((item, position) => position === index ? { ...item, detail } : item)),
-            file, topic,
+            sourceId, profile, controller.signal, detail => updateStatus(index, 'processing', detail), file, topic,
           );
           const resourceMessage = state.status === 'review' ? 'Confirme o trecho de origem para continuar.'
             : cardsAdded || questionsAdded ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados.`
-            : `Texto salvo (${state.raw?.wordCount ?? 0} palavras), mas não encontrei novas definições explícitas suficientes para gerar cartões ou questões com segurança.`;
-          nextStatuses.push({ name: file.name, status: 'success', detail: `${resourceMessage} Original e texto extraído estão associados à disciplina.` });
-          processedSuccessfully.add(file);
+            : `Texto salvo (${state.raw?.wordCount ?? 0} palavras), mas não encontrei novas definições explícitas ou outros trechos adequados para gerar cartões ou questões com segurança. O enriquecimento semântico depende de IA.`;
+          updateStatus(index, state.status === 'review' ? 'review' : 'success', `${resourceMessage} Original e texto extraído estão associados à disciplina.`);
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : 'Falha inesperada ao processar este arquivo.';
-          nextStatuses.push({ name: file.name, status: 'error', detail: `${message}${sourceId ? ' O original foi preservado na biblioteca.' : ''}` });
-        }
-        setStatuses((current) => current.map((status, statusIndex) => statusIndex === index ? nextStatuses[nextStatuses.length - 1] : status));
+          updateStatus(index, 'error', `${message} O original foi preservado na biblioteca.`);
+        } finally { processingController.current = null; }
       }
-      if (cancelRef.current) setError('Processamento interrompido. Os arquivos já concluídos foram preservados.');
-      setStaged((current) => current.filter((file) => !processedSuccessfully.has(file)));
+      if (cancelRef.current) setError('Processamento interrompido. Os arquivos salvos podem ser retomados.');
+      setStaged((current) => current.filter((file) => !storedOriginals.has(file)));
       if (storedChanges) {
         try { setPending(await loadPending(disciplineId, unit?.id)); await onProcessed?.(); }
         catch { setError('Os materiais foram salvos, mas a tela não conseguiu atualizar. Recarregue para ver os recursos.'); }
@@ -216,7 +231,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     </div>}
     {statuses.length > 0 && <div className="study-material-results" aria-live="polite">
       {statuses.map((item, index) => <article key={`${item.name}:${index}`} className={`study-material-result ${item.status}`}>
-        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
+        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : item.status === 'review' ? 'Revisão necessária' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
       </article>)}
     </div>}
     {pending.map(({ file, topic }) => {

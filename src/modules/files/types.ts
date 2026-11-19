@@ -49,6 +49,7 @@ export interface FileSummary {
   kind?: 'note';
   noteText?: string;
   updatedAt?: string;
+  studySummary?: string;
   hasExtractedText: boolean;
   extractedAt?: string;
 }
