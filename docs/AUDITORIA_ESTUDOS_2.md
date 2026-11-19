@@ -21,4 +21,6 @@ Bases verificadas no GitHub: Laboratory `89241c6`, Server `48addf9` e Laboratory
 
 Os testes usam fixtures locais e incluem extração de PDF com e sem texto, Office, cancelamento, retomada e armazenamento local, histórico, atualização de cartões e limites do contrato. Uma falha no armazenamento local pode impedir que um arquivo seja salvo, inclusive se o navegador encerrar a aba durante a fase inicial de gravação. O estado de processamento persistido permite reabrir os materiais já gravados.
 
+A recarga offline precisa recuperar o HTML e os assets pré-cacheados. A regressão de `Vary: Origin` no carregamento de JavaScript e CSS foi reproduzida no Chromium e corrigida no fallback do service worker para arquivos estáticos com hash.
+
 A homologação física deve testar Safari e PWA com um lote PDF textual + PDF digitalizado + DOCX, cancelamento e retomada após fechar, revisão de cartões, histórico de simulados e acesso em modo avião depois de carregar o aplicativo. Pressão de memória de OCR e primeira execução offline dependem dos ativos e do aparelho.
