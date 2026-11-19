@@ -27,9 +27,14 @@ function readBlob(blob: Blob): Promise<ArrayBuffer> {
 
 async function sameBytes(left: Blob, right: Blob): Promise<boolean> {
   if (left.size !== right.size) return false;
-  const [leftBytes, rightBytes] = await Promise.all([readBlob(left), readBlob(right)]);
-  const a = new Uint8Array(leftBytes), b = new Uint8Array(rightBytes);
-  return a.every((byte, index) => byte === b[index]);
+  const blockSize = 256 * 1024;
+  for (let offset = 0; offset < left.size; offset += blockSize) {
+    const end = offset + blockSize;
+    const [leftBytes, rightBytes] = await Promise.all([readBlob(left.slice(offset, end)), readBlob(right.slice(offset, end))]);
+    const a = new Uint8Array(leftBytes), b = new Uint8Array(rightBytes);
+    if (!a.every((byte, index) => byte === b[index])) return false;
+  }
+  return true;
 }
 
 export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadOpen, onCloseUpload }: {
@@ -88,15 +93,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
       return;
     }
     if (incoming.length) {
-      setStaged((current) => {
-        if (unit) return incoming;
-        const seen = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
-        return [...current, ...incoming.filter((file) => {
-          const key = `${file.name}:${file.size}:${file.lastModified}`;
-          if (seen.has(key)) return false;
-          seen.add(key); return true;
-        })];
-      });
+      setStaged(current => unit ? incoming : [...new Set([...current, ...incoming])]);
       setError('');
     }
     event.target.value = '';
@@ -210,7 +207,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     </label>
     {staged.length > 0 && <div className="study-material-staging" aria-label="Arquivos aguardando processamento">
       <strong>{staged.length} arquivo(s) na preparação</strong>
-      {staged.map((file) => <div className="study-material-staged-file" key={`${file.name}:${file.size}:${file.lastModified}`}>
+      {staged.map((file, index) => <div className="study-material-staged-file" key={index}>
         <span>{file.name} · {(file.size / 1024).toFixed(0)} KB</span>
         <button className="text-action" type="button" disabled={saving} aria-label={`Remover ${file.name}`} onClick={() => setStaged((current) => current.filter((item) => item !== file))}>Remover</button>
       </div>)}

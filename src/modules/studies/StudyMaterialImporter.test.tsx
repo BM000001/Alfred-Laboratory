@@ -165,4 +165,29 @@ describe('StudyMaterialImporter', () => {
     });
   });
 
+  it('reuses equal files and retains equal-sized files differing after the first block', async () => {
+    // fake-indexeddb's structured clone does not retain jsdom Blob objects.
+    const blobs = new Map<string, Blob>();
+    const save = fileRepository.save.bind(fileRepository);
+    const list = fileRepository.getAll.bind(fileRepository);
+    vi.spyOn(fileRepository, 'save').mockImplementation(item => {
+      if (item.blob instanceof Blob) blobs.set(item.id, item.blob);
+      return save(item);
+    });
+    vi.spyOn(fileRepository, 'getAll').mockImplementation(async () => (await list())
+      .map(item => ({ ...item, blob: blobs.get(item.id) ?? item.blob })));
+    render(<StudyMaterialImporter disciplineId="software" />);
+    const picker = screen.getByLabelText('Adicionar arquivos');
+    const common = 'x'.repeat(256 * 1024);
+    const upload = (suffix: string) => fireEvent.change(picker, { target: { files: [
+      new File([common + suffix], 'material.bin', { type: 'application/octet-stream' }),
+    ] } });
+    for (const suffix of ['a', 'a', 'b']) {
+      upload(suffix);
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      await screen.findByText(/Formato ainda não suportado/);
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Interromper processamento' })).toBeNull());
+    }
+    expect(await list()).toHaveLength(2);
+  });
 });
