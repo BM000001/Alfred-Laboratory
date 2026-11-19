@@ -79,6 +79,11 @@ describe('selectQuizQuestions', () => {
     expect(result.map(item => item.id)).not.toEqual(['q1', 'q2']);
   });
 
+  it('prioritizes less exposed questions in new attempts', () => {
+    const selected = selectQuizQuestions(questions, { limit: 2, random: () => 0, recentQuestionIds: ['q1', 'q2', 'q2'] });
+    expect(selected.map(question => question.id)).toEqual(['q3', 'q1']);
+  });
+
   it('returns an empty list when no question matches the filters', () => {
     expect(selectQuizQuestions(questions, { topicId: 'missing' })).toEqual([]);
   });

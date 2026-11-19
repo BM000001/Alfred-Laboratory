@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StudyMaterialImporter } from './StudyMaterialImporter';
 import { disciplineRepository, fileRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../../storage/repositories';
@@ -42,6 +42,42 @@ describe('StudyMaterialImporter', () => {
     expect(question.options[question.correctOptionIndex]).toBe(question.explanation?.replace(/^Trecho de origem: [^:]+:\s*/, ''));
   });
 
+  it('persists all originals before processing and resumes the queued file after cancellation', async () => {
+    const persist = fileRepository.save.bind(fileRepository);
+    let release: () => void = () => {};
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    let paused = false;
+    vi.spyOn(fileRepository, 'save').mockImplementation(async item => {
+      await persist(item);
+      if (!paused && item.processing?.status === 'running' && item.processing.stage === 'Preparando material') {
+        paused = true;
+        await blocked;
+      }
+    });
+    const view = render(<StudyMaterialImporter disciplineId="software" />);
+    const files = ['primeiro.txt', 'segundo.txt'].map(name => new File([definitions], name, { type: 'text/plain' }));
+    fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    try {
+      await waitFor(() => expect(paused).toBe(true));
+      expect((await fileRepository.getAll()).map(file => file.name).sort()).toEqual(['primeiro.txt', 'segundo.txt']);
+      fireEvent.click(screen.getByRole('button', { name: 'Interromper processamento' }));
+    } finally {
+      release();
+    }
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Interromper processamento' })).toBeNull());
+    view.unmount();
+    render(<StudyMaterialImporter disciplineId="software" />);
+    const row = (await screen.findByText('segundo.txt')).closest('article');
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row!).getByRole('button', { name: 'Retomar processamento' }));
+    await waitFor(async () => {
+      const stored = await fileRepository.getAll();
+      expect(stored).toHaveLength(2);
+      expect(stored.find(file => file.name === 'segundo.txt')?.processing?.status).toBe('completed');
+    });
+  });
+
   it('preserves successful output when a sibling file has an unsupported format', async () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     const valid = new File([definitions], 'material.txt', { type: 'text/plain' });
@@ -63,7 +99,7 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File(['Texto de aula sem definições explícitas.'], 'resumo.txt')] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/não encontrei novas definições explícitas suficientes/)).toBeInTheDocument();
+    expect(await screen.findByText(/enriquecimento semântico depende de IA/i)).toBeInTheDocument();
     expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
     expect(await fileRepository.getAll()).toHaveLength(1);
   });

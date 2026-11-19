@@ -18,6 +18,17 @@ describe('flashcardService', () => {
     await expect(service.create({ disciplineId: 'math', front: ' ', back: 'Resposta' })).rejects.toThrow('pergunta e a resposta');
   });
 
+  it('blocks normalized duplicate cards within the same topic', async () => {
+    let id = 0;
+    const service = createFlashcardService(memoryRepository<StudyFlashcard>(), { createId: () => String(++id) });
+    const original = { disciplineId: 'math', topicId: 'limits', front: 'Definição', back: 'Um limite.' };
+    await service.create(original);
+    await expect(service.create({ ...original, front: ' DEFINICAO ' })).rejects.toThrow(/já existe/i);
+    const card = await service.create({ ...original, back: 'Outro limite.' });
+    await expect(service.update(card.id, { front: original.front, back: original.back })).rejects.toThrow(/já existe/i);
+    await expect(service.create({ ...original, topicId: 'derivatives' })).resolves.toMatchObject({ topicId: 'derivatives' });
+  });
+
   it('schedules review intervals according to the learner rating', async () => {
     const repository = memoryRepository<StudyFlashcard>();
     const service = createFlashcardService(repository, { createId: () => 'card-1', now: () => new Date('2026-11-04T12:00:00.000Z') });

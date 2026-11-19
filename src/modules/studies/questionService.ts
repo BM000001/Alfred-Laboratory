@@ -78,7 +78,7 @@ export function createQuestionService(
 
 export function selectQuizQuestions(
   questions: StudyQuestion[],
-  options: { topicId?: string; difficulty?: StudyQuestion['difficulty'] | 'all'; limit?: number; random?: () => number } = {},
+  options: { topicId?: string; difficulty?: StudyQuestion['difficulty'] | 'all'; limit?: number; random?: () => number; recentQuestionIds?: readonly string[] } = {},
 ): StudyQuestion[] {
   const limit = Math.max(1, Math.min(50, Math.floor(options.limit ?? 10)));
   const candidates = questions.filter(question =>
@@ -91,5 +91,8 @@ export function selectQuizQuestions(
     const target = Math.min(index, Math.max(0, Math.floor(random() * (index + 1))));
     [shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]];
   }
+  const exposure = new Map<string, number>();
+  for (const id of options.recentQuestionIds ?? []) exposure.set(id, (exposure.get(id) ?? 0) + 1);
+  shuffled.sort((a, b) => (exposure.get(a.id) ?? 0) - (exposure.get(b.id) ?? 0));
   return shuffled.slice(0, limit);
 }

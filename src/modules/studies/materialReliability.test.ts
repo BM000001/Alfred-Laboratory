@@ -51,3 +51,28 @@ it('does not join separate lowercase definitions as wrapped text', () => {
   const source = 'mitose: divisão celular que mantém cromossomos\nmeiose: divisão celular que reduz cromossomos.';
   expect(correctMaterial(source, 'f', 'printed').corrected).toBe(source);
 });
+
+it('generates cards from literal lists and explicit question-answer pairs', () => {
+  const pairs = [
+    ['Qual organela participa da fotossíntese?', 'O cloroplasto.'],
+    ['Qual estrutura delimita a célula?', 'A membrana plasmática.'],
+    ['Qual organela produz ATP?', 'A mitocôndria.'],
+    ['Qual estrutura abriga o DNA nuclear?', 'O núcleo.'],
+  ];
+  const text = ['ETAPAS DO EXPERIMENTO', '1. Preparar a lâmina.', '2. Ajustar a iluminação.',
+    ...pairs.flatMap(([question, answer]) => [`Pergunta: ${question}`, `Resposta: ${answer}`])].join('\n');
+  const result = validateMaterialResources(text, 100, 'printed');
+  expect(result.flashcards).toHaveLength(5);
+  expect(result.questions).toHaveLength(4);
+  for (const question of result.questions) {
+    const pair = pairs.find(([prompt]) => prompt === question.prompt);
+    expect(question.options[question.correctOptionIndex]).toBe(pair?.[1]);
+    expect(text).toContain(question.sourceExcerpt);
+  }
+  expect(validateMaterialResources(text, 100, 'printed', '').flashcards).toEqual([]);
+});
+
+it('drops question-answer pairs with conflicting source answers', () => {
+  const text = 'Pergunta: Qual estrutura contém DNA?\nResposta: Núcleo.\nPergunta: Qual estrutura contém DNA?\nResposta: Membrana.';
+  expect(validateMaterialResources(text, 100, 'printed').flashcards).toEqual([]);
+});

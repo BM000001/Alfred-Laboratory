@@ -7,11 +7,12 @@ export function createFileService(repository: EntityRepository<StoredFile>, crea
   return {
     async list(): Promise<FileSummary[]> {
       const files = await repository.getAll();
-      return files.map(({ id, name, type, size, createdAt, disciplineId, projectId, kind, extraction }) => ({
+      return files.map(({ id, name, type, size, createdAt, disciplineId, projectId, kind, extraction, processing }) => ({
         id, name, type, size, createdAt,
         ...(disciplineId ? { disciplineId } : {}),
         ...(projectId ? { projectId } : {}),
         ...(kind ? { kind } : {}),
+        ...(processing?.structured?.summary ? { studySummary: processing.structured.summary } : {}),
         hasExtractedText: Boolean(extraction),
         ...(extraction ? { extractedAt: extraction.extractedAt } : {}),
       })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));

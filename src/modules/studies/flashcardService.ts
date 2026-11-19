@@ -1,4 +1,5 @@
 import type { EntityRepository } from '../../storage/repositories';
+import { normalizeMaterial } from './materialReliability';
 import type { FlashcardRating, StudyFlashcard, CreateFlashcardInput } from './flashcardTypes';
 
 type Options = { createId?: () => string; now?: () => Date };
@@ -9,6 +10,12 @@ const MAX_INTERVAL_DAYS = 365;
 export function createFlashcardService(repository: EntityRepository<StudyFlashcard>, options: Options = {}) {
   const createId = options.createId ?? (() => crypto.randomUUID());
   const now = options.now ?? (() => new Date());
+  async function rejectDuplicate(disciplineId: string, topicId: string | undefined, front: string, back: string, except?: string) {
+    const key = [normalizeMaterial(front), normalizeMaterial(back)];
+    const cards = await repository.getAll();
+    if (cards.some(card => card.id !== except && card.disciplineId === disciplineId && card.topicId === topicId &&
+        normalizeMaterial(card.front) === key[0] && normalizeMaterial(card.back) === key[1])) throw new Error('Este flashcard já existe neste tópico.');
+  }
   return {
     list: () => repository.getAll(),
     async create(input: CreateFlashcardInput) {
@@ -17,6 +24,7 @@ export function createFlashcardService(repository: EntityRepository<StudyFlashca
       if (!input.disciplineId) throw new Error('Selecione uma disciplina.');
       if (!front || !back) throw new Error('Preencha a pergunta e a resposta.');
       if (front.length > 500 || back.length > 2000) throw new Error('A pergunta aceita até 500 caracteres e a resposta até 2.000.');
+      await rejectDuplicate(input.disciplineId, input.topicId, front, back);
       const timestamp = now().toISOString();
       const card: StudyFlashcard = { id: createId(), disciplineId: input.disciplineId, front, back, createdAt: timestamp, nextReviewAt: timestamp, intervalDays: 0, reviewCount: 0, ...(input.topicId ? { topicId: input.topicId } : {}), ...(input.sourceFileId ? { sourceFileId: input.sourceFileId } : {}), ...(input.sourceFileName ? { sourceFileName: input.sourceFileName } : {}), ...(input.subject ? { subject: input.subject } : {}) };
       await repository.save(card);
@@ -55,6 +63,7 @@ export function createFlashcardService(repository: EntityRepository<StudyFlashca
       const front = changes.front.trim(), back = changes.back.trim();
       if (!front || !back) throw new Error('Preencha a pergunta e a resposta.');
       if (front.length > 500 || back.length > 2000) throw new Error('A pergunta aceita até 500 caracteres e a resposta até 2.000.');
+      if (front !== card.front || back !== card.back) await rejectDuplicate(card.disciplineId, card.topicId, front, back, id);
       const updated = { ...card, front, back };
       await repository.save(updated);
       return updated;
