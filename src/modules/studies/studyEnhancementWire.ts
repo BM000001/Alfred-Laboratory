@@ -7,6 +7,22 @@ const MAX_WIRE_BYTES = 32 * 1024;
 export function encodeStudyEnhancement(request: StudyEnhancementRequest, signal?: AbortSignal): string {
   signal?.throwIfAborted();
   if (request.consent.externalProcessing !== true) throw new Error('consent_required');
+  const identifier = /^[A-Za-z0-9_.:-]{1,128}$/;
+  if (request.version !== 1 || typeof request.consent.externalAi !== 'boolean' ||
+      ![request.requestId, request.sourceFileId, request.disciplineId, request.topicId].every(value =>
+        typeof value === 'string' && identifier.test(value)) ||
+      !['board', 'printed', 'slide', 'note', 'formula', 'diagram', 'prose'].includes(request.profile) ||
+      !['flashcards', 'questions', 'explain'].includes(request.task) ||
+      !Array.isArray(request.chunks) || request.chunks.length > 24) throw new Error('request_shape');
+  const chunks = new Set<string>();
+  for (const chunk of request.chunks) {
+    if (!chunk || typeof chunk.chunkId !== 'string' || !identifier.test(chunk.chunkId) || chunks.has(chunk.chunkId) ||
+        typeof chunk.text !== 'string' || chunk.text.length > 4000 || !chunk.text.trim() ||
+        (chunk.pageNumber !== undefined && (!Number.isSafeInteger(chunk.pageNumber) || chunk.pageNumber < 1))) {
+      throw new Error('chunk_scope');
+    }
+    chunks.add(chunk.chunkId);
+  }
   const payload = JSON.stringify({
     version: request.version, request_id: request.requestId, source_file_id: request.sourceFileId,
     discipline_id: request.disciplineId, topic_id: request.topicId, profile: request.profile, task: request.task,
