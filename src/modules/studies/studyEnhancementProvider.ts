@@ -24,6 +24,7 @@ export interface StudyEnhancementRequest {
   consent: {
     externalProcessing: boolean;
     externalAi: boolean;
+    localAi?: boolean;
   };
 }
 

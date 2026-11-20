@@ -4,6 +4,7 @@ import type { StudyTopic } from './types';
 import type { StudyQuestion, StudyQuizAnswer, StudyQuizAttempt, StudyQuestionDifficulty } from './questionTypes';
 import { createQuestionService, gradeStudyAnswer, getQuestionSnapshot, summarizeQuiz, selectQuizQuestions } from './questionService';
 
+import { LocalQuestionPilot } from './LocalQuestionPilot';
 import { clearQuizDraft, readQuizDraft, writeQuizDraft } from './quizDraft';
 
 const service = createQuestionService(studyQuestionRepository, studyQuizAttemptRepository);
@@ -11,6 +12,10 @@ const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
 export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; onChanged?: () => void }) {
+  const pilotTopic = import.meta.env.DEV && import.meta.env.VITE_ALFRED_LOCAL_OLLAMA === '1' &&
+    window.location.origin === 'http://127.0.0.1:5173'
+    ? topics.find(topic => topic.id === unitId && topic.sourceFileId)
+    : undefined;
   const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]);
   const [draftWarning, setDraftWarning] = useState(false);
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
@@ -267,6 +272,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       {revealed && <div role="status" className={currentFeedback ? 'study-quiz-feedback correct' : 'study-quiz-feedback incorrect'}>
         <strong>{currentFeedback ? 'Resposta correta.' : `Resposta incorreta. Alternativa correta: ${String.fromCharCode(65 + currentQuestion.correctOptionIndex)}.`}</strong>
         {currentQuestion.explanation && <p>{currentQuestion.explanation}</p>}
+        {currentQuestion.sourceExcerpt && <p>Fonte: {currentQuestion.sourceFileName} · “{currentQuestion.sourceExcerpt}”</p>}
       </div>}
       {!revealed ? <button className="primary-action" type="button" onClick={revealAnswer}>Corrigir resposta</button> : <button className="primary-action" type="button" onClick={() => void advanceQuiz()} disabled={saving}>{questionIndex + 1 === quizQuestions.length ? 'Finalizar simulado' : 'Próxima questão'}</button>}
     </article>}
@@ -292,6 +298,8 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
     </article>}
 
     {phase === 'idle' && <>
+      {pilotTopic && <LocalQuestionPilot key={pilotTopic.id + ':' + pilotTopic.sourceFileId} topic={pilotTopic}
+        onSaved={async () => { await refresh(); onChanged?.(); }} />}
       <form className="study-question-form" onSubmit={createQuestion}>
         <label htmlFor="study-question-prompt">Enunciado da questão</label>
         <textarea id="study-question-prompt" rows={3} maxLength={1000} value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Digite uma pergunta objetiva..." required />

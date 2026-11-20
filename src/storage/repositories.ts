@@ -59,6 +59,7 @@ export const disciplineRepository = createRepository<Discipline>(STORE_NAMES.dis
 export const studyTopicRepository = createRepository<StudyTopic>(STORE_NAMES.studyTopics);
 export const studyFlashcardRepository = createRepository<StudyFlashcard>(STORE_NAMES.studyFlashcards);
 export const studyQuestionRepository = createRepository<StudyQuestion>(STORE_NAMES.studyQuestions);
+export const studyGeneratedQuestionRepository = createRepository<StudyQuestion>(STORE_NAMES.studyQuestions, true);
 export const studyLearningProgressRepository = createRepository<StudyLearningProgress>(STORE_NAMES.studyLearningProgress);
 export const studyQuizAttemptRepository = createRepository<StudyQuizAttempt>(STORE_NAMES.studyQuizAttempts, true);
 
