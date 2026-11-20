@@ -1,3 +1,4 @@
+import { isConcreteConcept } from './studyMaterialGeneration';
 import type { StudyFlashcard } from './flashcardTypes';
 import type { StudyQuestion, StudyQuizAttempt } from './questionTypes';
 import type { StudyTopic } from './types';
@@ -17,36 +18,37 @@ function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
 }
 
-function contextName(context: StudyLearningContext): string {
-  return ({ technical: 'um sistema', football: 'um time de futebol', sports: 'um treino esportivo', series: 'uma série', games: 'um jogo', daily: 'uma situação do cotidiano' })[context];
-}
-
-function analogyFor(concept: string, formalExplanation: string, context: StudyLearningContext): string {
+function analogyFor(concept: string, context: StudyLearningContext): string | undefined {
   const key = normalize(concept);
   const specific: Partial<Record<StudyLearningContext, string>> = {};
-  if (/encapsul|privad|acesso|proteg/iu.test(key + ' ' + formalExplanation)) {
+  if (/^encapsulamento$/iu.test(key)) {
     specific.football = `Pense no vestiário de um time: o público acompanha o jogo, mas só pessoas autorizadas entram e alteram o que acontece lá dentro. A ideia é proteger o funcionamento interno e oferecer apenas o acesso necessário.`;
     specific.games = `Pense no inventário de um jogo: o jogador usa os comandos permitidos, mas não altera diretamente as regras internas que calculam os itens. A interface protege o funcionamento por trás dela.`;
-  } else if (/heran|base|reutil|categoria/iu.test(key + ' ' + formalExplanation)) {
+  } else if (/^heranca$/iu.test(key)) {
     specific.football = `Pense nas categorias de base de um clube: uma equipe mais nova reaproveita fundamentos e regras do clube, mas pode acrescentar características próprias. O que já existe serve de base para uma nova estrutura.`;
     specific.games = `Pense em uma classe de personagem que herda habilidades de uma classe base e acrescenta uma habilidade própria. Você reutiliza uma base comprovada sem copiar tudo manualmente.`;
-  } else if (/polimorf|forma|comport|mesma opera/iu.test(key + ' ' + formalExplanation)) {
+  } else if (/^polimorfismo$/iu.test(key)) {
     specific.football = `Pense no mesmo passe sendo executado por jogadores diferentes: a ação é reconhecida como passe, mas cada jogador pode realizá-la com uma técnica própria. A operação permanece, a forma de responder muda.`;
     specific.games = `Pense em um comando “atacar” usado por personagens diferentes: o mago lança magia, o arqueiro dispara e o guerreiro golpeia. O comando é o mesmo, mas o comportamento depende do personagem.`;
   }
-  const tailored = specific[context];
-  if (tailored) return tailored;
-  const label = contextName(context);
-  return `Imagine ${label} com uma regra chamada “${concept}”. Primeiro observe o papel descrito no material: ${formalExplanation} Depois, compare essa regra com o exemplo: a analogia ajuda a visualizar, mas a definição formal continua sendo a referência para responder às questões.`;
+  return specific[context];
 }
 
-function bridgeFor(concept: string, formalExplanation: string, context: StudyLearningContext): string {
-  return `A analogia de ${contextName(context)} serve para visualizar “${concept}”. Na prova, volte ao núcleo formal: ${formalExplanation}`;
-}
-
-function sourceExcerptFor(question: StudyQuestion | undefined, card: StudyFlashcard): string | undefined {
-  if (question?.explanation?.startsWith('Trecho de origem:')) return question.explanation.slice('Trecho de origem:'.length).trim();
-  return card.back;
+function referenceLesson(concept: string, excerpt: string | undefined) {
+  if (!excerpt || !/referen|objeto/u.test(normalize(concept))) return;
+  const evidence = normalize(excerpt);
+  if (!/mesmo objeto/.test(evidence) || !/referen|apont/.test(evidence) ||
+      !/alter|modific|mutac/.test(evidence) || !/ambas|outra|compartilhad/.test(evidence) || /\bnao\b/.test(evidence)) return;
+  return {
+    mechanism: 'Duas variáveis podem apontar para um único objeto. Se você altera um atributo desse objeto, ambas continuam apontando para ele e podem observar o novo valor.',
+    example: /\bpython\b/u.test(evidence)
+      ? 'p1 = {"vida": 30}\np2 = p1\np1["vida"] = 27\n# p2["vida"] agora vale 27'
+      : 'Antes: p1 → objeto com vida 30 ← p2\nOperação: altere a vida do objeto para 27 por p1.\nDepois: p1 → o mesmo objeto com vida 27 ← p2',
+    application: 'Ao depurar uma alteração inesperada, confira se as duas variáveis indicam o mesmo objeto.',
+    pitfall: 'Trocar qual objeto uma variável referencia é uma operação diferente de modificar o objeto compartilhado.',
+    check: 'Se p2 continuar apontando para o mesmo objeto, qual é a vida observada depois da alteração?',
+    answer: '27. O atributo mudou no objeto que as duas variáveis compartilham.',
+  };
 }
 
 function weakestTopics(topics: StudyTopic[], questions: StudyQuestion[], attempts: StudyQuizAttempt[]): Set<string> {
@@ -67,7 +69,10 @@ function weakestTopics(topics: StudyTopic[], questions: StudyQuestion[], attempt
 }
 
 export function buildStudyLearningUnits({ cards, questions, attempts, topics, progress, context, now = new Date() }: LessonInput): StudyLearningUnit[] {
-  const questionBySubject = new Map(questions.filter((question) => question.subject).map((question) => [normalize(question.subject!), question]));
+  const sourceKey = (item: StudyFlashcard | StudyQuestion) =>
+    JSON.stringify([item.disciplineId, item.topicId, item.sourceFileId, normalize(item.subject ?? '')]);
+  const questionBySubject = new Map(questions.filter(question => question.subject && question.sourceFileId)
+    .map(question => [sourceKey(question), question]));
   const topicById = new Map(topics.map((topic) => [topic.id, topic]));
   const weak = weakestTopics(topics, questions, attempts);
   const completed = new Map(progress.map((item) => [item.lessonId, item]));
@@ -76,13 +81,17 @@ export function buildStudyLearningUnits({ cards, questions, attempts, topics, pr
 
   return cards
     .filter((card) => {
-      const key = `${normalize(card.disciplineId)}|${normalize(card.subject ?? card.front)}`;
+      const key = JSON.stringify([card.disciplineId, card.topicId, normalize(card.subject ?? card.front)]);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     })
     .map((card): StudyLearningUnit => {
-      const question = questionBySubject.get(normalize(card.subject ?? ''));
+      const question = card.sourceFileId ? questionBySubject.get(sourceKey(card)) : undefined;
+      const sourceExcerpt = card.sourceExcerpt ?? question?.sourceExcerpt;
+      const concept = card.subject ?? card.front;
+      const didactic = referenceLesson(concept, sourceExcerpt);
+      const analogy = isConcreteConcept(concept) ? analogyFor(concept, context) : undefined;
       const topic = card.topicId ? topicById.get(card.topicId) : undefined;
       const reason: StudyLearningUnit['reviewReason'] = topic && weak.has(topic.id) ? 'weak-topic' : due.has(card.id) ? 'due-review' : 'new';
       return {
@@ -91,11 +100,12 @@ export function buildStudyLearningUnits({ cards, questions, attempts, topics, pr
         ...(card.topicId ? { topicId: card.topicId } : {}),
         ...(topic ? { topicTitle: topic.title } : {}),
         ...(card.sourceFileName ? { sourceFileName: card.sourceFileName } : {}),
-        concept: card.subject ?? (card.front.replace(/^O que o material define como “|”\?$/giu, '').trim() || card.front),
+        concept,
         formalExplanation: card.back,
-        ...(sourceExcerptFor(question, card) ? { sourceExcerpt: sourceExcerptFor(question, card) } : {}),
-        analogy: analogyFor(card.subject ?? card.front, card.back, context),
-        bridge: bridgeFor(card.subject ?? card.front, card.back, context),
+        sourceExcerpt,
+        didactic,
+        analogy,
+        needsReview: Boolean(card.subject && !isConcreteConcept(card.subject)),
         reviewReason: reason,
         completed: Boolean(completed.get(`lesson:${card.id}`)),
       };

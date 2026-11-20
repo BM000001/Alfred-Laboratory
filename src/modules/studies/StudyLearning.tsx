@@ -57,7 +57,7 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
 
   return <section className="study-learning" aria-label="Aprender o conteúdo">
     <div className="study-learning-header">
-      <div><span className="card-label">ENSINO CONTEXTUALIZADO</span><h3>Aprender antes de praticar</h3><p>Alfred explica o conceito formal e depois cria uma ponte com um contexto escolhido por você. A analogia ajuda a visualizar; o material continua sendo a fonte da resposta.</p></div>
+      <div><span className="card-label">ENSINO CONTEXTUALIZADO</span><h3>Aprender antes de praticar</h3><p>Consulte os conceitos extraídos e pratique com exemplos quando houver evidência suficiente.</p></div>
       <div className="study-learning-count"><strong>{completedCount}/{units.length}</strong><span>explicações vistas</span></div>
     </div>
     <div className="study-learning-contexts" aria-label="Escolher contexto da explicação">
@@ -69,12 +69,23 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
     {error && <p className="module-error" role="alert">{error}</p>}
     {loading ? <p className="module-feedback">Preparando suas explicações...</p> : units.length === 0 ? <div className="study-learning-empty"><strong>Ainda não há conteúdo guiado.</strong><p>Adicione um material com definições explícitas e salve. O Alfred usará os conceitos extraídos como base para ensinar e depois praticar.</p></div> : <div className="study-learning-list">
       {units.map((unit, index) => <article className={unit.completed ? 'study-learning-card completed' : 'study-learning-card'} key={unit.id}>
-        <div className="study-learning-card-heading"><div><span className="study-learning-step">{index + 1}</span><span className="study-learning-reason">{reasonLabel(unit.reviewReason)}</span><h4>{unit.concept}</h4></div><button type="button" className="text-action" aria-expanded={expandedId === unit.id} onClick={() => setExpandedId((current) => current === unit.id ? '' : unit.id)}>{expandedId === unit.id ? 'Fechar' : 'Abrir aula'}</button></div>
+        <div className="study-learning-card-heading"><div><div className="study-learning-meta"><span className="study-learning-step">{index + 1}</span><span className="study-learning-reason">{reasonLabel(unit.reviewReason)}</span></div><h4>{unit.concept}</h4></div><button type="button" className="text-action" aria-expanded={expandedId === unit.id} onClick={() => setExpandedId((current) => current === unit.id ? '' : unit.id)}>{expandedId === unit.id ? 'Fechar' : 'Abrir aula'}</button></div>
         {expandedId === unit.id && <div className="study-learning-body">
-          <section><span className="card-label">CONCEITO FORMAL</span><p>{unit.formalExplanation}</p></section>
-          <section className="study-learning-analogy"><span className="card-label">PONTE COM {contextLabel(context).toUpperCase()}</span><p>{unit.analogy}</p></section>
-          <section><span className="card-label">LIGAÇÃO COM A MATÉRIA</span><p>{unit.bridge}</p></section>
-          {unit.sourceExcerpt && <p className="study-learning-source">Fonte associada: {unit.sourceFileName ?? 'material salvo'} · trecho usado: “{unit.sourceExcerpt}”</p>}
+          <section><span className="card-label">{unit.didactic ? 'Conceito usado na aula' : unit.sourceExcerpt ? 'Explicação extrativa' : 'Resposta do cartão'}</span><p>{unit.formalExplanation}</p></section>
+          {unit.needsReview && <p role="status">Revisão recomendada. Este cartão salvo pode descrever uma situação específica em vez de um conceito.</p>}
+          {unit.didactic ? <>
+            <section><h5>Como funciona</h5><p>{unit.didactic.mechanism}</p></section>
+            <section><h5>Exemplo didático</h5><pre>{unit.didactic.example}</pre></section>
+            <section><h5>Aplicação e cuidado</h5><p>{unit.didactic.application}</p><p>{unit.didactic.pitfall}</p></section>
+            <details><summary>Verificação de compreensão</summary><p>{unit.didactic.check}</p>
+              <details><summary>Conferir resposta</summary><p>{unit.didactic.answer}</p></details>
+            </details>
+          </> : <p className="study-learning-source">A explicação detalhada fica pendente de enriquecimento. Use a fonte para conferir o contexto.</p>}
+          {unit.analogy && <section className="study-learning-analogy"><span className="card-label">Analogia em {contextLabel(context)}</span><p>{unit.analogy}</p></section>}
+          {unit.sourceExcerpt && <details><summary>Trecho de origem{unit.sourceFileName ? ` · ${unit.sourceFileName}` : ''}</summary>
+            {unit.sourceExcerpt !== unit.formalExplanation && <blockquote>{unit.sourceExcerpt}</blockquote>}
+            {unit.sourceExcerpt === unit.formalExplanation && <p>O trecho está reproduzido acima.</p>}
+          </details>}
           <button type="button" className="primary-action" onClick={() => void markComplete(unit.id)} disabled={unit.completed}>{unit.completed ? 'Explicação concluída' : 'Marcar como aprendido'}</button>
         </div>}
       </article>)}

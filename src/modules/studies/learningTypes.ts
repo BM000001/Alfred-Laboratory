@@ -17,8 +17,9 @@ export interface StudyLearningUnit {
   concept: string;
   formalExplanation: string;
   sourceExcerpt?: string;
-  analogy: string;
-  bridge: string;
+  analogy?: string;
+  needsReview: boolean;
+  didactic?: { mechanism: string; example: string; application: string; pitfall: string; check: string; answer: string };
   reviewReason: 'new' | 'weak-topic' | 'due-review';
   completed: boolean;
 }

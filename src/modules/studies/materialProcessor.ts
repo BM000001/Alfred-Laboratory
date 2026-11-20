@@ -9,6 +9,7 @@ export interface MaterialProcessingState {
   version: 1; profile: ProcessingProfile; status: 'running' | 'cancelled' | 'failed' | 'review' | 'completed';
   stage: string; topicId?: string; error?: string; raw?: StoredTextExtraction; corrected?: string; corrections?: Correction[];
   assessment?: ReturnType<typeof assessMaterial>; structured?: { blocks?: ReturnType<typeof structureMaterial>; definitions: ReturnType<typeof extractStudyDefinitions>; formulas: string[]; summary: string };
+  skipDefinitionReview?: boolean;
   ambiguities?: ReturnType<typeof relevantAmbiguities>;
   generated?: ReturnType<typeof validateMaterialResources>;
 }
@@ -56,14 +57,15 @@ export async function processStoredMaterial(id: string, profile: ProcessingProfi
       state.corrected = result.corrected; state.corrections = result.corrections;
       await checkpoint('Texto corrigido com rastreabilidade');
     }
-    if (!state.assessment) {
+    const ambiguities = relevantAmbiguities(state.corrected);
+    if (!state.assessment || (!state.generated && state.assessment.conflicts !== Boolean(ambiguities.length))) {
       const ocrPages = state.raw.pages?.filter(page => page.method === 'ocr') ?? [];
       const ocrConfidence = state.raw.confidence ?? (ocrPages.length ? Math.min(...ocrPages.map(page => page.confidence ?? 0)) : state.raw.extractionMethod === 'ocr' || state.raw.format === 'image' ? 0 : undefined);
       state.assessment = assessMaterial(state.corrected, ocrConfidence, state.raw.imageQuality);
       await checkpoint('Consistência e confiança avaliadas');
     }
-    state.ambiguities = relevantAmbiguities(state.corrected);
-    if (state.ambiguities.length) {
+    state.ambiguities = ambiguities;
+    if (state.ambiguities.length && !state.skipDefinitionReview) {
       state.status = 'review';
       await checkpoint('Uma definição conflitante precisa de confirmação');
       return { state, cardsAdded, questionsAdded };
@@ -80,10 +82,6 @@ export async function processStoredMaterial(id: string, profile: ProcessingProfi
     }
     if (!state.generated) {
       state.generated = validateMaterialResources(state.corrected, state.assessment.score, profile, state.raw.text);
-      // Resource validity can lower confidence, never increase source confidence.
-      const combined = Math.min(state.assessment.score, Math.round(state.assessment.score * .9 + state.generated.validity * .1));
-      state.assessment.score = combined;
-      state.generated = validateMaterialResources(state.corrected, combined, profile, state.raw.text);
       await checkpoint('Flashcards e questões validados');
     }
     // Stable IDs make recovery idempotent even if the page closes during saving.
@@ -97,12 +95,18 @@ export async function processStoredMaterial(id: string, profile: ProcessingProfi
     const questionIds = new Set(questions.map((question) => question.id));
     const cardKeys = new Set(cards.filter(c => c.disciplineId === stored.disciplineId && c.topicId === topicId).map(c => normalizeMaterial(c.front) + '|' + normalizeMaterial(c.back)));
     const questionKeys = new Set(questions.filter(q => q.disciplineId === stored.disciplineId && q.topicId === topicId).map(q => normalizeMaterial(q.prompt)));
+    const definitionExcerpts = new Set(extractStudyDefinitions(state.corrected).map(entry => entry.sourceExcerpt));
+    const priorDefinitions = (items: typeof cards | typeof questions) => new Set(items.filter(item =>
+      item.disciplineId === stored.disciplineId && item.topicId === topicId && item.sourceFileId === id &&
+      item.sourceExcerpt && definitionExcerpts.has(item.sourceExcerpt)).map(item => item.sourceExcerpt));
+    const priorCardDefinitions = priorDefinitions(cards);
+    const priorQuestionDefinitions = priorDefinitions(questions);
     const timestamp = new Date().toISOString();
     for (const [index, card] of state.generated.flashcards.entries()) {
       signal.throwIfAborted();
       const key = normalizeMaterial(card.front) + '|' + normalizeMaterial(card.back);
       const cardId = `${topicId}:material:${id}:card:${index}`;
-      if (cardIds.has(cardId) || cardKeys.has(key)) continue;
+      if (cardIds.has(cardId) || cardKeys.has(key) || priorCardDefinitions.has(card.sourceExcerpt)) continue;
       await studyFlashcardRepository.save({ ...card, id: cardId, disciplineId: stored.disciplineId, topicId, sourceFileId: id, sourceFileName: stored.name, createdAt: timestamp, nextReviewAt: timestamp, intervalDays: 0, reviewCount: 0 });
       cardKeys.add(key); cardsAdded++;
     }
@@ -110,7 +114,7 @@ export async function processStoredMaterial(id: string, profile: ProcessingProfi
       signal.throwIfAborted();
       const key = normalizeMaterial(question.prompt);
       const questionId = `${topicId}:material:${id}:question:${index}`;
-      if (questionIds.has(questionId) || questionKeys.has(key)) continue;
+      if (questionIds.has(questionId) || questionKeys.has(key) || priorQuestionDefinitions.has(question.sourceExcerpt)) continue;
       await studyQuestionRepository.save({ ...question, id: questionId, disciplineId: stored.disciplineId, topicId, sourceFileId: id, sourceFileName: stored.name, createdAt: timestamp });
       questionKeys.add(key); questionsAdded++;
     }
@@ -131,11 +135,16 @@ export async function processStoredMaterial(id: string, profile: ProcessingProfi
 }
 
 /** Confirm only the conflicting excerpt; original OCR remains immutable. */
-export async function confirmMaterialDefinition(id: string, sourceExcerpt: string) {
+export async function confirmMaterialDefinition(id: string, sourceExcerpt: string | null) {
   const file = await fileRepository.getById(id);
   const state = file?.processing;
   if (active.has(id)) throw new Error('Aguarde o processamento deste material.');
   if (!file || !state?.raw || !state.corrected || state.status !== 'review') throw new Error('Não existe confirmação pendente para este arquivo.');
+  if (sourceExcerpt === null) {
+    await fileRepository.save({ ...file, processing: { ...state, skipDefinitionReview: true, status: 'cancelled',
+      generated: undefined, stage: 'Fontes preservadas; pronto para retomar' } });
+    return;
+  }
   const group = relevantAmbiguities(state.corrected).find(entries => entries.some(entry => entry.sourceExcerpt === sourceExcerpt));
   if (!group) throw new Error('A opção não pertence ao trecho de origem.');
   const removed = group.filter(entry => entry.sourceExcerpt !== sourceExcerpt);
