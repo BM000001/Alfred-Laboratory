@@ -3,6 +3,7 @@ import type { StudyEnhancementRequest } from './studyEnhancementProvider';
 
 type Source = { id: string; disciplineId?: string; text: string; pages?: readonly { pageNumber: number; text: string }[] };
 type Context = {
+  execution?: 'local';
   source: Source;
   topic: { id: string; disciplineId: string; sourceFileId?: string };
   existingFronts?: readonly string[];
@@ -21,7 +22,10 @@ const text = (value: unknown, max = 2000): value is string =>
 export function validateStudyEnhancement(request: StudyEnhancementRequest, result: unknown, context: Context, signal?: AbortSignal): Decision {
   const rejected = (issue: string): Decision => ({ status: 'rejected', issues: [issue] });
   if (signal?.aborted) return rejected('cancelled');
-  if (request.consent?.externalProcessing !== true) return rejected('consent_required');
+  const local = context.execution === 'local';
+  if (local ? request.consent?.localAi !== true : request.consent?.externalProcessing !== true) {
+    return rejected('consent_required');
+  }
   if (request.version !== 1 || ![request.requestId, request.sourceFileId, request.disciplineId, request.topicId].every(id) ||
       !oneOf(request.task, ['flashcards', 'questions', 'explain']) || !Array.isArray(request.chunks)) return rejected('request_shape');
   const { source, topic } = context;
@@ -47,7 +51,7 @@ export function validateStudyEnhancement(request: StudyEnhancementRequest, resul
       !Array.isArray(result.warnings) || result.warnings.length > 20 || result.warnings.some(item => !text(item, 500)) ||
       result.flashcards.length > 30 || result.questions.length > 30) return rejected('result_shape');
 
-  if (result.providerKind === 'ai' && request.consent.externalAi !== true) return rejected('ai_consent_required');
+  if (result.providerKind === 'ai' && !local && request.consent.externalAi !== true) return rejected('ai_consent_required');
   if (Object.keys(result).some(key => !['version', 'requestId', 'status', 'providerKind', 'flashcards', 'questions', 'explanation', 'evidence', 'warnings'].includes(key))) return rejected('result_shape');
   const hasEvidence = (value: unknown): boolean => Array.isArray(value) && value.length > 0 && value.length <= 8 &&
     value.every(item => record(item) && text(item.chunkId, 128) && text(item.excerpt) &&

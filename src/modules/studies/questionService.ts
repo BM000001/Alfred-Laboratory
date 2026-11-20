@@ -35,7 +35,7 @@ export function createQuestionService(
   return {
     list: () => questions.getAll(),
     listAttempts: () => attempts.getAll(),
-    async create(input: CreateStudyQuestionInput) {
+    async create(input: CreateStudyQuestionInput, id = createId()) {
       const prompt = input.prompt.trim();
       const choices = input.options.map((option) => option.trim());
       const explanation = input.explanation?.trim() ?? '';
@@ -47,7 +47,7 @@ export function createQuestionService(
       if (!Number.isInteger(input.correctOptionIndex) || input.correctOptionIndex < 0 || input.correctOptionIndex >= choices.length) throw new Error('Marque qual alternativa está correta.');
       if (explanation.length > 2000) throw new Error('A explicação aceita até 2.000 caracteres.');
       const question: StudyQuestion = {
-        id: createId(),
+        id,
         disciplineId: input.disciplineId,
         ...(input.topicId ? { topicId: input.topicId } : {}),
         prompt,
@@ -56,6 +56,7 @@ export function createQuestionService(
         ...(explanation ? { explanation } : {}),
         difficulty: input.difficulty,
         createdAt: now().toISOString(),
+        ...(input.sourceExcerpt ? { sourceExcerpt: input.sourceExcerpt } : {}),
         ...(input.sourceFileId ? { sourceFileId: input.sourceFileId } : {}),
         ...(input.sourceFileName ? { sourceFileName: input.sourceFileName } : {}),
         ...(input.subject ? { subject: input.subject } : {}),

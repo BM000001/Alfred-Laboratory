@@ -18,6 +18,7 @@ export interface StudyQuestion {
 }
 
 export interface CreateStudyQuestionInput {
+  sourceExcerpt?: string;
   disciplineId: string;
   topicId?: string;
   prompt: string;
