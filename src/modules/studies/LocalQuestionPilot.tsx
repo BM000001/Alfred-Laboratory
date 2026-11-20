@@ -3,15 +3,19 @@ import { fileRepository, studyGeneratedQuestionRepository, studyQuizAttemptRepos
 import { generateLocalStudyQuestions, localQuestionId, prepareLocalStudyQuestions, type LocalQuestionSource } from './localStudyQuestions';
 import { normalizeMaterial } from './materialReliability';
 import { OllamaStudyEnhancementProvider } from './ollamaStudyEnhancement';
+import { RemoteStudyEnhancementProvider } from './remoteStudyEnhancement';
 import { createQuestionService } from './questionService';
 import type { SuggestedQuestion } from './studyEnhancementProvider';
 import type { StudyTopic } from './types';
 
 const service = createQuestionService(studyGeneratedQuestionRepository, studyQuizAttemptRepository);
-const provider = new OllamaStudyEnhancementProvider();
+const localProvider = new OllamaStudyEnhancementProvider();
+const remoteProvider = new RemoteStudyEnhancementProvider();
 
-export function LocalQuestionPilot({ topic, onSaved }: { topic: StudyTopic; onSaved: () => Promise<void> }) {
+export function LocalQuestionPilot({ topic, onSaved, remote = false }: { topic: StudyTopic; onSaved: () => Promise<void>; remote?: boolean }) {
   const [input, setInput] = useState<LocalQuestionSource>();
+  const [preview, setPreview] = useState<LocalQuestionSource>();
+  const [consent, setConsent] = useState(false);
   const [questions, setQuestions] = useState<SuggestedQuestion[]>([]);
   const [busy, setBusy] = useState<'generate' | 'save'>();
   const [status, setStatus] = useState('');
@@ -20,19 +24,43 @@ export function LocalQuestionPilot({ topic, onSaved }: { topic: StudyTopic; onSa
 
   useEffect(() => () => active.current?.abort(), []);
 
+  async function showPreview() {
+    if (!topic.sourceFileId || saving.current || active.current) return;
+    setConsent(false);
+    setPreview(undefined);
+    setQuestions([]);
+    setStatus('');
+    try {
+      const file = await fileRepository.getById(topic.sourceFileId);
+      if (!file) throw new Error('O material de origem foi removido.');
+      setPreview(prepareLocalStudyQuestions(file, topic));
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Não foi possível abrir o material.');
+    }
+  }
+
   async function generate() {
-    if (active.current || saving.current || !topic.sourceFileId) return;
+    if (active.current || saving.current || !topic.sourceFileId || (remote && (!consent || !preview))) return;
     const controller = new AbortController();
     active.current = controller;
     setBusy('generate');
-    setStatus('Gerando questões no Ollama local…');
+    setStatus(remote ? 'Gerando questões na Cloudflare. A resposta pode demorar…' : 'Gerando questões no Ollama local…');
     setQuestions([]);
     try {
       const file = await fileRepository.getById(topic.sourceFileId);
       if (!file) throw new Error('O material de origem foi removido.');
       const prepared = prepareLocalStudyQuestions(file, topic);
+      if (remote) {
+        setConsent(false);
+        if (JSON.stringify(prepared.request.chunks) !== JSON.stringify(preview?.request.chunks)) {
+          setPreview(prepared);
+          throw new Error('Os trechos mudaram. Revise e autorize o envio novamente.');
+        }
+        prepared.request.consent = { externalProcessing: true, externalAi: true };
+      }
       const existing = (await service.list()).filter(question => question.topicId === topic.id);
-      const result = await generateLocalStudyQuestions(provider, prepared, existing.map(question => question.prompt), controller.signal);
+      const result = await generateLocalStudyQuestions(remote ? remoteProvider : localProvider, prepared,
+        existing.map(question => question.prompt), controller.signal, remote ? 'remote' : 'local');
       setInput(prepared);
       setQuestions(result.questions);
       setStatus(result.generated
@@ -86,9 +114,19 @@ export function LocalQuestionPilot({ topic, onSaved }: { topic: StudyTopic; onSa
     }
   }
 
-  return <section aria-label="Exercícios com IA local">
+  return <section aria-label={remote ? 'Exercícios com IA remota' : 'Exercícios com IA local'}>
+    {remote ? <>
+      <button className="text-action" type="button" onClick={() => void showPreview()} disabled={Boolean(busy)}>Visualizar trechos para IA</button>
+      {preview && <>
+        <p>Somente os trechos abaixo serão enviados à Cloudflare. Use material sintético nesta prévia.</p>
+        {preview.request.chunks.map(chunk => <blockquote key={chunk.chunkId}>{chunk.text}</blockquote>)}
+        <label><input type="checkbox" checked={consent} disabled={Boolean(busy)} onChange={event => setConsent(event.target.checked)} /> Autorizo o envio destes trechos e o processamento por IA.</label>
+        <button className="text-action" type="button" onClick={() => void generate()} disabled={!consent || Boolean(busy)}>Gerar exercícios com IA remota</button>
+      </>}
+    </> : <>
     <p>O Ollama recebe neste computador trechos do material vinculado a esta unidade. Use material sintético no piloto.</p>
     <button className="text-action" type="button" onClick={() => void generate()} disabled={Boolean(busy)}>Gerar e revisar questões no Ollama</button>
+    </>}
     {busy === 'generate' && <button className="text-action" type="button" onClick={() => active.current?.abort()}>Cancelar geração</button>}
     {status && <p role="status">{status}</p>}
     {questions.map(question => {

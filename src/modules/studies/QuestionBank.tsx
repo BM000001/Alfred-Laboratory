@@ -12,8 +12,11 @@ const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
 export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; onChanged?: () => void }) {
-  const pilotTopic = import.meta.env.DEV && import.meta.env.VITE_ALFRED_LOCAL_OLLAMA === '1' &&
-    window.location.origin === 'http://127.0.0.1:5173'
+  const remotePilot = import.meta.env.MODE === 'studies-preview' && window.location.protocol === 'https:' &&
+    import.meta.env.VITE_ALFRED_STUDIES_PREVIEW_ORIGIN === window.location.origin;
+  const localPilot = import.meta.env.DEV && import.meta.env.VITE_ALFRED_LOCAL_OLLAMA === '1' &&
+    window.location.origin === 'http://127.0.0.1:5173';
+  const pilotTopic = localPilot || remotePilot
     ? topics.find(topic => topic.id === unitId && topic.sourceFileId)
     : undefined;
   const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]);
@@ -298,7 +301,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
     </article>}
 
     {phase === 'idle' && <>
-      {pilotTopic && <LocalQuestionPilot key={pilotTopic.id + ':' + pilotTopic.sourceFileId} topic={pilotTopic}
+      {pilotTopic && <LocalQuestionPilot key={pilotTopic.id + ':' + pilotTopic.sourceFileId} topic={pilotTopic} remote={remotePilot}
         onSaved={async () => { await refresh(); onChanged?.(); }} />}
       <form className="study-question-form" onSubmit={createQuestion}>
         <label htmlFor="study-question-prompt">Enunciado da questão</label>

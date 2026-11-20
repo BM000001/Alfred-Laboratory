@@ -8,13 +8,13 @@ import type { StudyTopic } from './types';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-it('revisa antes de salvar, reabre o banco, corrige e mantém o histórico', async () => {
+it.each([false, true])('revisa, corrige e mantém histórico (provedor remoto=%s)', async remote => {
   vi.stubGlobal('crypto', {
     randomUUID: crypto.randomUUID.bind(crypto),
-    subtle: { digest: async () => new Uint8Array(32).buffer },
+    subtle: { digest: async (_algorithm: string, bytes: Uint8Array) => bytes.slice(0, 32).buffer },
   });
   const text = 'A clorofila absorve luz que fornece energia para a fotossíntese.';
-  const topic: StudyTopic = { id: 'pilot-topic', disciplineId: 'pilot-discipline', title: 'Fotossíntese', sourceFileId: 'pilot-source', status: 'pending', createdAt: '' };
+  const topic: StudyTopic = { id: 'pilot-topic-' + remote, disciplineId: 'pilot-discipline-' + remote, title: 'Fotossíntese', sourceFileId: 'pilot-source', status: 'pending', createdAt: '' };
   await studyTopicRepository.save(topic);
   await fileRepository.save({
     id: 'pilot-source', disciplineId: topic.disciplineId, name: 'fonte.txt', type: 'text/plain',
@@ -29,9 +29,27 @@ it('revisa antes de salvar, reabre o banco, corrige e mantém o histórico', asy
       evidence: [{ chunkId: 'trecho-1', excerpt: text }],
     }],
   }));
-  const pilot = render(<LocalQuestionPilot topic={topic} onSaved={async () => {}} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Gerar e revisar questões no Ollama' }));
-  expect(await screen.findByText(text)).toBeInTheDocument();
+  const fetcher = vi.fn(async () => Response.json({ questions: [{
+    question: 'Qual pigmento absorve a luz?', answer: 'Clorofila', distractors: ['Hemoglobina', 'Melanina'],
+    explanation: 'O trecho identifica a clorofila.', chunkId: 'trecho-1',
+  }] }));
+  vi.stubGlobal('fetch', fetcher);
+  const pilot = render(<LocalQuestionPilot topic={topic} remote={remote} onSaved={async () => {}} />);
+  if (remote) {
+    fireEvent.click(screen.getByRole('button', { name: 'Visualizar trechos para IA' }));
+    expect(await screen.findByText(text)).toBeInTheDocument();
+    const generate = screen.getByRole('button', { name: 'Gerar exercícios com IA remota' });
+    expect(generate).toBeDisabled();
+    expect(fetcher).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('checkbox', { name: /autorizo/i }));
+    fireEvent.click(generate);
+    expect(await screen.findByRole('button', { name: 'Aprovar e salvar' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /autorizo/i })).not.toBeChecked();
+    expect(fetcher).toHaveBeenCalledOnce();
+  } else {
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar e revisar questões no Ollama' }));
+  }
+  expect(await screen.findByRole('button', { name: 'Aprovar e salvar' })).toBeInTheDocument();
   expect((await studyQuestionRepository.getAll()).filter(question => question.topicId === topic.id)).toHaveLength(0);
   fireEvent.click(screen.getByRole('button', { name: 'Aprovar e salvar' }));
   expect(await screen.findByText('Questão aprovada e salva no banco.')).toBeInTheDocument();

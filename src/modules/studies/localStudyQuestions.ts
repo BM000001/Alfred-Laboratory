@@ -32,7 +32,7 @@ export function prepareLocalStudyQuestions(file: StoredFile, topic: StudyTopic) 
 export type LocalQuestionSource = ReturnType<typeof prepareLocalStudyQuestions>;
 
 export async function generateLocalStudyQuestions(
-  provider: StudyEnhancementProvider, input: LocalQuestionSource, existingPrompts: readonly string[], signal?: AbortSignal,
+  provider: StudyEnhancementProvider, input: LocalQuestionSource, existingPrompts: readonly string[], signal?: AbortSignal, execution: 'local' | 'remote' = 'local',
 ) {
   const { request, source, topic } = input;
   const result = await provider.enhance(request, signal);
@@ -41,7 +41,7 @@ export async function generateLocalStudyQuestions(
   const questions: SuggestedQuestion[] = [];
   for (const question of result.questions) {
     const check = validateStudyEnhancement(request, { ...result, questions: [question] },
-      { execution: 'local', source, topic, existingPrompts: prompts }, signal);
+      { execution: execution === 'local' ? 'local' : undefined, source, topic, existingPrompts: prompts }, signal);
     if (check.status !== 'review' || !question.prompt.trim().endsWith('?')) continue;
     const normalizedPrompt = normalizeMaterial(question.prompt).replace(/[.!?]+$/, '');
     if (request.chunks.some(chunk => normalizeMaterial(chunk.text).replace(/[.!?]+$/, '') === normalizedPrompt)) continue;
