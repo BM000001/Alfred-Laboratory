@@ -4,6 +4,7 @@ import type { StudyTopic } from './types';
 import type { StudyQuestion, StudyQuizAnswer, StudyQuizAttempt, StudyQuestionDifficulty } from './questionTypes';
 import { createQuestionService, gradeStudyAnswer, getQuestionSnapshot, summarizeQuiz, selectQuizQuestions } from './questionService';
 
+import { isRemoteStudyPreview } from './isRemoteStudyPreview';
 import { LocalQuestionPilot } from './LocalQuestionPilot';
 import { clearQuizDraft, readQuizDraft, writeQuizDraft } from './quizDraft';
 
@@ -12,8 +13,7 @@ const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
 export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; onChanged?: () => void }) {
-  const remotePilot = import.meta.env.MODE === 'studies-preview' && window.location.protocol === 'https:' &&
-    import.meta.env.VITE_ALFRED_STUDIES_PREVIEW_ORIGIN === window.location.origin;
+  const remotePilot = isRemoteStudyPreview();
   const localPilot = import.meta.env.DEV && import.meta.env.VITE_ALFRED_LOCAL_OLLAMA === '1' &&
     window.location.origin === 'http://127.0.0.1:5173';
   const pilotTopic = localPilot || remotePilot

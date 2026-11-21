@@ -5,6 +5,8 @@ import { useEffect, useLayoutEffect, useMemo, useState, type FormEvent } from 'r
 import type { Discipline, StudyTopic } from './studies/types';
 import { StudyLearning } from './studies/StudyLearning';
 import { StudyFlashcards } from './studies/StudyFlashcards';
+import { LocalQuestionPilot } from './studies/LocalQuestionPilot';
+import { isRemoteStudyPreview } from './studies/isRemoteStudyPreview';
 import { QuestionBank } from './studies/QuestionBank';
 import { StudyMaterialImporter } from './studies/StudyMaterialImporter';
 import { StudyPerformance } from './studies/StudyPerformance';
@@ -21,6 +23,21 @@ const studyViews = [
 const practiceViews = [
   ['questions', 'Simulados'], ['cards', 'Revisar flashcards'], ['performance', 'Desempenho'],
 ] as const;
+
+function MaterialExercises({ topics, onSaved }: { topics: StudyTopic[]; onSaved: () => Promise<void> }) {
+  const [selected, setSelected] = useState('');
+  const materials = topics.filter(topic => topic.sourceFileId);
+  const material = materials.find(topic => topic.id === selected) ?? materials[0];
+  if (!material) return <p>Importe ou vincule um material a uma unidade para gerar exercícios com IA.</p>;
+  return <section>
+    <label>Material para exercícios
+      <select value={material.id} onChange={event => setSelected(event.target.value)}>
+        {materials.map(topic => <option key={topic.id} value={topic.id}>{topic.sourceFileName || topic.title}</option>)}
+      </select>
+    </label>
+    <LocalQuestionPilot key={JSON.stringify([material.id, material.sourceFileId])} topic={material} remote onSaved={onSaved} />
+  </section>;
+}
 
 export type StudyAction = { label: string; run: () => void };
 export type StudyStart = { disciplineId: string; unitId: string; view?: 'materiais' | 'aprender' | 'praticar' };
@@ -247,7 +264,9 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
             <div className="study-topic-actions"><button className="text-action" type="button" aria-label={`Materiais de ${topic.title}`} onClick={() => openUnit(topic.id, 'materiais')}>Materiais</button><button className="text-action" type="button" aria-label={`Praticar ${topic.title}`} onClick={() => openUnit(topic.id, 'praticar')}>Praticar</button><button className="text-action" type="button" onClick={() => editTopic(topic)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteTopic(topic)}>Excluir</button></div>
           </article>)}</div>}
           </>}
-          {studyView === 'materiais' && <><StudyMaterialImporter key={`import-${selectedDiscipline}-${unit?.id ?? ""}`} disciplineId={selectedDiscipline} unit={unit} onProcessed={refreshAfterMaterialImport} uploadOpen={showUpload} onCloseUpload={() => setShowUpload(false)} /><Files key={`files-${selectedDiscipline}-${studyRefreshVersion}`} disciplineId={selectedDiscipline} sourceFileId={unit ? unit.sourceFileId ?? null : undefined} allowUpload={false} /></>}
+          {studyView === 'materiais' && <>
+            {isRemoteStudyPreview() && <MaterialExercises topics={unit ? [unit] : disciplineTopics} onSaved={refreshAfterMaterialImport} />}
+            <StudyMaterialImporter key={`import-${selectedDiscipline}-${unit?.id ?? ""}`} disciplineId={selectedDiscipline} unit={unit} onProcessed={refreshAfterMaterialImport} uploadOpen={showUpload} onCloseUpload={() => setShowUpload(false)} /><Files key={`files-${selectedDiscipline}-${studyRefreshVersion}`} disciplineId={selectedDiscipline} sourceFileId={unit ? unit.sourceFileId ?? null : undefined} allowUpload={false} /></>}
           {studyView === 'notas' && <Notes key={selectedDiscipline} disciplineId={selectedDiscipline} revision={noteRevision} />}
           {showNote && <NoteEditor scope={{ disciplineId: selectedDiscipline }} onClose={() => setShowNote(false)} onSaved={() => {
             setShowNote(false); setNoteRevision((current) => current + 1);

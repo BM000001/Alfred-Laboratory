@@ -116,12 +116,12 @@ export function LocalQuestionPilot({ topic, onSaved, remote = false }: { topic: 
 
   return <section aria-label={remote ? 'Exercícios com IA remota' : 'Exercícios com IA local'}>
     {remote ? <>
-      <button className="text-action" type="button" onClick={() => void showPreview()} disabled={Boolean(busy)}>Visualizar trechos para IA</button>
+      <button className="text-action" type="button" onClick={() => void showPreview()} disabled={Boolean(busy)}>Gerar exercícios com IA</button>
       {preview && <>
         <p>Somente os trechos abaixo serão enviados à Cloudflare. Use material sintético nesta prévia.</p>
         {preview.request.chunks.map(chunk => <blockquote key={chunk.chunkId}>{chunk.text}</blockquote>)}
         <label><input type="checkbox" checked={consent} disabled={Boolean(busy)} onChange={event => setConsent(event.target.checked)} /> Autorizo o envio destes trechos e o processamento por IA.</label>
-        <button className="text-action" type="button" onClick={() => void generate()} disabled={!consent || Boolean(busy)}>Gerar exercícios com IA remota</button>
+        <button className="text-action" type="button" onClick={() => void generate()} disabled={!consent || Boolean(busy)}>Enviar trechos e gerar exercícios</button>
       </>}
     </> : <>
     <p>O Ollama recebe neste computador trechos do material vinculado a esta unidade. Use material sintético no piloto.</p>

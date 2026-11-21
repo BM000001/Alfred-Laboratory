@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import App from '../app/App';
 import { create } from '../app/testActions';
 import { disciplineRepository, fileRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../storage/repositories';
@@ -90,4 +90,31 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   fireEvent.click(await screen.findByText('Revisar respostas e explicações'));
   expect(await screen.findByText(`1. ${prompt}`)).toBeInTheDocument();
   expect(await screen.findByText(`Correta: ${question.options[question.correctOptionIndex]}`)).toBeInTheDocument();
+});
+
+
+it('abre os trechos do Markdown na aba Materiais da disciplina antes de pedir consentimento', async () => {
+  const preview = await import('./studies/isRemoteStudyPreview');
+  const gate = vi.spyOn(preview, 'isRemoteStudyPreview').mockReturnValue(true);
+  try {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Aprender' }));
+    await screen.findByRole('heading', { name: 'Disciplinas' });
+    create('Nova disciplina');
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Teste 2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
+    await screen.findByRole('heading', { name: 'Teste 2' });
+    fireEvent.click(screen.getByRole('button', { name: 'Materiais' }));
+    create('Adicionar material');
+    fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: {
+      files: [new File([definitions], 'teste.md', { type: 'text/markdown' })],
+    } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    expect(await within(await screen.findByLabelText('Material para exercícios')).findByRole('option', { name: 'teste.md' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar exercícios com IA' }));
+    expect(await screen.findByLabelText(/autorizo o envio/i)).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Enviar trechos e gerar exercícios' })).toBeDisabled();
+  } finally {
+    gate.mockRestore();
+  }
 });

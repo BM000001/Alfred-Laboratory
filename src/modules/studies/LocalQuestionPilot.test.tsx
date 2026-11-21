@@ -36,9 +36,9 @@ it.each([false, true])('revisa, corrige e mantém histórico (provedor remoto=%s
   vi.stubGlobal('fetch', fetcher);
   const pilot = render(<LocalQuestionPilot topic={topic} remote={remote} onSaved={async () => {}} />);
   if (remote) {
-    fireEvent.click(screen.getByRole('button', { name: 'Visualizar trechos para IA' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar exercícios com IA' }));
     expect(await screen.findByText(text)).toBeInTheDocument();
-    const generate = screen.getByRole('button', { name: 'Gerar exercícios com IA remota' });
+    const generate = screen.getByRole('button', { name: 'Enviar trechos e gerar exercícios' });
     expect(generate).toBeDisabled();
     expect(fetcher).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('checkbox', { name: /autorizo/i }));
@@ -46,6 +46,7 @@ it.each([false, true])('revisa, corrige e mantém histórico (provedor remoto=%s
     expect(await screen.findByRole('button', { name: 'Aprovar e salvar' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /autorizo/i })).not.toBeChecked();
     expect(fetcher).toHaveBeenCalledOnce();
+    expect(fetcher).toHaveBeenCalledWith('/api/studies/questions', expect.objectContaining({ method: 'POST', credentials: 'same-origin' }));
   } else {
     fireEvent.click(screen.getByRole('button', { name: 'Gerar e revisar questões no Ollama' }));
   }
