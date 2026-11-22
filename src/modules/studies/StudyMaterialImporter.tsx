@@ -93,6 +93,41 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     }
   }
 
+  async function retryAIQuestions(file: StoredFile, topic?: StudyTopic) {
+    if (saving || !aiConsent || !aiAvailable) return;
+    setSaving(true);
+    setError('');
+    setAINotice('Conectando à IA para preparar questões com base no material salvo…');
+    const controller = new AbortController();
+    processingController.current = controller;
+    try {
+      const target = topic ?? (await study.listTopics()).find(item =>
+        item.disciplineId === disciplineId && item.sourceFileId === file.id);
+      const source = file.processing?.raw?.text;
+      if (!target || !source) throw new Error('Não foi possível recuperar o texto e a unidade de origem.');
+      const proposals = await requestAIStudyQuestions({
+        configuredOrigin: aiOrigin, currentOrigin: window.location.origin,
+        sourceText: source, consent: aiConsent, signal: controller.signal,
+      });
+      const saved = await saveValidatedAIStudyQuestions({
+        fileId: file.id, fileName: file.name, disciplineId, topicId: target.id,
+        sourceText: source, questions: proposals, signal: controller.signal,
+      });
+      setAINotice(saved
+        ? saved + ' nova(s) questão(ões) produzida(s) por IA, validada(s) e salva(s).'
+        : 'A IA não retornou questões novas com resposta verificável no material.');
+      await onProcessed?.();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Falha ao criar questões por IA.');
+      setAINotice('');
+    } finally {
+      processingController.current = null;
+      setSaving(false);
+      try { setPending(await loadPending(disciplineId, unit?.id)); }
+      catch { setError('Não foi possível atualizar a lista de materiais pendentes.'); }
+    }
+  }
+
   function stageFiles(event: ChangeEvent<HTMLInputElement>) {
     const incoming = Array.from(event.target.files ?? []);
     if (unit && incoming.length > 1) {
