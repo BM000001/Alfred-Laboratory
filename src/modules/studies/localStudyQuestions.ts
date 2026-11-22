@@ -4,15 +4,20 @@ import type { StudyEnhancementProvider, StudyEnhancementRequest, SuggestedQuesti
 import { validateStudyEnhancement } from './studyEnhancementValidation';
 import type { StudyTopic } from './types';
 
-export function prepareLocalStudyQuestions(file: StoredFile, topic: StudyTopic) {
+export function prepareLocalStudyQuestions(file: StoredFile, topic: StudyTopic, focus = '', batch = 0) {
   const extraction = file.processing?.raw ?? file.extraction;
   const source = { id: file.id, disciplineId: file.disciplineId, text: extraction?.text ?? '', pages: extraction?.pages };
-  const chunks = (source.pages?.length ? source.pages : [{ text: source.text, pageNumber: undefined }])
-    .flatMap(({ text, pageNumber }) => text.split(/\n\s*\n/).map(part => ({
-      text: part.trim().slice(0, 1200).trim(), pageNumber,
-    })))
-    .filter(chunk => chunk.text.length >= 40)
-    .slice(0, 3)
+  const candidates = (source.pages?.length ? source.pages : [{ text: source.text, pageNumber: undefined }])
+    .flatMap(({ text, pageNumber }) => {
+      let heading = '';
+      return text.split(/\n(?=#{1,6}\s)|\n\s*\n/).flatMap(paragraph => {
+        const title = paragraph.match(/^#{1,6}\s+([^\n]+)/);
+        if (title) heading = title[1];
+        if (focus.trim() && !normalizeMaterial(heading + ' ' + paragraph).includes(normalizeMaterial(focus.trim()))) return [];
+        return (paragraph.match(/[\s\S]{1,1200}/g) ?? []).map(part => ({text: part.trim(), pageNumber}));
+      });
+    }).filter(chunk => chunk.text.length >= 40 && chunk.text.length <= 1200);
+  const chunks = candidates.slice(batch * 3, batch * 3 + 3)
     .map((chunk, index) => ({ ...chunk, chunkId: 'trecho-' + (index + 1) }));
   if (file.disciplineId !== topic.disciplineId || topic.sourceFileId !== file.id) {
     throw new Error('O material não pertence a esta unidade.');
@@ -26,7 +31,7 @@ export function prepareLocalStudyQuestions(file: StoredFile, topic: StudyTopic) 
     topicId: topic.id, profile: file.processing?.profile ?? 'printed', task: 'questions', chunks,
     consent: { externalProcessing: false, externalAi: false, localAi: true },
   };
-  return { request, source, topic, fileName: file.name };
+  return { request, source, topic, focus, batch, batches: Math.ceil(candidates.length / 3), fileName: file.name };
 }
 
 export type LocalQuestionSource = ReturnType<typeof prepareLocalStudyQuestions>;

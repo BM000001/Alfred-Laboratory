@@ -14,3 +14,9 @@
 @media(max-width:420px){.study-island-panel{top:auto!important;bottom:0;inset-inline:0}.study-terrain:has(.study-island-panel){margin-bottom:0}.study-landmark small{max-height:2.5em;overflow:auto}}
 .study-landmark { width:max-content; }
 .study-landmark span { text-wrap:balance; }
+.studies-module { min-width:0; overflow-wrap:anywhere; }
+.studies-module :where(.study-level,.study-content,article,section,form,fieldset,div,label,select,input,textarea) { min-width:0; max-width:100%; }
+.studies-module :where(pre,blockquote) { white-space:pre-wrap; overflow-wrap:anywhere; margin-inline:0; }
+.studies-module :where(img,video) { max-width:100%; }
+.studies-module table { display:block; max-width:100%; overflow-x:auto; }
+.studies-module .study-level { display:block; }

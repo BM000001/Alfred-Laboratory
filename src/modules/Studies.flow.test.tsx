@@ -104,26 +104,30 @@ it('abre os trechos do Markdown na aba Materiais da disciplina antes de pedir co
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Teste 2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
     await screen.findByRole('heading', { name: 'Teste 2' });
-    for (const [building, activity, tab] of [
-      ['Campo de Alvos · Praticar', 'Responder a um simulado', 'Simulados'],
-      ['Baú de Flashcards · Memorizar', 'Revisar os flashcards', 'Revisar flashcards'],
-      ['Castelo · Dominar', 'Consultar o desempenho e revisar erros', 'Desempenho'],
-      ['Laboratório · Aplicar', 'Abrir o estudo guiado da disciplina', 'Revisar'],
-      ['Biblioteca · Aprender', 'Abrir os materiais da disciplina', 'Materiais'],
+    expect(screen.queryByRole('complementary', {name:'Disciplinas'})).not.toBeInTheDocument();
+    create('Nova unidade');
+    fireEvent.change(screen.getByLabelText('Nome da unidade'), {target:{value:'Botânica'}});
+    fireEvent.click(screen.getByRole('button',{name:'Salvar unidade'}));
+    fireEvent.click(await screen.findByRole('button',{name:'Botânica'}));
+    for (const [building, heading] of [
+      ['Campo de Alvos · Praticar','Questões e simulados'],
+      ['Baú de Flashcards · Memorizar','Flashcards'],
+      ['Castelo · Dominar','Simulado final'],
+      ['Laboratório · Aplicar','Aplicação com fonte'],
     ]) {
-      const map = screen.getByRole('navigation', { name: 'Ilha de aprendizagem' });
-      fireEvent.click(within(map).getByText(building));
-      fireEvent.click(within(map).getByRole('button', { name: activity }));
-      const destination = screen.getByRole('button', { name: tab });
-      expect(destination.getAttribute('aria-pressed') ?? destination.getAttribute('aria-current')).toMatch(/^(true|page)$/);
-      if (tab !== 'Materiais') fireEvent.click(screen.getByRole('button', { name: 'Unidades' }));
+      fireEvent.click(within(screen.getByRole('navigation',{name:'Ilha de aprendizagem'})).getByText(building));
+      expect(await screen.findByRole('heading',{name:heading})).toBeInTheDocument();
+      expect(screen.queryByRole('navigation',{name:'Ilha de aprendizagem'})).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button',{name:'Voltar à ilha'}));
     }
+    fireEvent.click(within(screen.getByRole('navigation',{name:'Ilha de aprendizagem'})).getByText('Biblioteca · Aprender'));
     create('Adicionar material');
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: {
       files: [new File([definitions], 'teste.md', { type: 'text/markdown' })],
     } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await within(await screen.findByLabelText('Material para exercícios')).findByRole('option', { name: 'teste.md' })).toBeInTheDocument();
+    await screen.findByRole('button', {name:'Ler texto de teste.md'});
+    expect(await screen.findByLabelText('Material para exercícios')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Gerar exercícios com IA' }));
     expect(await screen.findByLabelText(/autorizo o envio/i)).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'Enviar trechos e gerar exercícios' })).toBeDisabled();

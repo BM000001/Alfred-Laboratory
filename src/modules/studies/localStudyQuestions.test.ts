@@ -104,3 +104,12 @@ describe('geração local de questões', () => {
     await expect(provider.enhance(input.request)).rejects.toThrow(/indisponível/);
   });
 });
+
+it('seleciona a seção solicitada e preserva a fonte literal nos lotes seguintes', () => {
+  const paragraphs = Array.from({length:7},(_,i)=>'Observação '+i+' sobre a absorção da água pela raiz em solo úmido.');
+  const file = material('# Geral\n\n' + text + '\n\n## Raízes\n\n' + paragraphs.join('\n\n'));
+  const batch = prepareLocalStudyQuestions(file,topic,'Raízes',1);
+  expect(batch.batches).toBe(3);
+  expect(batch.request.chunks.map(c=>c.text)).toEqual(paragraphs.slice(3,6));
+  expect(() => prepareLocalStudyQuestions(file,topic,'Vulcões')).toThrow(/insuficiente/i);
+});

@@ -46,9 +46,20 @@ function MaterialExercises({ topics, onSaved }: { topics: StudyTopic[]; onSaved:
 export type StudyAction = { label: string; run: () => void };
 export type StudyStart = { disciplineId: string; unitId: string; view?: 'materiais' | 'aprender' | 'praticar' };
 export function Studies({ initialUnit, onActions, showMascot = true }: { showMascot?: boolean; initialUnit?: StudyStart; onActions?: (actions: StudyAction[]) => void } = {}) {
-  const [studyView, setStudyView] = useState(initialUnit?.view ?? (initialUnit ? 'materiais' : 'conteudos'));
-  const [activity, setActivity] = useState<IslandActivity>('practice');
-  const [practiceView, setPracticeView] = useState<typeof practiceViews[number][0]>('questions');
+  const hierarchy = isRemoteStudyPreview();
+  const [resume] = useState(() => {
+    if (!hierarchy || initialUnit) return;
+    try {
+      const state = JSON.parse(sessionStorage.getItem('alfred:studies:route:v1') ?? 'null');
+      if (state && typeof state.discipline === 'string' && typeof state.unit === 'string' &&
+          studyViews.some(([key]) => key === state.view) && practiceViews.some(([key]) => key === state.practice) &&
+          ['practice','memory','castle','lab'].includes(state.activity)) return state as {
+            discipline:string; unit:string; view:typeof studyViews[number][0]; practice:typeof practiceViews[number][0]; activity:IslandActivity };
+    } catch { /* Storage can be unavailable in private browsing. */ }
+  });
+  const [studyView, setStudyView] = useState(initialUnit?.view ?? resume?.view ?? (initialUnit ? 'materiais' : 'conteudos'));
+  const [activity, setActivity] = useState<IslandActivity>(resume?.activity ?? 'practice');
+  const [practiceView, setPracticeView] = useState<typeof practiceViews[number][0]>(resume?.practice ?? 'questions');
   const [showDisciplineForm, setShowDisciplineForm] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showNote, setShowNote] = useState(false);
@@ -65,8 +76,8 @@ export function Studies({ initialUnit, onActions, showMascot = true }: { showMas
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [editingDisciplineId, setEditingDisciplineId] = useState<string | null>(null);
   const [selectedDiscipline, setSelectedDiscipline] = useState('');
-  const [unitId, setUnitId] = useState(initialUnit?.unitId ?? '');
-  const initialDisciplineId = initialUnit?.disciplineId;
+  const [unitId, setUnitId] = useState(initialUnit?.unitId ?? resume?.unit ?? '');
+  const initialDisciplineId = initialUnit?.disciplineId ?? resume?.discipline;
   const [practiceVersion, setPracticeVersion] = useState(0);
   const [cardVersion, setCardVersion] = useState(0);
   const [studyRefreshVersion, setStudyRefreshVersion] = useState(0);
@@ -191,11 +202,16 @@ export function Studies({ initialUnit, onActions, showMascot = true }: { showMas
     catch { setError('Não foi possível excluir a disciplina.'); }
   }
 
+  useEffect(() => {
+    if (!hierarchy || loading) return;
+    try { sessionStorage.setItem('alfred:studies:route:v1', JSON.stringify({ discipline:selectedDiscipline,unit:unit?.id ?? '',view:studyView,practice:practiceView,activity })); }
+    catch { /* Navigation remains available when storage is full. */ }
+  }, [hierarchy,loading,selectedDiscipline,unit?.id,studyView,practiceView,activity]);
   if (loading) return <p className="module-feedback">Carregando seus estudos...</p>;
 
   return <StudyMascotVisible.Provider value={showMascot}><section className="studies-module">
     {error && <p className="module-error" role="alert">{error}</p>}
-    <section className="study-index-heading" aria-labelledby="disciplines-title">
+    {(!hierarchy || !discipline) && <section className="study-index-heading" aria-labelledby="disciplines-title">
       <div className="section-heading">
         {!discipline && <StudyMascot mood="welcome" variant="full" />}
         <h2 id="disciplines-title">Disciplinas</h2>
@@ -207,7 +223,7 @@ export function Studies({ initialUnit, onActions, showMascot = true }: { showMas
         <progress aria-label="Progresso geral dos estudos" value={progress.completed} max={progress.total} />
         <span>{progress.completed} de {progress.total} unidades concluídas</span>
       </div>}
-    </section>
+    </section>}
 
     {showDisciplineForm && <EditDialog title={editingDisciplineId ? 'Editar disciplina' : 'Nova disciplina'} onClose={cancelDisciplineEdit}>
       <form className="dialog-form" onSubmit={createDiscipline} data-saving={saving || undefined}>
@@ -233,8 +249,8 @@ export function Studies({ initialUnit, onActions, showMascot = true }: { showMas
     </EditDialog>}
 
     {disciplines.length === 0 ? <div className="empty-state"><strong>Seu espaço de estudos começa aqui.</strong><p>Use + para criar a primeira disciplina.</p></div> : <>
-      <div className={discipline ? "study-layout" : "study-library"}>
-        <aside className="discipline-list" aria-label="Disciplinas">
+      <div className={discipline ? (hierarchy ? "study-level" : "study-layout") : "study-library"}>
+        {(!hierarchy || !discipline) && <aside className="discipline-list" aria-label="Disciplinas">
           {disciplines.map((discipline) => {
             const summary = summarizeStudyProgress(topics.filter((topic) => topic.disciplineId === discipline.id));
             return <button type="button" key={discipline.id} className={selectedDiscipline === discipline.id ? 'discipline-option selected' : 'discipline-option'} aria-pressed={selectedDiscipline === discipline.id} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) { setSelectedDiscipline(discipline.id); setUnitId(''); setStudyView('conteudos'); setPracticeView('questions'); setShowTopicForm(false); setEditingTopicId(null); setTopicTitle(''); setTopicNotes(''); } }}>
@@ -243,19 +259,24 @@ export function Studies({ initialUnit, onActions, showMascot = true }: { showMas
               {summary.total > 0 && <progress aria-hidden="true" value={summary.completed} max={summary.total} />}
             </button>;
           })}
-        </aside>
+        </aside>}
         {discipline && <div className="study-content">
+          {hierarchy && <nav aria-label="Caminho de estudos"><button className="text-action" onClick={() => {
+            if (studyView !== 'conteudos') openUnit(unitId, 'conteudos');
+            else if (unit) openUnit('', 'conteudos');
+            else if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable:true }))) setSelectedDiscipline('');
+          }}>{studyView !== 'conteudos' && unit ? 'Voltar à ilha' : unit || studyView !== 'conteudos' ? 'Voltar às unidades' : 'Voltar às disciplinas'}</button></nav>}
           <header className="study-content-heading">
-            <div><h2>{discipline?.name}</h2>{discipline?.description && <p>{discipline.description}</p>}</div>
-            <details className="interface-disclosure study-management"><summary>Gerenciar disciplina</summary>
+            <div><h2>{hierarchy && unit ? unit.title : discipline?.name}</h2>{hierarchy && unit && <small>{discipline.name}</small>}{(!hierarchy || !unit) && discipline?.description && <p>{discipline.description}</p>}</div>
+            {(!hierarchy || !unit) && <details className="interface-disclosure study-management"><summary>Gerenciar disciplina</summary>
               <button className="text-action" type="button" onClick={() => { if (discipline) editDiscipline(discipline); }}>Editar disciplina</button>
               <button className="danger-action" type="button" onClick={() => { if (discipline) void deleteDiscipline(discipline); }}>Excluir disciplina</button>
-            </details>
+            </details>}
           </header>
-          <nav className="view-switcher" aria-label="Conteúdo da disciplina">{studyViews.map(([key, label]) =>
+          {!hierarchy && <nav className="view-switcher" aria-label="Conteúdo da disciplina">{studyViews.map(([key, label]) =>
             <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => openUnit(unitId, key)}>{label}</button>
-          )}</nav>
-          {studyView !== 'notas' && <div className="study-filter">
+          )}</nav>}
+          {!hierarchy && studyView !== 'notas' && <div className="study-filter">
             <label className="field-label" htmlFor="study-unit">Unidade de estudo</label>
             <select id="study-unit" value={unit?.id ?? ''} onChange={(event) => openUnit(event.target.value)}>
               <option value="">Toda a disciplina</option>
@@ -263,7 +284,7 @@ export function Studies({ initialUnit, onActions, showMascot = true }: { showMas
             </select>
           </div>}
           {studyView === 'conteudos' && <>
-          <StudyIsland key={JSON.stringify([selectedDiscipline, unit?.id])} disciplineId={selectedDiscipline} unit={unit} topics={disciplineTopics}
+          {(!hierarchy || unit) && <StudyIsland direct={hierarchy} key={JSON.stringify([selectedDiscipline, unit?.id])} disciplineId={selectedDiscipline} unit={unit} topics={disciplineTopics}
             onOpen={destination => {
               if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
               setActivity('practice');
@@ -273,15 +294,19 @@ export function Studies({ initialUnit, onActions, showMascot = true }: { showMas
             onChallenge={value => {
               if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
               setActivity(value); setStudyView('praticar'); setPracticeView('questions');
-            }} />
+            }} />}
+          {(!hierarchy || !unit) && <>
           <h3>Unidades de estudo</h3>
           {disciplineTopics.length > 0 && <div className="study-filter"><label className="field-label" htmlFor="topic-filter">Exibir</label><select id="topic-filter" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Todos</option><option value="pending">Pendentes</option><option value="completed">Concluídos</option></select></div>}
           {visibleTopics.length === 0 ? <div className="empty-state"><strong>Nenhum conteúdo nesta lista.</strong><p>Use + para adicionar uma unidade ou altere o filtro.</p></div> : <div className="study-topic-list">{visibleTopics.map((topic) => <article className={topic.status === 'completed' ? 'study-topic completed' : 'study-topic'} key={topic.id}>
             <input type="checkbox" aria-label={`Marcar ${topic.title} como concluído`} checked={topic.status === 'completed'} onChange={() => void toggleTopic(topic)} />
-            <div><strong>{topic.title}</strong>{topic.notes && <p>{topic.notes}</p>}</div>
-            <div className="study-topic-actions"><button className="text-action" type="button" aria-label={`Materiais de ${topic.title}`} onClick={() => openUnit(topic.id, 'materiais')}>Materiais</button><button className="text-action" type="button" aria-label={`Praticar ${topic.title}`} onClick={() => openUnit(topic.id, 'praticar')}>Praticar</button><button className="text-action" type="button" onClick={() => editTopic(topic)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteTopic(topic)}>Excluir</button></div>
+            <div>{hierarchy ? <button className="text-action" onClick={() => openUnit(topic.id, 'conteudos')}>{topic.title}</button> : <strong>{topic.title}</strong>}{topic.notes && <p>{topic.notes}</p>}</div>
+            <div className="study-topic-actions">{!hierarchy && <><button className="text-action" type="button" aria-label={`Materiais de ${topic.title}`} onClick={() => openUnit(topic.id, 'materiais')}>Materiais</button><button className="text-action" type="button" aria-label={`Praticar ${topic.title}`} onClick={() => openUnit(topic.id, 'praticar')}>Praticar</button></>}<button className="text-action" type="button" onClick={() => editTopic(topic)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteTopic(topic)}>Excluir</button></div>
           </article>)}</div>}
           </>}
+          </>}
+          {hierarchy && studyView === 'materiais' && <button className="text-action" onClick={() => openUnit(unitId, 'aprender')}>Abrir aulas e explicações</button>}
+          {hierarchy && studyView === 'conteudos' && !unit && <button className="text-action" onClick={() => openUnit('', 'notas')}>Anotações da disciplina</button>}
           {studyView === 'materiais' && <>
             {isRemoteStudyPreview() && <MaterialExercises topics={unit ? [unit] : disciplineTopics} onSaved={refreshAfterMaterialImport} />}
             <StudyMaterialImporter key={`import-${selectedDiscipline}-${unit?.id ?? ""}`} disciplineId={selectedDiscipline} unit={unit} onProcessed={refreshAfterMaterialImport} uploadOpen={showUpload} onCloseUpload={() => setShowUpload(false)} /><Files key={`files-${selectedDiscipline}-${studyRefreshVersion}`} disciplineId={selectedDiscipline} sourceFileId={unit ? unit.sourceFileId ?? null : undefined} allowUpload={false} /></>}
@@ -292,10 +317,12 @@ export function Studies({ initialUnit, onActions, showMascot = true }: { showMas
           {studyView === 'aprender' && <StudyLearning disciplineId={selectedDiscipline} topicId={unit?.id}
             topics={unit ? [unit] : disciplineTopics} refreshToken={studyRefreshVersion + practiceVersion + cardVersion} />}
           {studyView === 'praticar' && <div className="study-practice" key={`${selectedDiscipline}:${unit?.id ?? ''}`}>
-            <div className="view-switcher practice-switcher" role="group" aria-label="Atividades e resultados">
+            {hierarchy && practiceView === 'cards' && <button className="text-action" onClick={() => { setActivity('memory'); setPracticeView('questions'); }}>Desafio de três cartões</button>}
+            {hierarchy && activity === 'castle' && practiceView === 'questions' && <button className="text-action" onClick={() => setPracticeView('performance')}>Desempenho e revisão de erros</button>}
+            {!hierarchy && <div className="view-switcher practice-switcher" role="group" aria-label="Atividades e resultados">
               {practiceViews.map(([key, label]) => <button type="button" key={key} aria-pressed={practiceView === key}
                 onClick={() => { setActivity('practice'); setPracticeView(key); }}>{label}</button>)}
-            </div>
+            </div>}
             <div hidden={practiceView !== 'questions'}>
               <QuestionBank activity={activity} key={JSON.stringify([selectedDiscipline, unit?.id, activity])} disciplineId={selectedDiscipline} topics={disciplineTopics} unitId={unit?.id} refreshToken={studyRefreshVersion}
                 onChanged={() => setPracticeVersion((version) => version + 1)} />

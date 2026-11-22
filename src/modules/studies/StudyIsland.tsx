@@ -15,8 +15,8 @@ const destinations = [
 ] as const;
 export type Destination = typeof destinations[number];
 
-export function StudyIsland({ disciplineId, unit, topics, onOpen, onChallenge }: {
-  disciplineId: string; unit?: StudyTopic; topics: StudyTopic[];
+export function StudyIsland({ disciplineId, unit, topics, onOpen, onChallenge, direct = false }: {
+  direct?: boolean; disciplineId: string; unit?: StudyTopic; topics: StudyTopic[];
   onOpen: (destination: Destination) => void; onChallenge: (activity: IslandActivity) => void;
 }) {
   const [selected, setSelected] = useState<number>();
@@ -61,8 +61,12 @@ export function StudyIsland({ disciplineId, unit, topics, onOpen, onChallenge }:
     <div className="study-terrain" onKeyDown={e => { if (e.key === 'Escape') close(); }}>
       <img alt="" width="800" height="1200" src={import.meta.env.BASE_URL + 'studies/island.webp'} />
       {destinations.map((item,i) => <button key={item.name} type="button" className="study-landmark"
-        style={{left: item.x + '%', top: item.y + '%'}} aria-expanded={selected === i}
-        ref={node => { controls.current[i] = node; }} onClick={() => setSelected(selected === i ? undefined : i)}>
+        style={{left: item.x + '%', top: item.y + '%'}} aria-expanded={direct ? undefined : selected === i}
+        ref={node => { controls.current[i] = node; }} onClick={() => {
+          if (!direct) setSelected(selected === i ? undefined : i);
+          else if ('activity' in item && (item.activity === 'lab' || item.activity === 'castle')) onChallenge(item.activity);
+          else onOpen(item);
+        }}>
         <span>{item.name} · {item.action}</span>
         {!load && <small>{progress(item)}</small>}
       </button>)}

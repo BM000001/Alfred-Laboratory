@@ -15,7 +15,7 @@ export class RemoteStudyEnhancementProvider implements StudyEnhancementProvider 
         method: 'POST', credentials: 'same-origin', redirect: 'manual', cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-        body: JSON.stringify({ consent: true, chunks: request.chunks.map(({ chunkId, text }) => ({ chunkId, text })) }),
+        body: JSON.stringify({ consent: true, generation: request.generation, chunks: request.chunks.map(({ chunkId, text }) => ({ chunkId, text })) }),
       });
     } catch {
       signal?.throwIfAborted();
@@ -51,7 +51,7 @@ export class RemoteStudyEnhancementProvider implements StudyEnhancementProvider 
       options.splice(correctOptionIndex, 0, item.answer);
       const excerpt = request.chunks.find(chunk => chunk.chunkId === item.chunkId)?.text ?? '';
       return { prompt: item.question, options, correctOptionIndex, explanation: item.explanation,
-        difficulty: 'medium' as const, evidence: [{ chunkId: item.chunkId, excerpt }] };
+        difficulty: request.generation?.difficulty ?? 'medium' as const, evidence: [{ chunkId: item.chunkId, excerpt }] };
     });
     return { version: 1, requestId: request.requestId, status: questions.length ? 'ready' : 'insufficient_evidence',
       providerKind: 'ai', questions, flashcards: [], evidence: [], warnings: [] };

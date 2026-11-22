@@ -20,6 +20,7 @@ export interface StudyEnhancementRequest {
   topicId: string;
   profile: ProcessingProfile;
   task: 'flashcards' | 'questions' | 'explain';
+  generation?: { count: number; difficulty: StudyQuestionDifficulty; goal: 'recordar' | 'comparar' | 'aplicar'; kind: 'conceitual' | 'pratica' };
   chunks: StudyEvidenceChunk[];
   consent: {
     externalProcessing: boolean;
