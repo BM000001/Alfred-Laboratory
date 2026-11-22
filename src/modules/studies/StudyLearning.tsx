@@ -68,11 +68,11 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0,
       <div><span className="card-label">ENSINO CONTEXTUALIZADO</span><h3>Aprender antes de praticar</h3><p>Consulte os conceitos extraídos e pratique com exemplos quando houver evidência suficiente.</p></div>
       <div className="study-learning-count"><strong>{completedCount}/{readyUnits.length + aiLessons.length}</strong><span>explicações vistas</span></div>
     </div>
-    <div className="study-learning-contexts" aria-label="Escolher contexto da explicação">
+    {!aiOnly && <div className="study-learning-contexts" aria-label="Escolher contexto da explicação">
       <span className="study-learning-context-label">Como você quer aprender?</span>
       {studyLearningContexts.map((option) => <button key={option.value} type="button" className={context === option.value ? 'selected' : ''} aria-pressed={context === option.value} onClick={() => changeContext(option.value)}>{option.label}</button>)}
-    </div>
-    {contextDescription(context) && <p className="study-learning-context-description">{contextDescription(context)}</p>}
+    </div>}
+    {!aiOnly && contextDescription(context) && <p className="study-learning-context-description">{contextDescription(context)}</p>}
     {focusCount > 0 && <div className="study-learning-focus" role="status"><strong>Alfred priorizou {focusCount} conceito(s).</strong><span> Eles aparecem primeiro porque você teve pelo menos metade de erros nas questões vinculadas a esses tópicos.</span></div>}
     {error && <p className="module-error" role="alert">{error}</p>}
     {loading ? <p className="module-feedback">Preparando suas explicações...</p> : readyUnits.length === 0 && aiLessons.length === 0 ? <div className="study-learning-empty"><strong>Ainda não há conteúdo guiado.</strong><p>Ainda não há aulas completas e verificadas. Adicione um material; quando a IA estiver disponível, o Alfred poderá complementar o conteúdo. Respostas curtas de flashcards não serão apresentadas como aulas prontas.</p></div> : <div className="study-learning-list">
