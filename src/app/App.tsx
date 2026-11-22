@@ -107,7 +107,7 @@ function App() {
 
   function navigate(target: Page, context?: { study?: StudyStart; calendarDate?: string; settings?: 'google' | 'weather' }) {
     setPage(target);
-    setStudyDisciplineOpen(false);
+    if (target !== 'estudos') setStudyDisciplineOpen(false);
     setStudyStart(context?.study);
     setCalendarStart(context?.calendarDate);
     setSettingsTarget(context?.settings);
