@@ -41,7 +41,7 @@ type Props = {
 
 export function StudyTrail({ discipline, topics, refreshToken, onManage, onMaterials, onAddMaterial }: Props) {
   const [chapterId, selectChapter] = useState('');
-  const topic = topics.find((t) => t.id === chapterId) ?? topics[0];
+  const topic = topics.find((t) => t.id === chapterId) ?? topics.find((t) => Boolean(t.sourceFileId)) ?? topics[0];
   const [active, select] = useState('');
   const [decision, setDecision] = useState(false);
   const [showResult, setShowResult] = useState(false);
