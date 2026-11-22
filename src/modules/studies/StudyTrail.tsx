@@ -109,6 +109,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     topic?.title ?? 'Toda a disciplina',
     counts,
   );
+  const hasLinkedMaterial = topics.some((entry) => Boolean(entry.sourceFileId));
   const nodes = chapter.nodes.map((node) => ({ ...node, completion: marks[node.id] ?? node.completion }));
   const summary = summarizeTrailCompletion(nodes);
   const index = nodes.findIndex((n) => n.id === active),
@@ -144,7 +145,13 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     <section className="learning-trail" aria-label="Trilha de aprendizagem">
       {warning && <p role="alert">{warning}</p>}
       {!online && <p role="status">Offline · recursos locais disponíveis</p>}
-      {!node ? (
+      {!hasLinkedMaterial ? (
+        <div className="empty-state" role="status">
+          <strong>Adicione um material para começar</strong>
+          <p>A trilha será preparada depois que você enviar um material da disciplina. Não vamos mostrar aulas ou desafios sem uma fonte.</p>
+          <button type="button" className="primary-action" onClick={() => onMaterials('')}>Adicionar material</button>
+        </div>
+      ) : !node ? (
         <>
           <div className="trail-tools">
             <label>
