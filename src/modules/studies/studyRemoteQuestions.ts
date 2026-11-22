@@ -61,7 +61,7 @@ function normalizeEvidence(text: string): string {
   return text.normalize('NFC').replace(/\s+/gu, ' ').trim().toLocaleLowerCase('pt-BR');
 }
 
-function validatedQuestions(payload: unknown, chunks: StudySourceChunk[]): ValidatedAIStudyQuestion[] {
+export function validateAIStudyQuestions(payload: unknown, chunks: StudySourceChunk[]): ValidatedAIStudyQuestion[] {
   if (!payload || typeof payload !== 'object' || !('questions' in payload)) throw new Error('Resposta inválida da IA.');
   const questions = (payload as { questions?: unknown }).questions;
   if (!Array.isArray(questions) || questions.length > 3) throw new Error('Quantidade inválida de questões da IA.');
@@ -126,5 +126,5 @@ export async function requestAIStudyQuestions({
   if (response.status === 429) throw new Error('Limite temporário da IA atingido. Aguarde antes de tentar novamente.');
   if (!response.ok) throw new Error('A IA não conseguiu preparar as questões agora. O material foi preservado.');
   const payload: unknown = await response.json();
-  return validatedQuestions(payload, chunks);
+  return validateAIStudyQuestions(payload, chunks);
 }
