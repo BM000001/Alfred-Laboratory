@@ -4,6 +4,7 @@ import { EditDialog } from '../components/EditDialog';
 import { useEffect, useLayoutEffect, useMemo, useState, type FormEvent } from 'react';
 import type { Discipline, StudyTopic } from './studies/types';
 import { StudyTrail } from './studies/StudyTrail';
+import { displayStudyTitle } from './studies/displayStudyTitle';
 import { StudyLearning } from './studies/StudyLearning';
 import { StudyFlashcards } from './studies/StudyFlashcards';
 import { QuestionBank } from './studies/QuestionBank';
@@ -254,7 +255,7 @@ export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { in
             <label className="field-label" htmlFor="study-unit">Unidade de estudo</label>
             <select id="study-unit" value={unit?.id ?? ''} onChange={(event) => openUnit(event.target.value)}>
               <option value="">Toda a disciplina</option>
-              {disciplineTopics.map((topic) => <option key={topic.id} value={topic.id}>{topic.title}</option>)}
+              {disciplineTopics.map((topic) => <option key={topic.id} value={topic.id}>{displayStudyTitle(topic.title)}</option>)}
             </select>
           </div>}
           {studyView === 'conteudos' && <>
@@ -262,7 +263,7 @@ export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { in
           {disciplineTopics.length > 0 && <div className="study-filter"><label className="field-label" htmlFor="topic-filter">Exibir</label><select id="topic-filter" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Todos</option><option value="pending">Pendentes</option><option value="completed">Concluídos</option></select></div>}
           {visibleTopics.length === 0 ? <div className="empty-state"><strong>Nenhum conteúdo nesta lista.</strong><p>Use + para adicionar uma unidade ou altere o filtro.</p></div> : <div className="study-topic-list">{visibleTopics.map((topic) => <article className={topic.status === 'completed' ? 'study-topic completed' : 'study-topic'} key={topic.id}>
             <input type="checkbox" aria-label={`Marcar ${topic.title} como concluído`} checked={topic.status === 'completed'} onChange={() => void toggleTopic(topic)} />
-            <div><strong>{topic.title}</strong>{topic.notes && <p>{topic.notes}</p>}</div>
+            <div><strong>{displayStudyTitle(topic.title)}</strong>{topic.notes && <p>{topic.notes}</p>}</div>
             <div className="study-topic-actions"><button className="text-action" type="button" aria-label={`Materiais de ${topic.title}`} onClick={() => openUnit(topic.id, 'materiais')}>Materiais</button><button className="text-action" type="button" aria-label={`Praticar ${topic.title}`} onClick={() => openUnit(topic.id, 'praticar')}>Praticar</button><button className="text-action" type="button" onClick={() => editTopic(topic)}>Editar</button><button className="text-action" type="button" onClick={() => void deleteTopic(topic)}>Excluir</button></div>
           </article>)}</div>}
           </>}
