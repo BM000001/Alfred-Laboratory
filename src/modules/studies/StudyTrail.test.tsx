@@ -44,7 +44,7 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
   fireEvent.change(screen.getByLabelText('Capítulo'), { target: { value: 'b' } });
   fireEvent.click(await screen.findByRole('button', { name: /Campo de Alvos Disponível/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Pular etapa' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
   expect(screen.getByRole('heading', { name: 'Recordar conceitos' })).toBeInTheDocument();
   view.unmount();
   render(<StudyTrail {...data} />);
