@@ -35,7 +35,7 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
     files: [new File([definitions], 'conceitos.txt', { type: 'text/plain' })],
   } });
   fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-  expect(await screen.findByText(/A geração de aulas, exercícios e flashcards aguarda a conexão/)).toBeInTheDocument();
+  expect(await screen.findByText(/Questões aguardam uma prévia autenticada/)).toBeInTheDocument();
   await screen.findByRole('button', { name: 'Ler texto de conceitos.txt' });
   await waitFor(async () => {
     const [material] = await fileRepository.getAll();
