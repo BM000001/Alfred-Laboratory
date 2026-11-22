@@ -1,31 +1,39 @@
-# Alfred Studies 2.2 — geração de questões com IA (integração privada)
+# Alfred Studies 2.2 — preparação de aulas, questões e flashcards por IA
 
-Status: **adaptador preparado no PR #87; implantação same-origin ainda pendente**.
+Status: **Laboratory PR #87 e Server PR #8 em rascunho; implantação de frontend same-origin ainda pendente**.
 
-## Limites reais
+## Estado verificado
 
-- O serviço experimental já existente na Cloudflare aceita `POST /api/studies/questions` com até **3 questões** por requisição, mediante Cloudflare Access, IA configurada e cotas.
-- **Não há endpoint de aulas nem de flashcards neste contrato.** Não marque essas etapas como geradas.
-- O backend exige a origem e o cabeçalho `Origin` do próprio Worker, além da identidade permitida no Cloudflare Access. Um site servido por GitHub Pages **não pode** fazer a chamada protegida com segurança por CORS nem deve receber token de serviço.
-- Este adaptador só é ativado quando `VITE_STUDIES_AI_ORIGIN` corresponde exatamente à origem HTTPS que hospeda **também o frontend**. Sem essa condição, o importador preserva o material e explica que a IA está indisponível.
-- Não publicar `VITE_STUDIES_AI_ORIGIN` como solução de autenticação: é só uma origem pública, não uma credencial; não inserir chaves, JWTs ou secrets no Vite.
+- O Worker **já implantado** na Cloudflare aceita `POST /api/studies/questions` com até 3 questões por chamada. Ele exige autenticação Cloudflare Access, usuário autorizado, consentimento explícito e cotas de uso.
+- O **código ainda não publicado** do Server PR #8 amplia o Worker com `/api/studies/lessons`, `/api/studies/flashcards` e `POST /api/studies/prepare`. A rota `prepare` gera um pacote limitado a até 2 aulas, 2 questões e 2 flashcards em uma chamada, economizando a cota de **2 requisições por minuto** e **10 por dia por usuário**.
+- O cliente do Laboratory tenta `/api/studies/prepare`; quando recebe 404 de uma versão antiga do Worker, retorna à rota somente de questões, deixando aulas e flashcards explicitamente pendentes.
+- Nada disso cria conteúdo local automaticamente por regras; sem IA real, são preservados apenas original, extração, análise e histórico.
 
-## Fluxo implementado
+## Segurança e privacidade
 
-1. O aluno importa o material; o original e texto extraído ficam preservados no dispositivo.
-2. Se o frontend estiver na origem privada autorizada, é exibida uma opção explícita de consentimento para enviar **até 3 trechos** de no máximo **1.200 caracteres** cada à IA.
-3. Depois de salvar, a extração local roda normalmente e o progresso é exibido por etapa real.
-4. Com consentimento, conexão disponível e material extraído, o cliente chama o Worker privado **pela mesma origem**.
-5. O cliente aceita apenas questões com resposta explícita no trecho da fonte, alternativas distintas e identificador de trecho reconhecido. Explicações elaboradas pela IA são identificadas separadamente.
-6. As questões aceitas são salvas com `disciplineId`, `topicId`, `sourceFileId`, nome e trecho de origem, evitando duplicação por identificador estável e enunciado.
-7. Ao falhar a IA, o material original continua salvo. É possível tentar novamente na origem privada, respeitando autenticação, consentimento e cotas.
+- O Worker exige `Origin` equivalente à origem HTTPS configurada, autenticação Access válida e conta permitida. GitHub Pages não pode chamar a API privada diretamente com segurança.
+- `VITE_STUDIES_AI_ORIGIN` só ativa o cliente quando é **exatamente a mesma origem HTTPS do aplicativo**. A variável é uma origem pública, **não uma credencial**. Nunca publicar JWT, token do Cloudflare Access nem chave de API no JavaScript do frontend.
+- A pessoa precisa autorizar o envio. O aplicativo envia somente até **3 trechos de até 1.200 caracteres**, extraídos do próprio material, com identidade do trecho (`trecho-1` etc.).
+- Respostas e flashcards devem ter respostas literais fundamentadas em trechos recebidos. Aulas contêm explicações e exemplos **explicitamente identificados como conteúdo elaborado por IA**, com a fonte original disponível. A validação literal reduz erros, mas não comprova integralmente a correção pedagógica: revisão humana segue importante.
+- Sem conexão, autenticação, cota ou resposta adequada, o conteúdo não é inventado; usuário vê falha ou estado pendente e pode tentar novamente.
+- Os resultados são salvos localmente com disciplina, unidade e arquivo de origem; há identificação estável para evitar duplicações e suporte a processamento interrompido.
 
-## Próxima etapa de infraestrutura (não executada aqui)
+## Etapas visíveis
 
-1. Servir o build do Laboratory como aplicativo HTTPS na **mesma origem do Worker de estudos**, protegido pelo Cloudflare Access, sem modificar a produção.
-2. Configurar `VITE_STUDIES_AI_ORIGIN` no build **somente** para essa origem privada.
-3. Validar que o Worker injeta/recebe identidade do Access, e que uma pessoa não autorizada não consegue chamar `/api/studies/questions`.
-4. Homologar no Safari físico: autenticação, consentimento, estado de carregamento, resposta válida, indisponibilidade, cota, cancelamento, retorno à trilha e persistência.
-5. Só após aprovação específica, expandir o backend para aulas e flashcards com validação, proveniência e limites de custo.
+1. Análise e extração local do original.
+2. Preparação das aulas pela IA.
+3. Preparação das questões pela IA.
+4. Preparação dos flashcards pela IA.
+5. Montagem da trilha a partir dos materiais realmente salvos.
 
-Nenhuma etapa local simula a IA, e o aplicativo não promete continuidade com o iPhone fechado sem infraestrutura de execução remota.
+As etapas refletem execução e persistência reais. Se a versão do Worker não oferecer o pacote completo, as modalidades ausentes não serão anunciadas como prontas. Não inventar porcentagens e não prometer processamento com o iPhone fechado sem infraestrutura remota.
+
+## Próxima etapa de infraestrutura (pendente)
+
+1. Publicar o Worker revisado do **Server PR #8** somente após validar CI, políticas e configuração segura, sem afetar `alfred-edge-api` de produção.
+2. Servir o build do Laboratory na **mesma origem HTTPS do Worker privado**, protegido pelo Cloudflare Access; não utilizar um site público de GitHub Pages como substituto.
+3. Configurar `VITE_STUDIES_AI_ORIGIN` somente no build dessa prévia, nunca como segredo.
+4. Homologar no Safari físico com conta autorizada e com conta não autorizada: login, consentimento, importação, geração de pacote, origem, quotas, falhas, reinício, progressão e persistência.
+5. Após aprovação, decidir se a arquitetura de produção precisará de login Google individual e expansão de limites/infraestrutura. Não fazer merge automático em nenhum repositório.
+
+**Estado atual:** CI automatizado não substitui um teste de geração real via navegador protegido; não declarar a Fase 1.1 concluída até essa validação.
