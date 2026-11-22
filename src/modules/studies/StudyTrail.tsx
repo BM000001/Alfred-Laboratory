@@ -12,6 +12,7 @@ import { QuestionBank } from './QuestionBank';
 import { buildTrailChapter, summarizeTrailCompletion, type TrailCompletion } from './trailModel';
 import type { Discipline, StudyTopic } from './types';
 import './studyTrail.css';
+import { displayStudyTitle } from './displayStudyTitle';
 
 const labels = {
   available: 'Disponível',
@@ -160,7 +161,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                 {!topics.length && <option value="">Toda a disciplina</option>}
                 {topics.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.title}
+                    {displayStudyTitle(t.title)}
                   </option>
                 ))}
               </select>
@@ -221,7 +222,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
             Voltar à trilha
           </button>
           <h3>{node.title}</h3>
-          <p>{chapter.title}</p>
+          <p>{displayStudyTitle(chapter.title)}</p>
           {(!decision || showResult) && (
             <>
               {(load || node.availability !== 'available') && (
