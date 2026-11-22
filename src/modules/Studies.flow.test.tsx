@@ -104,7 +104,20 @@ it('abre os trechos do Markdown na aba Materiais da disciplina antes de pedir co
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Teste 2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
     await screen.findByRole('heading', { name: 'Teste 2' });
-    fireEvent.click(screen.getByRole('button', { name: 'Materiais' }));
+    for (const [building, activity, tab] of [
+      ['Campo de Alvos · Praticar', 'Responder a um simulado', 'Simulados'],
+      ['Baú de Flashcards · Memorizar', 'Revisar os flashcards', 'Revisar flashcards'],
+      ['Castelo · Dominar', 'Consultar o desempenho e revisar erros', 'Desempenho'],
+      ['Laboratório · Aplicar', 'Abrir o estudo guiado da disciplina', 'Revisar'],
+      ['Biblioteca · Aprender', 'Abrir os materiais da disciplina', 'Materiais'],
+    ]) {
+      const map = screen.getByRole('navigation', { name: 'Ilha de aprendizagem' });
+      fireEvent.click(within(map).getByText(building));
+      fireEvent.click(within(map).getByRole('button', { name: activity }));
+      const destination = screen.getByRole('button', { name: tab });
+      expect(destination.getAttribute('aria-pressed') ?? destination.getAttribute('aria-current')).toMatch(/^(true|page)$/);
+      if (tab !== 'Materiais') fireEvent.click(screen.getByRole('button', { name: 'Unidades' }));
+    }
     create('Adicionar material');
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: {
       files: [new File([definitions], 'teste.md', { type: 'text/markdown' })],

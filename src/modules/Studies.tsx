@@ -39,6 +39,14 @@ function MaterialExercises({ topics, onSaved }: { topics: StudyTopic[]; onSaved:
   </section>;
 }
 
+const studyDestinations = [
+  { name: 'Biblioteca', action: 'Aprender', detail: 'Abrir os materiais da disciplina', view: 'materiais' },
+  { name: 'Campo de Alvos', action: 'Praticar', detail: 'Responder a um simulado', view: 'praticar', practice: 'questions' },
+  { name: 'Baú de Flashcards', action: 'Memorizar', detail: 'Revisar os flashcards', view: 'praticar', practice: 'cards' },
+  { name: 'Laboratório', action: 'Aplicar', detail: 'Abrir o estudo guiado da disciplina', view: 'aprender' },
+  { name: 'Castelo', action: 'Dominar', detail: 'Consultar o desempenho e revisar erros', view: 'praticar', practice: 'performance' },
+] as const;
+
 export type StudyAction = { label: string; run: () => void };
 export type StudyStart = { disciplineId: string; unitId: string; view?: 'materiais' | 'aprender' | 'praticar' };
 export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; onActions?: (actions: StudyAction[]) => void } = {}) {
@@ -256,6 +264,17 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
             </select>
           </div>}
           {studyView === 'conteudos' && <>
+          <nav aria-label="Ilha de aprendizagem">
+            {studyDestinations.map(destination => <details key={destination.name} className="interface-disclosure">
+              <summary>{destination.name} · {destination.action}</summary>
+              <button className="text-action" type="button" onClick={() => {
+                if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
+                setUnitId('');
+                setStudyView(destination.view);
+                if ('practice' in destination) setPracticeView(destination.practice);
+              }}>{destination.detail}</button>
+            </details>)}
+          </nav>
           <h3>Unidades de estudo</h3>
           {disciplineTopics.length > 0 && <div className="study-filter"><label className="field-label" htmlFor="topic-filter">Exibir</label><select id="topic-filter" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Todos</option><option value="pending">Pendentes</option><option value="completed">Concluídos</option></select></div>}
           {visibleTopics.length === 0 ? <div className="empty-state"><strong>Nenhum conteúdo nesta lista.</strong><p>Use + para adicionar uma unidade ou altere o filtro.</p></div> : <div className="study-topic-list">{visibleTopics.map((topic) => <article className={topic.status === 'completed' ? 'study-topic completed' : 'study-topic'} key={topic.id}>
