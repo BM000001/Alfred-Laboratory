@@ -42,7 +42,7 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
   const units = useMemo(() => buildStudyLearningUnits({ cards, questions, attempts, topics: topics.filter((topic) => topic.disciplineId === disciplineId), progress, context }), [cards, questions, attempts, topics, progress, context, disciplineId]);
   const readyUnits = units.filter((unit) => unit.didactic && !unit.needsReview);
   const completedCount = readyUnits.filter((unit) => unit.completed).length;
-  const focusCount = units.filter((unit) => unit.reviewReason === 'weak-topic').length;
+  const focusCount = readyUnits.filter((unit) => unit.reviewReason === 'weak-topic').length;
 
   function changeContext(value: StudyLearningContext) {
     setContext(value);
