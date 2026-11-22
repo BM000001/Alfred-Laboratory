@@ -255,7 +255,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
               updatePreparation(index, stage, 'unavailable');
             }
           }
-          const resourceMessage = awaitingAI ? 'Material analisado e preservado. Aulas e flashcards aguardam IA. ' +
+          const resourceMessage = awaitingAI ? 'Material analisado e preservado. ' + (aiPrepared ? 'Pacote preparado por IA. ' : 'Aulas e flashcards aguardam IA. ') +
             (aiResult || 'Questões aguardam uma prévia autenticada e autorização para envio de trechos.')
             : state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
             : cardsAdded || questionsAdded ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados.`
