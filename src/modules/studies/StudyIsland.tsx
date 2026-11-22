@@ -23,6 +23,8 @@ export function StudyIsland({ disciplineId, unit, topics, onOpen, onChallenge }:
   const [history, setHistory] = useState<StudyQuizAttempt[]>([]);
   const [reviews, setReviews] = useState(0);
   const [load, setLoad] = useState('Carregando progresso…');
+  const dismiss = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (selected !== undefined) dismiss.current?.focus({ preventScroll: true }); }, [selected]);
   const controls = useRef<(HTMLButtonElement | null)[]>([]);
   useEffect(() => {
     let active = true;
@@ -65,7 +67,7 @@ export function StudyIsland({ disciplineId, unit, topics, onOpen, onChallenge }:
         {!load && <small>{progress(item)}</small>}
       </button>)}
       {destination && <section className="study-island-panel" style={{top: (destination.y > 55 ? destination.y - 30 : destination.y + 5) + '%'}} aria-label={destination.name}>
-        <button className="island-close" aria-label="Fechar painel" type="button" onClick={close}>×</button>
+        <button ref={dismiss} className="island-close" aria-label="Fechar painel" type="button" onClick={close}>×</button>
         <h4>{destination.name}</h4><p>{progress(destination)}</p>
         <button type="button" className="text-action" onClick={() => onOpen(destination)}>{destination.detail}</button>
         {'activity' in destination && destination.activity !== 'practice' && <button className="primary-action" type="button" onClick={() => onChallenge(destination.activity)}>

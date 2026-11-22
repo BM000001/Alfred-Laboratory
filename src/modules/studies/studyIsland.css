@@ -12,3 +12,5 @@
 
 .study-landmark small { display:block; margin:0 auto; padding:.12rem .35rem; width:fit-content; max-width:100%; border-radius:.35rem; background:#171b18ef; color:#f3f1ea; font-size:.71rem; line-height:1.2; }
 @media(max-width:420px){.study-island-panel{top:auto!important;bottom:0;inset-inline:0}.study-terrain:has(.study-island-panel){margin-bottom:0}.study-landmark small{max-height:2.5em;overflow:auto}}
+.study-landmark { width:max-content; }
+.study-landmark span { text-wrap:balance; }
