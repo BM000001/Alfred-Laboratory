@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { StudyFlashcard } from './flashcardTypes';
 import type { StudyQuestion, StudyQuizAttempt } from './questionTypes';
 import type { StudyTopic } from './types';
-import { studyFlashcardRepository, studyLearningProgressRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
+import { fileRepository, studyFlashcardRepository, studyLearningProgressRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
+import type { MaterialProcessingState } from './materialProcessor';
 import { buildStudyLearningUnits, createLearningProgress } from './studyLearning';
 import { studyLearningContexts, type StudyLearningContext, type StudyLearningProgress } from './learningTypes';
 
@@ -10,10 +11,12 @@ import { getAlfredLocalStorageKey } from '../../storage/namespace';
 import { displayStudyTitle } from './displayStudyTitle';
 
 const contextStorageKey = getAlfredLocalStorageKey('alfred-study-learning-context');
+type AILesson = NonNullable<MaterialProcessingState['aiLessons']>[number];
 
 export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 }: { disciplineId: string; topics: StudyTopic[]; topicId?: string; refreshToken?: number }) {
   const [cards, setCards] = useState<StudyFlashcard[]>([]);
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
+  const [aiLessons, setAILessons] = useState<AILesson[]>([]);
   const [attempts, setAttempts] = useState<StudyQuizAttempt[]>([]);
   const [progress, setProgress] = useState<StudyLearningProgress[]>([]);
   const [context, setContext] = useState<StudyLearningContext>(() => readContext());
@@ -26,13 +29,16 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
     setLoading(true);
     Promise.all([
       studyFlashcardRepository.getAll(), studyQuestionRepository.getAll(),
-      studyQuizAttemptRepository.getAll(), studyLearningProgressRepository.getAll(),
-    ]).then(([allCards, allQuestions, allAttempts, allProgress]) => {
+      studyQuizAttemptRepository.getAll(), studyLearningProgressRepository.getAll(), fileRepository.getAll(),
+    ]).then(([allCards, allQuestions, allAttempts, allProgress, allFiles]) => {
       if (!active) return;
       setCards(allCards.filter((item) => item.disciplineId === disciplineId && (!topicId || item.topicId === topicId)));
       setQuestions(allQuestions.filter((item) => item.disciplineId === disciplineId && (!topicId || item.topicId === topicId)));
       setAttempts(allAttempts.filter((item) => item.disciplineId === disciplineId));
       setProgress(allProgress.filter((item) => item.disciplineId === disciplineId));
+      setAILessons(allFiles.filter((file) => file.disciplineId === disciplineId &&
+        (!topicId || file.processing?.topicId === topicId))
+        .flatMap(file => file.processing?.aiLessons ?? []));
     }).catch(() => { if (active) setError('Não foi possível carregar o conteúdo guiado desta disciplina.'); })
       .finally(() => { if (active) setLoading(false); });
     setExpandedId('');
@@ -41,7 +47,7 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
 
   const units = useMemo(() => buildStudyLearningUnits({ cards, questions, attempts, topics: topics.filter((topic) => topic.disciplineId === disciplineId), progress, context }), [cards, questions, attempts, topics, progress, context, disciplineId]);
   const readyUnits = units.filter((unit) => unit.didactic && !unit.needsReview);
-  const completedCount = readyUnits.filter((unit) => unit.completed).length;
+  const completedCount = readyUnits.filter((unit) => unit.completed).length + aiLessons.filter(lesson => progress.some(item => item.lessonId === 'lesson:' + lesson.id)).length;
   const focusCount = readyUnits.filter((unit) => unit.reviewReason === 'weak-topic').length;
 
   function changeContext(value: StudyLearningContext) {
@@ -60,7 +66,7 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
   return <section className="study-learning" aria-label="Aprender o conteúdo">
     <div className="study-learning-header">
       <div><span className="card-label">ENSINO CONTEXTUALIZADO</span><h3>Aprender antes de praticar</h3><p>Consulte os conceitos extraídos e pratique com exemplos quando houver evidência suficiente.</p></div>
-      <div className="study-learning-count"><strong>{completedCount}/{readyUnits.length}</strong><span>explicações vistas</span></div>
+      <div className="study-learning-count"><strong>{completedCount}/{readyUnits.length + aiLessons.length}</strong><span>explicações vistas</span></div>
     </div>
     <div className="study-learning-contexts" aria-label="Escolher contexto da explicação">
       <span className="study-learning-context-label">Como você quer aprender?</span>
@@ -69,7 +75,32 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
     {contextDescription(context) && <p className="study-learning-context-description">{contextDescription(context)}</p>}
     {focusCount > 0 && <div className="study-learning-focus" role="status"><strong>Alfred priorizou {focusCount} conceito(s).</strong><span> Eles aparecem primeiro porque você teve pelo menos metade de erros nas questões vinculadas a esses tópicos.</span></div>}
     {error && <p className="module-error" role="alert">{error}</p>}
-    {loading ? <p className="module-feedback">Preparando suas explicações...</p> : readyUnits.length === 0 ? <div className="study-learning-empty"><strong>Ainda não há conteúdo guiado.</strong><p>Ainda não há aulas completas e verificadas. Adicione um material; quando a IA estiver disponível, o Alfred poderá complementar o conteúdo. Respostas curtas de flashcards não serão apresentadas como aulas prontas.</p></div> : <div className="study-learning-list">
+    {loading ? <p className="module-feedback">Preparando suas explicações...</p> : readyUnits.length === 0 && aiLessons.length === 0 ? <div className="study-learning-empty"><strong>Ainda não há conteúdo guiado.</strong><p>Ainda não há aulas completas e verificadas. Adicione um material; quando a IA estiver disponível, o Alfred poderá complementar o conteúdo. Respostas curtas de flashcards não serão apresentadas como aulas prontas.</p></div> : <div className="study-learning-list">
+      {aiLessons.map((lesson, index) => {
+        const learned = progress.some(item => item.lessonId === 'lesson:' + lesson.id);
+        return <article className={learned ? 'study-learning-card completed' : 'study-learning-card'} key={lesson.id}>
+          <div className="study-learning-card-heading">
+            <div><div className="study-learning-meta"><span className="study-learning-step">{index + 1}</span><span className="study-learning-reason">Aula com IA</span></div>
+              <h4>{displayStudyTitle(lesson.title)}</h4></div>
+            <button type="button" className="text-action" aria-expanded={expandedId === lesson.id}
+              onClick={() => setExpandedId(current => current === lesson.id ? '' : lesson.id)}>
+              {expandedId === lesson.id ? 'Fechar' : 'Abrir aula'}
+            </button>
+          </div>
+          {expandedId === lesson.id && <div className="study-learning-body">
+            <section><span className="card-label">EXPLICAÇÃO ELABORADA POR IA</span><p>{lesson.explanation}</p></section>
+            <section><h5>Exemplo contextual da IA</h5><p>{lesson.example}</p></section>
+            <details><summary>Consultar material de origem</summary><blockquote>{lesson.sourceExcerpt}</blockquote></details>
+            <details><summary>Verificação de compreensão</summary><p>{lesson.check}</p>
+              <details><summary>Conferir resposta fundamentada no material</summary><p>{lesson.answer}</p></details>
+            </details>
+            <button type="button" className="primary-action" disabled={learned}
+              onClick={() => void markComplete('lesson:' + lesson.id)}>
+              {learned ? 'Explicação concluída' : 'Marcar como aprendido'}
+            </button>
+          </div>}
+        </article>;
+      })}
       {readyUnits.map((unit, index) => <article className={unit.completed ? 'study-learning-card completed' : 'study-learning-card'} key={unit.id}>
         <div className="study-learning-card-heading"><div><div className="study-learning-meta"><span className="study-learning-step">{index + 1}</span><span className="study-learning-reason">{reasonLabel(unit.reviewReason)}</span></div><h4>{displayStudyTitle(unit.concept)}</h4></div><button type="button" className="text-action" aria-expanded={expandedId === unit.id} onClick={() => setExpandedId((current) => current === unit.id ? '' : unit.id)}>{expandedId === unit.id ? 'Fechar' : 'Abrir aula'}</button></div>
         {expandedId === unit.id && <div className="study-learning-body">
