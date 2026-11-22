@@ -8,13 +8,14 @@ import { attachStudyMaterial } from './attachStudyMaterial';
 import type { StudyTopic } from './types';
 import { confirmMaterialDefinition, processStoredMaterial } from './materialProcessor';
 import { PROCESSING_PROFILES, definitionDifferences, relevantAmbiguities, type ProcessingProfile } from './materialReliability';
+import { STUDY_PREPARATION_STAGES, createStudyPreparationState, updateStudyPreparationStage, type StudyPreparationState, type StudyPreparationStageId, type StudyPreparationStatus } from './studyPreparationProgress';
 
 const files = createFileService(fileRepository);
 const study = createStudyService(disciplineRepository, studyTopicRepository);
 
 type PendingMaterial = { file: StoredFile; topic?: StudyTopic };
 
-interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'insufficient' | 'awaiting-ai' | 'error'; detail: string; contextSources?: string[]; }
+interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'insufficient' | 'awaiting-ai' | 'error'; detail: string; contextSources?: string[]; preparation?: StudyPreparationState; }
 
 function readBlob(blob: Blob): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -107,9 +108,14 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     function updateStatus(index: number, status: ProcessingStatus['status'], detail: string, contextSources?: string[]) {
       setStatuses(current => current.map((item, position) => position === index ? { ...item, status, detail, contextSources } : item));
     }
+    function updatePreparation(index: number, stage: StudyPreparationStageId, status: StudyPreparationStatus, error?: string) {
+      setStatuses(current => current.map((item, position) => position === index && item.preparation
+        ? { ...item, preparation: updateStudyPreparationStage(item.preparation, stage, { status, ...(error ? { error } : {}) }) }
+        : item));
+    }
     let storedChanges = false;
     const storedOriginals = new Set<File>();
-    setStatuses(queue.map((file) => ({ name: file.name, status: 'processing', detail: 'Aguardando processamento local.' })));
+    setStatuses(queue.map((file, index) => ({ name: file.name, status: 'processing', detail: 'Aguardando processamento do original.', preparation: createStudyPreparationState(file.name || `material-${index + 1}`) })));
     try {
       const [existingTopics, savedFiles] = await Promise.all([study.listTopics(), fileRepository.getAll()]);
       for (const [index, file] of queue.entries()) {
@@ -155,6 +161,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         }
         const controller = new AbortController();
         processingController.current = controller;
+        updatePreparation(index, 'analysis', 'running');
         try {
           const result = await processStoredMaterial(
             sourceId, profile, controller.signal, detail => updateStatus(index, 'processing', detail), file, topic,
@@ -162,6 +169,10 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
           );
           const { state, cardsAdded, questionsAdded } = result;
           const awaitingAI = 'awaitingAI' in result && result.awaitingAI === true;
+          updatePreparation(index, 'analysis', 'completed');
+          if (awaitingAI) for (const stage of ['lessons', 'questions', 'flashcards', 'trail'] as const) {
+            updatePreparation(index, stage, 'unavailable');
+          }
           const resourceMessage = awaitingAI ? 'Material analisado e preservado. A geração de aulas, exercícios e flashcards aguarda a conexão com uma IA real.' : state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
             : cardsAdded || questionsAdded ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados.`
             : `Texto salvo (${state.raw?.wordCount ?? 0} palavras), mas não encontrei novas definições explícitas ou outros trechos adequados para gerar cartões ou questões com segurança. O enriquecimento semântico depende de IA.`;
@@ -171,6 +182,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
           updateStatus(index, state.status === 'review' ? 'review' : awaitingAI ? 'awaiting-ai' : state.generated && !state.generated.flashcards.length && !state.generated.questions.length ? 'insufficient' : 'success', `${resourceMessage}${contextNote} Original e texto extraído estão associados à disciplina.`, contextSources);
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : 'Falha inesperada ao processar este arquivo.';
+          updatePreparation(index, 'analysis', 'failed', message);
           updateStatus(index, 'error', `${message} O original foi preservado na biblioteca.`);
         } finally { processingController.current = null; }
       }
@@ -228,13 +240,25 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     }}>{uploadFields}</EditDialog>}
     {error && <p className="module-error" role="alert">{error}</p>}
     {saving && <div className="study-material-progress" aria-live="polite">
-      <strong>Processamento local · {finishedCount} de {statuses.length} concluído(s)</strong>
+      <strong>Análise dos materiais · {finishedCount} de {statuses.length} arquivo(s) processado(s)</strong>
       <progress value={finishedCount} max={statuses.length || 1} aria-label="Progresso real do processamento dos materiais" />
       <button className="text-action" type="button" onClick={() => { cancelRef.current = true; processingController.current?.abort(); }}>Interromper processamento</button>
     </div>}
     {statuses.length > 0 && <div className="study-material-results" aria-live="polite">
       {statuses.map((item, index) => <article key={`${item.name}:${index}`} className={`study-material-result ${item.status}`}>
         <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : item.status === 'review' ? 'Revisão recomendada' : item.status === 'insufficient' ? 'Evidência insuficiente' : item.status === 'awaiting-ai' ? 'Aguardando IA' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
+        {item.preparation && <ol className="study-preparation-steps" aria-label={`Etapas de preparação de ${item.name}`}>
+          {STUDY_PREPARATION_STAGES.map(({ id, label }) => {
+            const stage = item.preparation?.stages.find((entry) => entry.id === id);
+            return <li key={id}><strong>{label}</strong><span>{
+              stage?.status === 'completed' ? 'Concluído'
+                : stage?.status === 'running' ? 'Em andamento'
+                : stage?.status === 'failed' ? 'Falhou'
+                : stage?.status === 'unavailable' ? 'Aguardando conexão com IA'
+                : 'Aguardando'
+            }</span></li>;
+          })}
+        </ol>}
         {!!item.contextSources?.length && <details><summary>Comparar trechos da fonte</summary><ul>
           {item.contextSources.map(excerpt => <li key={excerpt}>{excerpt}</li>)}
         </ul></details>}
