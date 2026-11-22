@@ -238,7 +238,8 @@ export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { in
             </details>
           </header>
           <div hidden={manage || studyView !== 'conteudos'}><StudyTrail key={discipline.id} discipline={discipline} topics={disciplineTopics}
-            onManage={()=>setManage(true)} onMaterials={id=>openUnit(id,'materiais')} refreshToken={studyRefreshVersion}/></div>
+            onManage={()=>setManage(true)} onMaterials={id=>openUnit(id,'materiais')}
+            onAddMaterial={id => { openUnit(id, 'materiais'); setShowUpload(true); }} refreshToken={studyRefreshVersion}/></div>
           {(manage || studyView !== 'conteudos') && <><nav className="view-switcher" aria-label="Conteúdo da disciplina">{studyViews.map(([key, label]) =>
             <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => openUnit(unitId, key)}>{label}</button>
           )}</nav>
