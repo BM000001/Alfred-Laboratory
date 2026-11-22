@@ -1,0 +1,19 @@
+.study-butler { --eyes:#ffce64; display:inline-block; position:relative; overflow:hidden; vertical-align:middle; flex:none; width:5rem; height:3.1rem; }
+.study-butler.full { width:5rem; height:7.5rem; }
+.study-butler.bust { width:5rem; height:4.8rem; }
+.study-butler-figure { position:absolute; display:block; inset:0 auto auto 0; width:100%; aspect-ratio:2/3; }
+.study-butler img { display:block; width:100%; height:100%; }
+.study-butler .eye { position:absolute; top:20.6%; width:4.1%; height:5.6%; border-radius:60%; background:var(--eyes); box-shadow:0 0 2px var(--eyes); }
+.study-butler .left { left:38%; } .study-butler .right { left:53.5%; }
+.study-butler.thinking { --eyes:#85cfff; } .study-butler.thinking .right { height:3.2%; }
+.study-butler.complete { --eyes:#9ae5a7; } .study-butler.happy .eye,.study-butler.complete .eye { border-radius:75% 75% 30% 30%; height:3%; }
+.study-butler.attention { --eyes:#ffa663; } .study-butler.attention .eye { width:5%; }
+.study-butler.learning { --eyes:#ccb0ff; } .study-butler.learning .left { transform:rotate(18deg); }
+.study-butler.welcome .study-butler-figure { transform:rotate(-4deg); }
+@media(prefers-reduced-motion:no-preference){
+  .study-butler .eye { animation:study-blink 6s infinite; }
+  .study-butler.thinking .study-butler-figure { animation:study-nod 2.8s ease-in-out infinite alternate; }
+  .study-butler.complete,.study-butler.welcome { animation:study-nod .6s ease-out 2 alternate; }
+  @keyframes study-blink { 0%,93%,98%,100%{transform:scaleY(1)} 95%{transform:scaleY(.12)} }
+  @keyframes study-nod { from{transform:rotate(-3deg)} to{transform:rotate(3deg)} }
+}

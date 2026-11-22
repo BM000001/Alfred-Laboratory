@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
+import { StudyMascot } from './StudyMascot';
+import { activities, flashcardQuestions, passed, type IslandActivity } from './islandActivities';
+import { studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
 import type { StudyTopic } from './types';
 import type { StudyQuestion, StudyQuizAnswer, StudyQuizAttempt, StudyQuestionDifficulty } from './questionTypes';
 import { createQuestionService, gradeStudyAnswer, getQuestionSnapshot, summarizeQuiz, selectQuizQuestions } from './questionService';
@@ -12,14 +14,14 @@ const service = createQuestionService(studyQuestionRepository, studyQuizAttemptR
 const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
-export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; onChanged?: () => void }) {
+export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, activity = 'practice', onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; activity?: IslandActivity; onChanged?: () => void }) {
   const remotePilot = isRemoteStudyPreview();
   const localPilot = import.meta.env.DEV && import.meta.env.VITE_ALFRED_LOCAL_OLLAMA === '1' &&
     window.location.origin === 'http://127.0.0.1:5173';
   const pilotTopic = localPilot || remotePilot
     ? topics.find(topic => topic.id === unitId && topic.sourceFileId)
     : undefined;
-  const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]);
+  const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]) + (activity === 'practice' ? '' : ':' + activity);
   const [draftWarning, setDraftWarning] = useState(false);
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [history, setHistory] = useState<StudyQuizAttempt[]>([]);
@@ -31,7 +33,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
   const [difficulty, setDifficulty] = useState<StudyQuestionDifficulty>('medium');
   const [quizTopicFilter, setQuizTopicFilter] = useState('all');
   const [quizDifficultyFilter, setQuizDifficultyFilter] = useState<StudyQuestionDifficulty | 'all'>('all');
-  const [quizQuestionCount, setQuizQuestionCount] = useState(10);
+  const [quizQuestionCount, setQuizQuestionCount] = useState<number>(activities[activity].limit);
   const [phase, setPhase] = useState<'idle' | 'quiz' | 'result'>('idle');
   const [quizQuestions, setQuizQuestions] = useState<StudyQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -47,15 +49,24 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  async function loadQuestions() {
+    if (activity === 'memory') {
+      const cards = await studyFlashcardRepository.getAll();
+      return flashcardQuestions(cards.filter(card => card.disciplineId === disciplineId && (!unitId || card.topicId === unitId)));
+    }
+    const all = await service.list();
+    return activity === 'lab' ? all.filter(question => question.sourceExcerpt?.trim()) : all;
+  }
+
   async function refresh() {
-    const [allQuestions, allAttempts] = await Promise.all([service.list(), service.listAttempts()]);
+    const [allQuestions, allAttempts] = await Promise.all([loadQuestions(), service.listAttempts()]);
     setQuestions(allQuestions.filter((item) => item.disciplineId === disciplineId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setHistory(allAttempts.filter((item) => item.disciplineId === disciplineId).sort((a, b) => b.completedAt.localeCompare(a.completedAt)));
   }
 
   useEffect(() => {
     let active = true;
-    Promise.all([service.list(), service.listAttempts()])
+    Promise.all([loadQuestions(), service.listAttempts()])
       .then(([allQuestions, allAttempts]) => {
         if (!active) return;
         setQuestions(allQuestions.filter((item) => item.disciplineId === disciplineId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
@@ -64,7 +75,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       .catch(() => { if (active) setError('Não foi possível carregar o banco de questões.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [disciplineId, refreshToken]);
+  }, [disciplineId, unitId, activity, refreshToken]);
 
   useEffect(() => {
     if (loading || restoredDraft.current) return;
@@ -92,13 +103,14 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
 
   const unitQuestions = useMemo(() => unitId ? questions.filter((question) => question.topicId === unitId) : questions, [questions, unitId]);
   const unitHistory = useMemo(() => {
-    if (!unitId) return history;
+    const scoped = history.filter(a => (a.activity ?? 'practice') === activity);
+    if (!unitId) return scoped;
     const questionIds = new Set(unitQuestions.map((question) => question.id));
-    return history.filter((attempt) => attempt.answers.some((answer) => {
+    return scoped.filter((attempt) => attempt.answers.some((answer) => {
       const snapshot = getQuestionSnapshot(answer, disciplineId);
       return snapshot ? snapshot.topicId === unitId : questionIds.has(answer.questionId);
     }));
-  }, [disciplineId, history, unitId, unitQuestions]);
+  }, [disciplineId, activity, history, unitId, unitQuestions]);
 
   const availableQuizQuestions = useMemo(() => selectQuizQuestions(unitQuestions, {
     topicId: quizTopicFilter === 'all' ? undefined : quizTopicFilter,
@@ -149,7 +161,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       limit: quizQuestionCount,
       recentQuestionIds: history.slice(0, 5).flatMap(attempt => attempt.answers.map(answer => answer.questionId)),
     });
-    if (!session.length) return;
+    if (!session.length || (activity === 'memory' && session.length !== 3)) return;
     attemptId.current = crypto.randomUUID();
     setError('');
     setQuizQuestions(session);
@@ -191,6 +203,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
     const summary = summarizeQuiz(updatedAnswers);
     const attempt: StudyQuizAttempt = {
       id: attemptId.current,
+      activity,
       disciplineId,
       startedAt: quizStartedAt,
       completedAt: new Date().toISOString(),
@@ -243,11 +256,12 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
 
   return <section className="study-question-bank" aria-label="Banco de questões e simulados">
     <div className="study-question-header">
-      <div><span className="card-label">PRÁTICA E AUTOAVALIAÇÃO</span><h3>Questões e simulados</h3><p>{unitQuestions.length} questão(ões) cadastrada(s) · simulados com até 50 questões</p></div>
-      {phase === 'idle' && <button className="study-quiz-start" type="button" disabled={loading || !availableQuizQuestions.length} onClick={startQuiz}>Iniciar simulado</button>}
+      <div><span className="card-label">PRÁTICA E AUTOAVALIAÇÃO</span><h3>{activities[activity].title}</h3><p>{unitQuestions.length} questão(ões) cadastrada(s) · simulados com até 50 questões</p></div>
+      <p>{activity === 'memory' ? 'Acerte pelo menos dois de três cartões. São necessários três cartões com perguntas distintas e alternativas disponíveis.' : 'Aprovação com 80% de acertos. Sessões incompletas ficam em andamento até a última resposta.'}</p>
+      {phase === 'idle' && <button className="study-quiz-start" type="button" disabled={loading || !availableQuizQuestions.length || (activity === 'memory' && availableQuizQuestions.length < 3)} onClick={startQuiz}>Iniciar simulado</button>}
       {phase !== 'idle' && <button className="study-quiz-start secondary" type="button" onClick={exitQuiz} disabled={saving}>Sair do simulado</button>}
     </div>
-    {phase === 'idle' && <div className="study-quiz-filters">
+    {phase === 'idle' && activity === 'practice' && <div className="study-quiz-filters">
       {!unitId && <label htmlFor="study-quiz-topic-filter">Tópico do simulado
         <select id="study-quiz-topic-filter" value={quizTopicFilter} onChange={event => setQuizTopicFilter(event.target.value)}><option value="all">Todos os tópicos</option>{topics.map(topic => <option key={topic.id} value={topic.id}>{topic.title}</option>)}</select>
       </label>}
@@ -265,6 +279,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
     {phase === 'quiz' && currentQuestion && <article className="study-quiz-card">
       <div className="study-quiz-progress"><span>Questão {questionIndex + 1} de {quizQuestions.length}</span><span>{difficultyLabels[currentQuestion.difficulty]}</span></div>
       <div className="progress-track"><span style={{ width: `${((questionIndex + 1) / quizQuestions.length) * 100}%` }} /></div>
+      {activity === 'lab' && <blockquote>{currentQuestion.sourceExcerpt}</blockquote>}
       <h4>{currentQuestion.prompt}</h4>
       <div className="study-quiz-options">
         {currentQuestion.options.map((option, index) => <label key={index} className={revealed && index === currentQuestion.correctOptionIndex ? 'correct' : revealed && index === selectedOptionIndex ? 'incorrect' : ''}>
@@ -274,7 +289,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       </div>
       {revealed && <div role="status" className={currentFeedback ? 'study-quiz-feedback correct' : 'study-quiz-feedback incorrect'}>
         <strong>{currentFeedback ? 'Resposta correta.' : `Resposta incorreta. Alternativa correta: ${String.fromCharCode(65 + currentQuestion.correctOptionIndex)}.`}</strong>
-        {currentQuestion.explanation && <p>{currentQuestion.explanation}</p>}
+        {currentQuestion.explanation && <p><StudyMascot mood={currentFeedback ? 'happy' : 'learning'} />{currentQuestion.explanation}</p>}
         {currentQuestion.sourceExcerpt && <p>Fonte: {currentQuestion.sourceFileName} · “{currentQuestion.sourceExcerpt}”</p>}
       </div>}
       {!revealed ? <button className="primary-action" type="button" onClick={revealAnswer}>Corrigir resposta</button> : <button className="primary-action" type="button" onClick={() => void advanceQuiz()} disabled={saving}>{questionIndex + 1 === quizQuestions.length ? 'Finalizar simulado' : 'Próxima questão'}</button>}
@@ -282,6 +297,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
 
     {phase === 'result' && lastAttempt && resultSummary && <article className="study-quiz-result">
       <span className="card-label">RESULTADO DO SIMULADO</span>
+      <p>{passed(lastAttempt) ? 'Aprovado' : 'Revisão recomendada'}</p>
       <strong className="study-quiz-score">{resultSummary.percentage}%</strong>
       <p>{resultSummary.correct} acerto(s) de {resultSummary.total} questão(ões) · {resultSummary.incorrect} erro(s)</p>
       <div className="progress-track"><span style={{ width: `${resultSummary.percentage}%` }} /></div>
@@ -300,7 +316,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       </details>
     </article>}
 
-    {phase === 'idle' && <>
+    {phase === 'idle' && activity === 'practice' && <>
       {pilotTopic && <LocalQuestionPilot key={pilotTopic.id + ':' + pilotTopic.sourceFileId} topic={pilotTopic} remote={remotePilot}
         onSaved={async () => { await refresh(); onChanged?.(); }} />}
       <form className="study-question-form" onSubmit={createQuestion}>
@@ -333,6 +349,8 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
           <button className="text-action" type="button" onClick={() => void deleteQuestion(question)}>Excluir</button>
         </article>)}
       </div> : <div className="study-flashcard-empty">Cadastre questões objetivas acima. Depois, inicie um simulado para responder e receber a correção automaticamente.</div>}
+    </>}
+    {phase === 'idle' && <>
       {unitHistory.length > 0 && <div className="study-quiz-history"><strong>Histórico de simulados</strong>{unitHistory.slice(0, 5).map((attempt) => <div key={attempt.id}><span>{new Date(attempt.completedAt).toLocaleDateString('pt-BR')}</span><strong>{attempt.correctAnswers}/{attempt.totalQuestions} acertos · {summarizeQuiz(attempt.answers).percentage}%</strong><button type="button" className="text-action" onClick={() => openAttempt(attempt)}>Ver correção</button></div>)}</div>}
     </>}
   </section>;

@@ -170,7 +170,7 @@ function App() {
       {page !== 'inicio' && page !== 'assistente' && <header className="page-heading">
         <h1>{pages[page][0]}</h1>{pages[page][1] && <p>{pages[page][1]}</p>}
       </header>}
-      {page === 'estudos' && <Studies initialUnit={studyStart} onActions={(list) => { studyActions.current = list; }} />}
+      {page === 'estudos' && <Studies showMascot={!mascotHidden} initialUnit={studyStart} onActions={(list) => { studyActions.current = list; }} />}
       {page === 'assistente' && <AlfredWorkspace showMascot={!mascotHidden} revision={revision}
         onActions={(list) => { assistantActions.current = list; }}
         onCreate={(kind, projectId) => setEditor({ kind, projectId })} />}

@@ -40,6 +40,7 @@ export interface StudyQuizAnswer {
 }
 
 export interface StudyQuizAttempt {
+  activity?: import('./islandActivities').IslandActivity;
   id: string;
   disciplineId: string;
   startedAt: string;

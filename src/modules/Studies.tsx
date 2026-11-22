@@ -7,6 +7,9 @@ import { StudyLearning } from './studies/StudyLearning';
 import { StudyFlashcards } from './studies/StudyFlashcards';
 import { LocalQuestionPilot } from './studies/LocalQuestionPilot';
 import { isRemoteStudyPreview } from './studies/isRemoteStudyPreview';
+import { StudyMascot, StudyMascotVisible } from './studies/StudyMascot';
+import { StudyIsland } from './studies/StudyIsland';
+import type { IslandActivity } from './studies/islandActivities';
 import { QuestionBank } from './studies/QuestionBank';
 import { StudyMaterialImporter } from './studies/StudyMaterialImporter';
 import { StudyPerformance } from './studies/StudyPerformance';
@@ -30,6 +33,7 @@ function MaterialExercises({ topics, onSaved }: { topics: StudyTopic[]; onSaved:
   const material = materials.find(topic => topic.id === selected) ?? materials[0];
   if (!material) return <p>Importe ou vincule um material a uma unidade para gerar exercícios com IA.</p>;
   return <section>
+    <StudyMascot variant="bust" mood="learning" />
     <label>Material para exercícios
       <select value={material.id} onChange={event => setSelected(event.target.value)}>
         {materials.map(topic => <option key={topic.id} value={topic.id}>{topic.sourceFileName || topic.title}</option>)}
@@ -39,18 +43,11 @@ function MaterialExercises({ topics, onSaved }: { topics: StudyTopic[]; onSaved:
   </section>;
 }
 
-const studyDestinations = [
-  { name: 'Biblioteca', action: 'Aprender', detail: 'Abrir os materiais da disciplina', view: 'materiais' },
-  { name: 'Campo de Alvos', action: 'Praticar', detail: 'Responder a um simulado', view: 'praticar', practice: 'questions' },
-  { name: 'Baú de Flashcards', action: 'Memorizar', detail: 'Revisar os flashcards', view: 'praticar', practice: 'cards' },
-  { name: 'Laboratório', action: 'Aplicar', detail: 'Abrir o estudo guiado da disciplina', view: 'aprender' },
-  { name: 'Castelo', action: 'Dominar', detail: 'Consultar o desempenho e revisar erros', view: 'praticar', practice: 'performance' },
-] as const;
-
 export type StudyAction = { label: string; run: () => void };
 export type StudyStart = { disciplineId: string; unitId: string; view?: 'materiais' | 'aprender' | 'praticar' };
-export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; onActions?: (actions: StudyAction[]) => void } = {}) {
+export function Studies({ initialUnit, onActions, showMascot = true }: { showMascot?: boolean; initialUnit?: StudyStart; onActions?: (actions: StudyAction[]) => void } = {}) {
   const [studyView, setStudyView] = useState(initialUnit?.view ?? (initialUnit ? 'materiais' : 'conteudos'));
+  const [activity, setActivity] = useState<IslandActivity>('practice');
   const [practiceView, setPracticeView] = useState<typeof practiceViews[number][0]>('questions');
   const [showDisciplineForm, setShowDisciplineForm] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -107,6 +104,7 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
   const unit = disciplineTopics.find((topic) => topic.id === unitId);
   function openUnit(id: string, view = studyView) {
     if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
+    setActivity('practice');
     setUnitId(id);
     setStudyView(view);
   }
@@ -195,10 +193,11 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
 
   if (loading) return <p className="module-feedback">Carregando seus estudos...</p>;
 
-  return <section className="studies-module">
+  return <StudyMascotVisible.Provider value={showMascot}><section className="studies-module">
     {error && <p className="module-error" role="alert">{error}</p>}
     <section className="study-index-heading" aria-labelledby="disciplines-title">
       <div className="section-heading">
+        {!discipline && <StudyMascot mood="welcome" variant="full" />}
         <h2 id="disciplines-title">Disciplinas</h2>
         {discipline && <button className="text-action" type="button" onClick={() => {
           setSelectedDiscipline(''); setUnitId(''); setStudyView('conteudos');
@@ -256,7 +255,7 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
           <nav className="view-switcher" aria-label="Conteúdo da disciplina">{studyViews.map(([key, label]) =>
             <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => openUnit(unitId, key)}>{label}</button>
           )}</nav>
-          {(studyView === 'materiais' || studyView === 'praticar' || studyView === 'aprender') && <div className="study-filter">
+          {studyView !== 'notas' && <div className="study-filter">
             <label className="field-label" htmlFor="study-unit">Unidade de estudo</label>
             <select id="study-unit" value={unit?.id ?? ''} onChange={(event) => openUnit(event.target.value)}>
               <option value="">Toda a disciplina</option>
@@ -264,17 +263,17 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
             </select>
           </div>}
           {studyView === 'conteudos' && <>
-          <nav aria-label="Ilha de aprendizagem">
-            {studyDestinations.map(destination => <details key={destination.name} className="interface-disclosure">
-              <summary>{destination.name} · {destination.action}</summary>
-              <button className="text-action" type="button" onClick={() => {
-                if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
-                setUnitId('');
-                setStudyView(destination.view);
-                if ('practice' in destination) setPracticeView(destination.practice);
-              }}>{destination.detail}</button>
-            </details>)}
-          </nav>
+          <StudyIsland key={JSON.stringify([selectedDiscipline, unit?.id])} disciplineId={selectedDiscipline} unit={unit} topics={disciplineTopics}
+            onOpen={destination => {
+              if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
+              setActivity('practice');
+              setStudyView(destination.view);
+              if ('practice' in destination) setPracticeView(destination.practice);
+            }}
+            onChallenge={value => {
+              if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
+              setActivity(value); setStudyView('praticar'); setPracticeView('questions');
+            }} />
           <h3>Unidades de estudo</h3>
           {disciplineTopics.length > 0 && <div className="study-filter"><label className="field-label" htmlFor="topic-filter">Exibir</label><select id="topic-filter" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="all">Todos</option><option value="pending">Pendentes</option><option value="completed">Concluídos</option></select></div>}
           {visibleTopics.length === 0 ? <div className="empty-state"><strong>Nenhum conteúdo nesta lista.</strong><p>Use + para adicionar uma unidade ou altere o filtro.</p></div> : <div className="study-topic-list">{visibleTopics.map((topic) => <article className={topic.status === 'completed' ? 'study-topic completed' : 'study-topic'} key={topic.id}>
@@ -295,10 +294,10 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
           {studyView === 'praticar' && <div className="study-practice" key={`${selectedDiscipline}:${unit?.id ?? ''}`}>
             <div className="view-switcher practice-switcher" role="group" aria-label="Atividades e resultados">
               {practiceViews.map(([key, label]) => <button type="button" key={key} aria-pressed={practiceView === key}
-                onClick={() => setPracticeView(key)}>{label}</button>)}
+                onClick={() => { setActivity('practice'); setPracticeView(key); }}>{label}</button>)}
             </div>
             <div hidden={practiceView !== 'questions'}>
-              <QuestionBank key={JSON.stringify([selectedDiscipline, unit?.id])} disciplineId={selectedDiscipline} topics={disciplineTopics} unitId={unit?.id} refreshToken={studyRefreshVersion}
+              <QuestionBank activity={activity} key={JSON.stringify([selectedDiscipline, unit?.id, activity])} disciplineId={selectedDiscipline} topics={disciplineTopics} unitId={unit?.id} refreshToken={studyRefreshVersion}
                 onChanged={() => setPracticeVersion((version) => version + 1)} />
             </div>
             <div hidden={practiceView !== 'cards'}>
@@ -312,5 +311,5 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
         </div>}
       </div>
     </>}
-  </section>;
+  </section></StudyMascotVisible.Provider>;
 }

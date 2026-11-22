@@ -1,3 +1,4 @@
+import { StudyMascot } from './StudyMascot';
 import { useEffect, useRef, useState } from 'react';
 import { fileRepository, studyGeneratedQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../../storage/repositories';
 import { generateLocalStudyQuestions, localQuestionId, prepareLocalStudyQuestions, type LocalQuestionSource } from './localStudyQuestions';
@@ -132,7 +133,8 @@ export function LocalQuestionPilot({ topic, onSaved, remote = false }: { topic: 
     <button className="text-action" type="button" onClick={() => void generate()} disabled={Boolean(busy)}>Gerar e revisar questões no Ollama</button>
     </>}
     {busy === 'generate' && <button className="text-action" type="button" onClick={() => active.current?.abort()}>Cancelar geração</button>}
-    {status && <p role="status">{status}</p>}
+    {status && <p role="status"><StudyMascot mood={busy ? 'thinking' : status.startsWith('Questão aprovada') ? 'complete' :
+      questions.length ? 'happy' : preview && !consent && status.startsWith('Confira') ? 'neutral' : 'attention'} />{status}</p>}
     {questions.map(question => {
       const page = input?.request.chunks.find(chunk => chunk.chunkId === question.evidence[0].chunkId)?.pageNumber;
       return <article key={question.prompt}>
