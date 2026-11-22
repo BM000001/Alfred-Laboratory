@@ -216,42 +216,54 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
           const awaitingAI = 'awaitingAI' in result && result.awaitingAI === true;
           updatePreparation(index, 'analysis', 'completed');
           let aiResult = '';
+          let aiPrepared = false;
           if (awaitingAI && aiAvailable && aiConsent && state.raw?.text) {
-            updatePreparation(index, 'questions', 'running');
+            for (const stage of ['lessons', 'questions', 'flashcards'] as const) {
+              updatePreparation(index, stage, 'running');
+            }
             try {
-              const proposals = await requestAIStudyQuestions({
+              const pack = await requestAIStudyPack({
                 configuredOrigin: aiOrigin, currentOrigin: window.location.origin,
                 sourceText: state.raw.text, consent: aiConsent, signal: controller.signal,
               });
-              const saved = await saveValidatedAIStudyQuestions({
+              const saved = await saveValidatedAIStudyPack({
                 fileId: sourceId, fileName: file.name, disciplineId, topicId: topic.id,
-                sourceText: state.raw.text, questions: proposals, signal: controller.signal,
-                onSaved: count => updatePreparation(index, 'questions', 'running', undefined, count, proposals.length),
+                sourceText: state.raw.text, pack, signal: controller.signal,
+                onSaved: (kind, count) => updatePreparation(index, kind, 'running', undefined, count, pack[kind].length),
               });
-              if (saved) {
-                updatePreparation(index, 'questions', 'completed', undefined, saved, saved);
-                aiResult = ' ' + saved + ' questão(ões) gerada(s) por IA e salva(s) com fonte identificada.';
-              } else {
-                updatePreparation(index, 'questions', 'unavailable');
-                aiResult = ' A IA não retornou questões novas com base verificável neste material.';
+              for (const kind of ['lessons', 'questions', 'flashcards'] as const) {
+                const count = kind === 'lessons' ? saved.lessonsAdded : kind === 'questions'
+                  ? saved.questionsAdded : saved.flashcardsAdded;
+                updatePreparation(index, kind, count > 0 ? 'completed' : 'unavailable',
+                  undefined, count, pack[kind].length);
               }
+              aiPrepared = (await fileRepository.getById(sourceId))?.processing?.status === 'completed';
+              updatePreparation(index, 'trail', aiPrepared ? 'completed' : 'unavailable');
+              aiResult = 'IA: ' + saved.lessonsAdded + ' aula(s), ' + saved.questionsAdded +
+                ' questão(ões) e ' + saved.flashcardsAdded + ' flashcard(s) novos, todos vinculados à fonte.';
+              if (!aiPrepared) aiResult += ' Parte do conteúdo ainda precisa de material mais completo ou novas solicitações à IA.';
             } catch (cause) {
-              const message = cause instanceof Error ? cause.message : 'A IA não pôde preparar as questões.';
-              updatePreparation(index, 'questions', 'failed', message);
-              aiResult = ' As questões não foram geradas: ' + message;
+              const message = cause instanceof Error ? cause.message : 'A IA não pôde preparar o conteúdo.';
+              for (const kind of ['lessons', 'questions', 'flashcards'] as const) {
+                updatePreparation(index, kind, 'failed', message);
+              }
+              updatePreparation(index, 'trail', 'unavailable');
+              aiResult = ' A geração por IA falhou: ' + message;
+            }
+          } else if (awaitingAI) {
+            for (const stage of ['lessons', 'questions', 'flashcards', 'trail'] as const) {
+              updatePreparation(index, stage, 'unavailable');
             }
           }
-          if (awaitingAI) for (const stage of ['lessons', 'flashcards', 'trail'] as const) {
-            updatePreparation(index, stage, 'unavailable');
-          }
-          if (awaitingAI && (!aiAvailable || !aiConsent)) updatePreparation(index, 'questions', 'unavailable');
-          const resourceMessage = awaitingAI ? 'Material analisado e preservado. Aulas e flashcards aguardam IA. ' + (aiResult || 'Questões aguardam uma prévia autenticada e autorização para envio de trechos.') : state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
+          const resourceMessage = awaitingAI ? 'Material analisado e preservado. Aulas e flashcards aguardam IA. ' +
+            (aiResult || 'Questões aguardam uma prévia autenticada e autorização para envio de trechos.')
+            : state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
             : cardsAdded || questionsAdded ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados.`
             : `Texto salvo (${state.raw?.wordCount ?? 0} palavras), mas não encontrei novas definições explícitas ou outros trechos adequados para gerar cartões ou questões com segurança. O enriquecimento semântico depende de IA.`;
           const differences = state.corrected && state.status !== 'review' ? definitionDifferences(state.corrected) : [];
           const contextSources = differences.flat().map(entry => entry.sourceExcerpt).slice(0, 8);
           const contextNote = differences && differences.length ? ' Há definições diferentes para um mesmo termo. Podem ser complementares ou pertencer a contextos diferentes. Confira os trechos na fonte; esse termo ficou fora da geração automática.' : '';
-          updateStatus(index, state.status === 'review' ? 'review' : awaitingAI ? 'awaiting-ai' : state.generated && !state.generated.flashcards.length && !state.generated.questions.length ? 'insufficient' : 'success', `${resourceMessage}${contextNote} Original e texto extraído estão associados à disciplina.`, contextSources);
+          updateStatus(index, state.status === 'review' ? 'review' : aiPrepared ? 'success' : awaitingAI ? 'awaiting-ai' : state.generated && !state.generated.flashcards.length && !state.generated.questions.length ? 'insufficient' : 'success', `${resourceMessage}${contextNote} Original e texto extraído estão associados à disciplina.`, contextSources);
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : 'Falha inesperada ao processar este arquivo.';
           updatePreparation(index, 'analysis', 'failed', message);
