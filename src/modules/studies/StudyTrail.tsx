@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
+  fileRepository,
   studyFlashcardRepository,
   studyQuestionRepository,
   studyQuizAttemptRepository,
@@ -80,16 +81,20 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
       studyQuestionRepository.getAll(),
       studyFlashcardRepository.getAll(),
       studyQuizAttemptRepository.getAll(),
+      fileRepository.getAll(),
     ])
-      .then(([allQuestions, allCards, attempts]) => {
+      .then(([allQuestions, allCards, attempts, allFiles]) => {
         if (!current) return;
         const questions = allQuestions.filter(matches),
           cards = allCards.filter(matches);
+        const aiLessonCount = allFiles.filter(file => file.disciplineId === discipline.id &&
+          (!topic || file.processing?.topicId === topic.id))
+          .reduce((count, file) => count + (file.processing?.aiLessons?.length ?? 0), 0);
         setCounts({
           questions: questions.length,
           cards: cards.length,
           sourced: questions.filter((q) => q.sourceExcerpt).length,
-          lessons: cards.length > 0,
+          lessons: cards.length > 0 || aiLessonCount > 0,
           attempts: attempts.filter(
             (a) =>
               a.disciplineId === discipline.id &&
