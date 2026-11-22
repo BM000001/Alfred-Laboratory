@@ -112,6 +112,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     counts,
   );
   const hasLinkedMaterial = Boolean(topic?.sourceFileId);
+  const hasActivities = counts.lessons || counts.questions > 0 || counts.cards > 0;
   const nodes = chapter.nodes.map((node) => ({ ...node, completion: marks[node.id] ?? node.completion }));
   const summary = summarizeTrailCompletion(nodes);
   const index = nodes.findIndex((n) => n.id === active),
@@ -147,11 +148,17 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     <section className="learning-trail" aria-label="Trilha de aprendizagem">
       {warning && <p role="alert">{warning}</p>}
       {!online && <p role="status">Offline · recursos locais disponíveis</p>}
-      {!hasLinkedMaterial ? (
+      {load ? <p role="status">{load}</p> : !hasLinkedMaterial ? (
         <div className="empty-state" role="status">
           <strong>Adicione um material para começar</strong>
           <p>A trilha será preparada depois que você enviar um material da disciplina. Não vamos mostrar aulas ou desafios sem uma fonte.</p>
           <button type="button" className="primary-action" onClick={() => onAddMaterial(topic?.id ?? '')}>Adicionar material</button>
+        </div>
+      ) : !hasActivities ? (
+        <div className="empty-state" role="status">
+          <strong>Material salvo. Preparação da trilha pendente</strong>
+          <p>O material já está vinculado, mas ainda não há atividades preparadas com segurança. A geração por IA precisa estar disponível antes de liberar o percurso.</p>
+          <button type="button" className="primary-action" onClick={() => onMaterials(topic?.id ?? '')}>Ver material e preparação</button>
         </div>
       ) : !node ? (
         <>
