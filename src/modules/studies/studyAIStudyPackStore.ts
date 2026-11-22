@@ -1,4 +1,4 @@
-import { fileRepository, studyFlashcardRepository } from '../../storage/repositories';
+import { fileRepository, studyFlashcardRepository, studyQuestionRepository } from '../../storage/repositories';
 import { saveValidatedAIStudyQuestions } from './studyAIQuestionStore';
 import type { ValidatedAIStudyPack } from './studyRemotePack';
 
@@ -76,5 +76,17 @@ export async function saveValidatedAIStudyPack({
     await fileRepository.save({ ...file, processing: { ...file.processing, aiLessons: lessons } });
   }
   onSaved?.('lessons', lessonsAdded);
+  const updated = await fileRepository.getById(fileId);
+  const readyQuestions = (await studyQuestionRepository.getAll()).some(item =>
+    item.disciplineId === disciplineId && item.topicId === topicId && item.sourceFileId === fileId);
+  const readyCards = (await studyFlashcardRepository.getAll()).some(item =>
+    item.disciplineId === disciplineId && item.topicId === topicId && item.sourceFileId === fileId);
+  if (updated?.processing?.aiLessons?.length && readyQuestions && readyCards) {
+    signal.throwIfAborted();
+    await fileRepository.save({
+      ...updated,
+      processing: { ...updated.processing, status: 'completed', stage: 'Aulas, questões e flashcards preparados por IA.' },
+    });
+  }
   return { questionsAdded, flashcardsAdded, lessonsAdded };
 }
