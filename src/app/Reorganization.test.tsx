@@ -45,6 +45,7 @@ it('salva notas de Hoje nos destinos geral e disciplina, com uma única cópia a
   expect(within(general).queryByText('Nota vinculada B')).not.toBeInTheDocument();
   fireEvent.click(button('Aprender'));
   fireEvent.click(await screen.findByRole('button', { name: /História/ }));
+  fireEvent.click(button('Unidades e materiais'));
   fireEvent.click(button('Anotações'));
   expect(await screen.findByText('Nota vinculada B')).toBeVisible();
   expect(screen.queryByText('Nota geral A')).not.toBeInTheDocument();

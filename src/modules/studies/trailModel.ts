@@ -11,7 +11,7 @@ export const TRAIL_LANDMARKS = [
   { id: 'castle', label: 'Castelo', purpose: 'Avaliação e consolidação' },
 ] as const;
 
-export type TrailLandmarkId = typeof TRAIL_LANDMARKS[number]['id'];
+export type TrailLandmarkId = (typeof TRAIL_LANDMARKS)[number]['id'];
 export type TrailActivityKind = 'landmark' | 'quick-challenge' | 'flashcards' | 'review';
 export type TrailAvailability = 'available' | 'preparation-needed' | 'insufficient-content' | 'offline';
 export type TrailCompletion = 'not-started' | 'completed' | 'skipped';
@@ -56,4 +56,46 @@ export function getVisibleLandmarks(nodes: readonly TrailNode[]) {
     ...landmark,
     node: nodes.find((node) => node.kind === 'landmark' && node.landmarkId === landmark.id),
   }));
+}
+
+type Resources = { lessons: boolean; questions: number; cards: number; sourced: number; attempts: number };
+export function buildTrailChapter(
+  id: string,
+  disciplineId: string,
+  title: string,
+  resources: Resources,
+): TrailChapter {
+  const { lessons, questions, cards, sourced, attempts } = resources;
+  const stops: [string, TrailActivityKind, string, boolean][] = [
+    ['library', 'landmark', '', lessons],
+    ['quick', 'quick-challenge', 'Desafio rápido', questions > 0],
+    ['targets', 'landmark', '', questions > 0],
+    ['recall', 'flashcards', 'Recordar conceitos', cards > 0],
+    ['flashcard-chest', 'landmark', '', cards > 0],
+    ['review', 'review', 'Revisar tentativas', attempts > 0],
+    ['laboratory', 'landmark', '', sourced > 0],
+    ['warmup', 'flashcards', 'Revisão antes do simulado', cards > 0],
+    ['castle', 'landmark', '', questions > 0],
+  ];
+  return {
+    id,
+    disciplineId,
+    title,
+    nodes: stops.map(([key, kind, label, available]) => {
+      const landmark = TRAIL_LANDMARKS.find((item) => item.id === key);
+      return {
+        id: key,
+        chapterId: id,
+        kind,
+        landmarkId: landmark?.id,
+        title: landmark?.label ?? label,
+        availability: available
+          ? 'available'
+          : key === 'library' || key === 'review'
+            ? 'preparation-needed'
+            : 'insufficient-content',
+        completion: 'not-started',
+      };
+    }),
+  };
 }
