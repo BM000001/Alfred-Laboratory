@@ -104,3 +104,23 @@ test('contraste de texto, botões e controles atende os limites nos dois temas',
     }
   }
 });
+
+test('preview hands documents and Access callbacks to the browser and excludes login redirects from asset cache', async () => {
+  const scope = 'https://alfred-studies-iphone-preview.brianmarcondes2000.workers.dev/';
+  const listeners = new Map();
+  let activated = false;
+  vm.runInNewContext(worker, {
+    URL, Response, self: { registration: { scope }, skipWaiting: async () => { activated = true; },
+      addEventListener: (type, callback) => listeners.set(type, callback) },
+    caches: { open: async () => ({ match: async () => undefined, put: () => assert.fail('cached Access redirect') }) },
+    fetch: async (_req, opts) => { assert.equal(opts.redirect, 'manual'); return { type: 'opaqueredirect' }; },
+  });
+  await new Promise((resolve, reject) => listeners.get('install')({ waitUntil: p => p.then(resolve, reject) }));
+  assert.equal(activated, true);
+  for (const [path, mode] of [['', 'navigate'], ['index.html', 'navigate'], ['cdn-cgi/access/authorized', 'cors']]) {
+    listeners.get('fetch')({ request: { url: scope + path, method: 'GET', mode }, respondWith: () => assert.fail('intercepted Access') });
+  }
+  let pending;
+  listeners.get('fetch')({ request: { url: scope + 'assets/app-12345678.js', method: 'GET', mode: 'cors' }, respondWith: p => { pending = p; } });
+  assert.equal((await pending).status, 401);
+});

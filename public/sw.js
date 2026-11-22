@@ -1,3 +1,4 @@
+const ACCESS_PREVIEW = new URL(self.registration.scope).hostname === 'alfred-studies-iphone-preview.brianmarcondes2000.workers.dev';
 const IS_LABORATORY_SCOPE = new URL(self.registration.scope).pathname.startsWith('/Alfred-Laboratory/');
 const CACHE_PREFIX = IS_LABORATORY_SCOPE ? 'laboratory-alfred-' : 'alfred-';
 const SHELL_BUILD = '__ALFRED_SHELL_BUILD__';
@@ -41,7 +42,9 @@ async function cacheAppShell() {
 
 self.addEventListener('install', (event) => {
   // Let open clients finish using their current UI before changing cache generations.
-  event.waitUntil(cacheAppShell());
+  // Access owns document navigation. This worker can replace the legacy
+  // controller without fetching a protected document during installation.
+  event.waitUntil(ACCESS_PREVIEW ? self.skipWaiting() : cacheAppShell());
 });
 
 self.addEventListener('activate', (event) => {
@@ -62,6 +65,9 @@ self.addEventListener('fetch', (event) => {
   const scope = new URL(self.registration.scope);
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
 
+  // Preserve the browser's native top-level redirect and cookie handling.
+  if (ACCESS_PREVIEW && (request.mode === 'navigate' || url.pathname.startsWith('/cdn-cgi/'))) return;
+
   const isOcrAsset = url.pathname.includes(scope.pathname + 'ocr/');
   const isFingerprintedEntrypoint = url.pathname.startsWith(scope.pathname + 'assets/') && /-[\w-]{8,}\.(?:m?js|css)$/.test(url.pathname);
   const isAppAsset = request.mode === 'navigate' || url.pathname.includes('/assets/') ||
@@ -72,16 +78,26 @@ self.addEventListener('fetch', (event) => {
     const cache = await caches.open(isOcrAsset ? OCR_CACHE : APP_CACHE);
     const cached = await cache.match(request);
 
-    if (isOcrAsset && cached) return cached;
+    if (isOcrAsset && cached && (!ACCESS_PREVIEW || (!cached.redirected && !cached.headers.get('Content-Type')?.includes('text/html')))) return cached;
 
     try {
+      if (ACCESS_PREVIEW) {
+        const asset = await fetch(request, { redirect: 'manual' });
+        if (asset.type === 'opaqueredirect' || asset.redirected) {
+          return new Response(null, { status: 401, headers: { 'Cache-Control': 'no-store' } });
+        }
+        if (asset.ok && asset.type === 'basic' && !asset.headers.get('Content-Type')?.includes('text/html')) {
+          await cache.put(request, asset.clone());
+        }
+        return asset;
+      }
       const response = await fetch(request.mode === 'navigate' ? request.url : request, request.mode === 'navigate' ? { cache: 'reload' } : undefined);
       // The offline navigation shell and its entrypoints are installed together.
       // A live request may be ahead of this worker during a Pages rollout.
       if (request.mode !== 'navigate' && response.ok && response.type === 'basic') await cache.put(request, response.clone());
       return response;
     } catch (error) {
-      if (cached) return cached;
+      if (cached && (!ACCESS_PREVIEW || (!cached.redirected && !cached.headers.get('Content-Type')?.includes('text/html')))) return cached;
       // The precache fetch omits Origin, while a module request can send it.
       // This fallback is only for immutable same-origin JS/CSS build assets.
       if (isFingerprintedEntrypoint) {
