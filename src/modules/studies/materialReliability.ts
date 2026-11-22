@@ -110,6 +110,9 @@ export function relevantAmbiguities(text: string) {
     const definitions = entries.map(entry => normalizeMaterial(entry.definition));
     return definitions.some((left, leftIndex) => definitions.some((right, rightIndex) => {
       if (entries[leftIndex].context !== entries[rightIndex].context) return false;
+      // Direct definitions of one metric as a duration and a rate need source review.
+      if (/^(?:e |o |a )*(?:tempo|duracao) (?:ate|entre|de)\b/.test(left) &&
+          /^(?:e |o |a )*(?:quantidade|numero) de [\p{L} -]+ por (?:segundo|minuto|hora)\b/u.test(right)) return true;
       const bare = (value: string) => value.replace(/\bnao\s+/g, '');
       if (left !== right && bare(left) === bare(right)) return true;
       return /\b(?:mantem|aumenta)\b/.test(left) &&
