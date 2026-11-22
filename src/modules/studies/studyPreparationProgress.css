@@ -34,3 +34,28 @@
 .study-preparation-steps li span {
   font-size: 0.8rem;
 }
+
+.study-preparation-steps li[data-status='running'] {
+  border-color: #8fae83;
+}
+.study-preparation-steps li[data-status='running'] strong::before {
+  content: '';
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.45rem;
+  border: 2px solid #8fae83;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: study-preparation-spin 1s linear infinite;
+}
+@keyframes study-preparation-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .study-preparation-steps li[data-status='running'] strong::before {
+    animation: none;
+    border-top-color: #8fae83;
+  }
+}
