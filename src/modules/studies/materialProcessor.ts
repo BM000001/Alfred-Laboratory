@@ -6,7 +6,7 @@ import { assessMaterial, correctMaterial, validateMaterialResources, normalizeMa
 import { extractStudyDefinitions } from './studyMaterialGeneration';
 
 export interface MaterialProcessingState {
-  version: 1; profile: ProcessingProfile; status: 'running' | 'cancelled' | 'failed' | 'review' | 'completed';
+  version: 1; profile: ProcessingProfile; status: 'running' | 'cancelled' | 'failed' | 'review' | 'awaiting-ai' | 'completed';
   stage: string; topicId?: string; error?: string; raw?: StoredTextExtraction; corrected?: string; corrections?: Correction[];
   assessment?: ReturnType<typeof assessMaterial>; structured?: { blocks?: ReturnType<typeof structureMaterial>; definitions: ReturnType<typeof extractStudyDefinitions>; formulas: string[]; summary: string };
   skipDefinitionReview?: boolean;
@@ -14,7 +14,7 @@ export interface MaterialProcessingState {
   generated?: ReturnType<typeof validateMaterialResources>;
 }
 const active = new Set<string>();
-export async function processStoredMaterial(id: string, profile: ProcessingProfile, signal: AbortSignal, progress: (detail: string) => void, sourceFile?: File, unit?: StudyTopic) {
+export async function processStoredMaterial(id: string, profile: ProcessingProfile, signal: AbortSignal, progress: (detail: string) => void, sourceFile?: File, unit?: StudyTopic, options: { requireAI?: boolean } = {}) {
   if (active.has(id)) throw new Error('Este arquivo já está em processamento.');
   active.add(id);
   let state: MaterialProcessingState | undefined;
@@ -79,6 +79,16 @@ export async function processStoredMaterial(id: string, profile: ProcessingProfi
       ])].filter(excerpt => excerpt.length <= 500 && state!.raw!.text.includes(excerpt)).slice(0, 5).join('\n');
       state.structured = { blocks, definitions, formulas: state.corrected.split('\n').filter(line => /[=∑∫√]/u.test(line)), summary };
       await checkpoint('Conteúdo estruturado e resumo extraído');
+    }
+    // For the interactive importer, do not synthesize quizzes with deterministic local rules.
+    // Preserve extraction and provenance until a genuine AI provider is available.
+    if (options.requireAI) {
+      await checkpoint('Material estruturado. Aguardando geração por IA.');
+      state.status = 'awaiting-ai';
+      const latest = await fileRepository.getById(id);
+      if (!latest) throw new Error('Arquivo removido durante processamento.');
+      await fileRepository.save({ ...latest, extraction: state.raw, processing: state });
+      return { state, cardsAdded, questionsAdded, awaitingAI: true };
     }
     if (!state.generated) {
       state.generated = validateMaterialResources(state.corrected, state.assessment.score, profile, state.raw.text);
