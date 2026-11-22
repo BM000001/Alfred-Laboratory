@@ -25,7 +25,7 @@ const practiceViews = [
 
 export type StudyAction = { label: string; run: () => void };
 export type StudyStart = { disciplineId: string; unitId: string; view?: 'materiais' | 'aprender' | 'praticar' };
-export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; onActions?: (actions: StudyAction[]) => void } = {}) {
+export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { initialUnit?: StudyStart; onActions?: (actions: StudyAction[]) => void; onDisciplineOpenChange?: (open: boolean) => void } = {}) {
   const [studyView, setStudyView] = useState(initialUnit?.view ?? (initialUnit ? 'materiais' : 'conteudos'));
   const [manage, setManage] = useState(false);
   const [practiceView, setPracticeView] = useState<typeof practiceViews[number][0]>('questions');
@@ -81,6 +81,7 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
 
   const disciplineTopics = topics.filter((topic) => topic.disciplineId === selectedDiscipline);
   const discipline = disciplines.find((item) => item.id === selectedDiscipline);
+  useEffect(() => { onDisciplineOpenChange?.(Boolean(discipline)); }, [Boolean(discipline), onDisciplineOpenChange]);
   const unit = disciplineTopics.find((topic) => topic.id === unitId);
   function openUnit(id: string, view = studyView) {
     if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
