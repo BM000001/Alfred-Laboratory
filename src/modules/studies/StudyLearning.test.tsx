@@ -1,11 +1,11 @@
 import 'fake-indexeddb/auto';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { StudyLearning } from './StudyLearning';
-import { disciplineRepository, studyFlashcardRepository, studyLearningProgressRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
+import { fileRepository, disciplineRepository, studyFlashcardRepository, studyLearningProgressRepository, studyQuestionRepository, studyQuizAttemptRepository } from '../../storage/repositories';
 
 beforeEach(async () => {
-  await Promise.all([disciplineRepository.clear(), studyFlashcardRepository.clear(), studyLearningProgressRepository.clear(), studyQuestionRepository.clear(), studyQuizAttemptRepository.clear()]);
+  await Promise.all([fileRepository.clear(), disciplineRepository.clear(), studyFlashcardRepository.clear(), studyLearningProgressRepository.clear(), studyQuestionRepository.clear(), studyQuizAttemptRepository.clear()]);
   await disciplineRepository.save({ id: 'software', name: 'Engenharia de Software', createdAt: '' });
   await studyFlashcardRepository.save({ id: 'card-1', disciplineId: 'software', topicId: 'topic-1', subject: 'Encapsulamento', front: 'O que o material define como “Encapsulamento”?', back: 'Técnica que protege componentes internos.', createdAt: '', nextReviewAt: '2099-11-01T00:00:00.000Z', intervalDays: 7, reviewCount: 0 });
   await studyFlashcardRepository.save({
@@ -35,4 +35,30 @@ describe('StudyLearning', () => {
     render(<StudyLearning disciplineId="software" topics={[{ id: 'topic-1', disciplineId: 'software', title: 'Orientação a objetos', status: 'pending', createdAt: '' }]} />);
     expect(await screen.findByText('1/1')).not.toBeNull();
   });
+});
+
+it('exibe uma aula gerada por IA separando explicação, exemplo e trecho original', async () => {
+  const text = 'HTTP é um protocolo usado para transferir informações entre clientes e servidores web.';
+  await fileRepository.save({
+    id: 'material', name: 'aula.txt', type: 'text/plain', size: text.length,
+    blob: new Blob([text]), disciplineId: 'software', createdAt: '',
+    processing: {
+      version: 1, profile: 'printed', status: 'completed', stage: 'Gerado por IA', topicId: 'topic-1',
+      aiLessons: [{
+        id: 'lesson-ai-1', title: '**HTTP**', explanation: 'Uma explicação elaborada por IA.',
+        example: 'Exemplo complementar da IA: um navegador.', check: 'Qual protocolo?',
+        answer: 'HTTP', sourceExcerpt: text, createdAt: '',
+      }],
+    },
+  });
+  render(<StudyLearning disciplineId="software" topics={[{ id: 'topic-1', disciplineId: 'software', title: 'Protocolos', status: 'pending', createdAt: '' }]} />);
+  const heading = await screen.findByRole('heading', { name: 'HTTP' });
+  const article = heading.closest('article')!;
+  fireEvent.click(within(article).getByRole('button', { name: 'Abrir aula' }));
+  expect(within(article).getByText('Uma explicação elaborada por IA.')).toBeInTheDocument();
+  expect(within(article).getByText(/Exemplo complementar da IA/)).toBeInTheDocument();
+  fireEvent.click(within(article).getByText('Consultar material de origem'));
+  expect(within(article).getByText(text)).toBeInTheDocument();
+  fireEvent.click(within(article).getByRole('button', { name: 'Marcar como aprendido' }));
+  expect(await within(article).findByRole('button', { name: 'Explicação concluída' })).toBeInTheDocument();
 });
