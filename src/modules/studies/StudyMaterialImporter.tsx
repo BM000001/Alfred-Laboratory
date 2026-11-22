@@ -10,8 +10,9 @@ import { confirmMaterialDefinition, processStoredMaterial } from './materialProc
 import { PROCESSING_PROFILES, definitionDifferences, relevantAmbiguities, type ProcessingProfile } from './materialReliability';
 import { STUDY_PREPARATION_STAGES, createStudyPreparationState, updateStudyPreparationStage, type StudyPreparationState, type StudyPreparationStageId, type StudyPreparationStatus } from './studyPreparationProgress';
 import './studyPreparationProgress.css';
-import { isSameOriginAIAvailable, requestAIStudyQuestions } from './studyRemoteQuestions';
-import { saveValidatedAIStudyQuestions } from './studyAIQuestionStore';
+import { isSameOriginAIAvailable } from './studyRemoteQuestions';
+import { requestAIStudyPack } from './studyRemotePack';
+import { saveValidatedAIStudyPack } from './studyAIStudyPackStore';
 import { displayStudyTitle } from './displayStudyTitle';
 
 const files = createFileService(fileRepository);
@@ -94,11 +95,11 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     }
   }
 
-  async function retryAIQuestions(file: StoredFile, topic?: StudyTopic) {
+  async function retryAIPack(file: StoredFile, topic?: StudyTopic) {
     if (saving || !aiConsent || !aiAvailable) return;
     setSaving(true);
     setError('');
-    setAINotice('Conectando à IA para preparar questões com base no material salvo…');
+    setAINotice('Conectando à IA para preparar aulas, questões e flashcards…');
     const controller = new AbortController();
     processingController.current = controller;
     try {
@@ -106,17 +107,18 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         item.disciplineId === disciplineId && item.sourceFileId === file.id);
       const source = file.processing?.raw?.text;
       if (!target || !source) throw new Error('Não foi possível recuperar o texto e a unidade de origem.');
-      const proposals = await requestAIStudyQuestions({
+      const pack = await requestAIStudyPack({
         configuredOrigin: aiOrigin, currentOrigin: window.location.origin,
         sourceText: source, consent: aiConsent, signal: controller.signal,
       });
-      const saved = await saveValidatedAIStudyQuestions({
+      const saved = await saveValidatedAIStudyPack({
         fileId: file.id, fileName: file.name, disciplineId, topicId: target.id,
-        sourceText: source, questions: proposals, signal: controller.signal,
+        sourceText: source, pack, signal: controller.signal,
+        onSaved: (kind, count) => setAINotice('Salvando ' + count + ' novo(s) item(ns) de ' + kind + '…'),
       });
-      setAINotice(saved
-        ? saved + ' nova(s) questão(ões) produzida(s) por IA, validada(s) e salva(s).'
-        : 'A IA não retornou questões novas com resposta verificável no material.');
+      setAINotice('IA: ' + saved.lessonsAdded + ' aula(s), ' +
+        saved.questionsAdded + ' questão(ões) e ' + saved.flashcardsAdded +
+        ' flashcard(s) novos salvos com origem identificada.');
       await onProcessed?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Falha ao criar questões por IA.');
@@ -301,7 +303,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
       </div>)}
       {aiAvailable && <label className="study-ai-consent">
         <input type="checkbox" checked={aiConsent} disabled={saving} onChange={event => setAIConsent(event.target.checked)} />
-        Autorizo enviar até 3 trechos curtos deste material à IA protegida para preparar questões.
+        Autorizo enviar até 3 trechos curtos deste material à IA protegida para preparar aulas, questões e flashcards.
       </label>}
       <button className="primary-action" type="button" onClick={() => { onCloseUpload?.(); void saveAndProcess(); }} disabled={saving || !disciplineId}>{saving ? 'Salvando e processando…' : 'Salvar'}</button>
     </div>}
@@ -316,7 +318,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     {aiNotice && <p role="status" className="module-feedback">{aiNotice}</p>}
     {uploadOpen === false && aiAvailable && pending.length > 0 && <label className="study-ai-consent">
       <input type="checkbox" checked={aiConsent} disabled={saving} onChange={event => setAIConsent(event.target.checked)} />
-      Autorizo enviar trechos curtos deste material à IA protegida para preparar questões.
+      Autorizo enviar trechos curtos deste material à IA protegida para preparar aulas, questões e flashcards.
     </label>}
     {saving && <div className="study-material-progress" aria-live="polite">
       <strong>Análise dos materiais · {finishedCount} de {statuses.length} arquivo(s) processado(s)</strong>
@@ -354,7 +356,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
           : file.processing?.status === 'awaiting-ai' ? <>
             <p role="status">Fonte analisada. Aulas e flashcards aguardam geração por IA.</p>
             {aiAvailable ? <button className="primary-action" type="button" disabled={saving || !aiConsent}
-              onClick={() => void retryAIQuestions(file, topic)}>Gerar questões com IA</button>
+              onClick={() => void retryAIPack(file, topic)}>Preparar conteúdo com IA</button>
               : <p role="status">Geração remota indisponível nesta versão. Abra a prévia autenticada quando estiver publicada.</p>}
           </>
           : <button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic)}>Retomar processamento</button>}
