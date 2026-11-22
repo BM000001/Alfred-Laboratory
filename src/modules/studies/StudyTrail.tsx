@@ -269,6 +269,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
               {['targets', 'castle', 'quick', 'laboratory'].includes(active) && (
                 <QuestionBank
                   key={active}
+                  refreshToken={refreshToken + revision}
                   onFinished={() => {
                     setShowResult(true);
                     finish('completed');
