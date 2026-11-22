@@ -228,6 +228,7 @@ describe('App', () => {
     create('Nova disciplina');
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Disciplina da biblioteca' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
+    await screen.findByRole('heading', { name: 'Disciplina da biblioteca' });
     fireEvent.click(screen.getByLabelText('Gerenciar matéria'));
   fireEvent.click(await screen.findByRole('button', { name: 'Unidades e materiais' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Materiais' }));
