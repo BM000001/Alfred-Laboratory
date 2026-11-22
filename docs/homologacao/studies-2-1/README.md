@@ -17,3 +17,14 @@ O prompt pede justificativa fundamentada, análise de um distrator e identifica�
 Markdown sintético com nome de 193 caracteres, quarenta seções repetidas, tabela, código, URL extensa e marcação de imagem. Antes da correção, após importação, a largura chegou a 2.860 px nos três tamanhos testados. Após a correção, seleção, importação e leitura mantiveram a largura de 320, 390 e 430 px em Chromium e WebKit Linux. A tentativa de vincular um segundo arquivo exibiu erro na mesma largura e preservou o primeiro. O percurso verificou retorno das atividades e recuperação da unidade e do material ao recarregar. Em WebKit foi usado perfil persistente e arquivo real em disco.
 
 [Ilha](ilha.jpg) · [Leitura no Chromium](leitura.jpg) · [Leitura no WebKit](leitura-webkit.jpg). Capturas do pacote local. O proprietário já havia validado a geração real e a persistência da versão anterior no Safari. A avaliação pedagógica do novo prompt depende de inferência autenticada e revisão das questões.
+
+## Pontos de integração para conversão de documentos
+
+React e TypeScript são a base compartilhada da web e da PWA e a referência para futuros clientes iOS e Android. O fluxo de Estudos já oferece quatro pontos de integração:
+
+1. **Importação.** A Biblioteca usa `StudyMaterialImporter` e `fileService` para guardar o arquivo original no IndexedDB e vinculá-lo à unidade.
+2. **Extração.** Quando precisa de texto bruto, `processStoredMaterial` reutiliza a extração salva ou chama `extractTextDocument`. O contrato local `StoredTextExtraction` contém texto, formato, contagens, data e páginas quando disponíveis.
+3. **Organização.** O processador conserva o texto bruto e registra correções, blocos e ambiguidades. `prepareLocalStudyQuestions` seleciona os trechos literais por tópico e lote.
+4. **Geração.** `StudyEnhancementProvider` recebe os trechos revisados. O fluxo remoto exige consentimento, valida a proveniência e apresenta as sugestões para aprovação.
+
+Se uma avaliação futura justificar o Microsoft MarkItDown, o ponto de entrada é a etapa de extração. Um adaptador TypeScript poderia chamar uma API autenticada e normalizar o resultado para o contrato local. As referências de página só devem ser preenchidas quando fornecidas pela conversão. O envio do arquivo original exigiria consentimento próprio, pois a autorização atual cobre apenas os trechos selecionados para IA. A extração local continuaria disponível offline.
