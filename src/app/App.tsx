@@ -63,6 +63,7 @@ function Icon({ name }: { name: IconName }) {
 function App() {
   const [page, setPage] = useState<Page>('inicio');
   const [studyStart, setStudyStart] = useState<StudyStart>();
+  const [studyDisciplineOpen, setStudyDisciplineOpen] = useState(false);
   const [editor, setEditor] = useState<Editor>();
   const [menu, setMenu] = useState<StudyAction[]>();
   const [revision, setRevision] = useState(0);
@@ -106,6 +107,7 @@ function App() {
 
   function navigate(target: Page, context?: { study?: StudyStart; calendarDate?: string; settings?: 'google' | 'weather' }) {
     setPage(target);
+    setStudyDisciplineOpen(false);
     setStudyStart(context?.study);
     setCalendarStart(context?.calendarDate);
     setSettingsTarget(context?.settings);
@@ -167,10 +169,10 @@ function App() {
           connect: () => navigate('configuracoes', { settings: 'google' }),
           dismiss: () => { setInviteDismissed(true); remember(googleInviteKey, 'true'); },
         }} revision={revision} />}
-      {page !== 'inicio' && page !== 'assistente' && <header className="page-heading">
+      {page !== 'inicio' && page !== 'assistente' && !(page === 'estudos' && studyDisciplineOpen) && <header className="page-heading">
         <h1>{pages[page][0]}</h1>{pages[page][1] && <p>{pages[page][1]}</p>}
       </header>}
-      {page === 'estudos' && <Studies initialUnit={studyStart} onActions={(list) => { studyActions.current = list; }} />}
+      {page === 'estudos' && <Studies initialUnit={studyStart} onActions={(list) => { studyActions.current = list; }} onDisciplineOpenChange={setStudyDisciplineOpen} />}
       {page === 'assistente' && <AlfredWorkspace showMascot={!mascotHidden} revision={revision}
         onActions={(list) => { assistantActions.current = list; }}
         onCreate={(kind, projectId) => setEditor({ kind, projectId })} />}
