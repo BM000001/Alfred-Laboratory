@@ -248,6 +248,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                   </button>
                   <StudyLearning
                     aiOnly
+                    refreshToken={refreshToken + revision}
                     disciplineId={discipline.id}
                     topicId={topic?.id}
                     topics={topic ? [topic] : []}
@@ -255,10 +256,11 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                 </>
               )}
               {(node.kind === 'flashcards' || active === 'flashcard-chest') && (
-                <StudyFlashcards disciplineId={discipline.id} topicId={topic?.id} />
+                <StudyFlashcards disciplineId={discipline.id} topicId={topic?.id} refreshToken={refreshToken + revision} />
               )}
               {active === 'review' && (
                 <StudyPerformance
+                  refreshToken={refreshToken + revision}
                   disciplineId={discipline.id}
                   topics={topic ? [topic] : []}
                   unitId={topic?.id}
