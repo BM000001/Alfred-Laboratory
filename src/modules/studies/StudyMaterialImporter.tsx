@@ -10,6 +10,8 @@ import { confirmMaterialDefinition, processStoredMaterial } from './materialProc
 import { PROCESSING_PROFILES, definitionDifferences, relevantAmbiguities, type ProcessingProfile } from './materialReliability';
 import { STUDY_PREPARATION_STAGES, createStudyPreparationState, updateStudyPreparationStage, type StudyPreparationState, type StudyPreparationStageId, type StudyPreparationStatus } from './studyPreparationProgress';
 import './studyPreparationProgress.css';
+import { isSameOriginAIAvailable, requestAIStudyQuestions } from './studyRemoteQuestions';
+import { saveValidatedAIStudyQuestions } from './studyAIQuestionStore';
 
 const files = createFileService(fileRepository);
 const study = createStudyService(disciplineRepository, studyTopicRepository);
@@ -49,6 +51,10 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
   const [profile, setProfile] = useState<ProcessingProfile>('printed');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [aiConsent, setAIConsent] = useState(false);
+  const [aiNotice, setAINotice] = useState('');
+  const aiOrigin = import.meta.env.VITE_STUDIES_AI_ORIGIN;
+  const aiAvailable = isSameOriginAIAvailable(aiOrigin, window.location.origin);
   const fileInput = useRef<HTMLInputElement>(null);
   const cancelRef = useRef(false);
   const processingController = useRef<AbortController | null>(null);
@@ -109,9 +115,9 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     function updateStatus(index: number, status: ProcessingStatus['status'], detail: string, contextSources?: string[]) {
       setStatuses(current => current.map((item, position) => position === index ? { ...item, status, detail, contextSources } : item));
     }
-    function updatePreparation(index: number, stage: StudyPreparationStageId, status: StudyPreparationStatus, error?: string) {
+    function updatePreparation(index: number, stage: StudyPreparationStageId, status: StudyPreparationStatus, error?: string, completedItems?: number, totalItems?: number) {
       setStatuses(current => current.map((item, position) => position === index && item.preparation
-        ? { ...item, preparation: updateStudyPreparationStage(item.preparation, stage, { status, ...(error ? { error } : {}) }) }
+        ? { ...item, preparation: updateStudyPreparationStage(item.preparation, stage, { status, ...(error ? { error } : {}), ...(completedItems === undefined ? {} : { completedItems }), ...(totalItems === undefined ? {} : { totalItems }) }) }
         : item));
     }
     let storedChanges = false;
@@ -171,10 +177,37 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
           const { state, cardsAdded, questionsAdded } = result;
           const awaitingAI = 'awaitingAI' in result && result.awaitingAI === true;
           updatePreparation(index, 'analysis', 'completed');
-          if (awaitingAI) for (const stage of ['lessons', 'questions', 'flashcards', 'trail'] as const) {
+          let aiResult = '';
+          if (awaitingAI && aiAvailable && aiConsent && state.raw?.text) {
+            updatePreparation(index, 'questions', 'running');
+            try {
+              const proposals = await requestAIStudyQuestions({
+                configuredOrigin: aiOrigin, currentOrigin: window.location.origin,
+                sourceText: state.raw.text, consent: aiConsent, signal: controller.signal,
+              });
+              const saved = await saveValidatedAIStudyQuestions({
+                fileId: sourceId, fileName: file.name, disciplineId, topicId: topic.id,
+                sourceText: state.raw.text, questions: proposals, signal: controller.signal,
+                onSaved: count => updatePreparation(index, 'questions', 'running', undefined, count, proposals.length),
+              });
+              if (saved) {
+                updatePreparation(index, 'questions', 'completed', undefined, saved, saved);
+                aiResult = ' ' + saved + ' questão(ões) gerada(s) por IA e salva(s) com fonte identificada.';
+              } else {
+                updatePreparation(index, 'questions', 'unavailable');
+                aiResult = ' A IA não retornou questões novas com base verificável neste material.';
+              }
+            } catch (cause) {
+              const message = cause instanceof Error ? cause.message : 'A IA não pôde preparar as questões.';
+              updatePreparation(index, 'questions', 'failed', message);
+              aiResult = ' As questões não foram geradas: ' + message;
+            }
+          }
+          if (awaitingAI) for (const stage of ['lessons', 'flashcards', 'trail'] as const) {
             updatePreparation(index, stage, 'unavailable');
           }
-          const resourceMessage = awaitingAI ? 'Material analisado e preservado. A geração de aulas, exercícios e flashcards aguarda a conexão com uma IA real.' : state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
+          if (awaitingAI && (!aiAvailable || !aiConsent)) updatePreparation(index, 'questions', 'unavailable');
+          const resourceMessage = awaitingAI ? 'Material analisado e preservado. Aulas e flashcards aguardam IA. ' + (aiResult || 'Questões aguardam uma prévia autenticada e autorização para envio de trechos.') : state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
             : cardsAdded || questionsAdded ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados.`
             : `Texto salvo (${state.raw?.wordCount ?? 0} palavras), mas não encontrei novas definições explícitas ou outros trechos adequados para gerar cartões ou questões com segurança. O enriquecimento semântico depende de IA.`;
           const differences = state.corrected && state.status !== 'review' ? definitionDifferences(state.corrected) : [];
@@ -230,6 +263,10 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         <span>{file.name} · {(file.size / 1024).toFixed(0)} KB</span>
         <button className="text-action" type="button" disabled={saving} aria-label={`Remover ${file.name}`} onClick={() => setStaged((current) => current.filter((item) => item !== file))}>Remover</button>
       </div>)}
+      {aiAvailable && <label className="study-ai-consent">
+        <input type="checkbox" checked={aiConsent} disabled={saving} onChange={event => setAIConsent(event.target.checked)} />
+        Autorizo enviar até 3 trechos curtos deste material à IA protegida para preparar questões.
+      </label>}
       <button className="primary-action" type="button" onClick={() => { onCloseUpload?.(); void saveAndProcess(); }} disabled={saving || !disciplineId}>{saving ? 'Salvando e processando…' : 'Salvar'}</button>
     </div>}
   </div>;
@@ -240,6 +277,11 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
       setStaged([]); onCloseUpload?.();
     }}>{uploadFields}</EditDialog>}
     {error && <p className="module-error" role="alert">{error}</p>}
+    {aiNotice && <p role="status" className="module-feedback">{aiNotice}</p>}
+    {uploadOpen === false && aiAvailable && pending.length > 0 && <label className="study-ai-consent">
+      <input type="checkbox" checked={aiConsent} disabled={saving} onChange={event => setAIConsent(event.target.checked)} />
+      Autorizo enviar trechos curtos deste material à IA protegida para preparar questões.
+    </label>}
     {saving && <div className="study-material-progress" aria-live="polite">
       <strong>Análise dos materiais · {finishedCount} de {statuses.length} arquivo(s) processado(s)</strong>
       <progress value={finishedCount} max={statuses.length || 1} aria-label="Progresso real do processamento dos materiais" />
@@ -273,7 +315,12 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         {choices?.length ? <><p>Os trechos usam o mesmo termo com predicados opostos. Confira o contexto antes de escolher.</p>{choices.map(({ sourceExcerpt }) =>
           <button className="text-action" type="button" key={sourceExcerpt} disabled={saving}
             onClick={() => void resume(file, topic, sourceExcerpt)}>Manter: {sourceExcerpt}</button>)}<button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic, null)}>Continuar sem usar as definições em disputa</button></>
-          : file.processing?.status === 'awaiting-ai' ? <p role="status">Fonte analisada. A geração será disponibilizada após a conexão com a IA; nenhuma questão automática foi inventada.</p>
+          : file.processing?.status === 'awaiting-ai' ? <>
+            <p role="status">Fonte analisada. Aulas e flashcards aguardam geração por IA.</p>
+            {aiAvailable ? <button className="primary-action" type="button" disabled={saving || !aiConsent}
+              onClick={() => void retryAIQuestions(file, topic)}>Gerar questões com IA</button>
+              : <p role="status">Geração remota indisponível nesta versão. Abra a prévia autenticada quando estiver publicada.</p>}
+          </>
           : <button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic)}>Retomar processamento</button>}
       </article>;
     })}
