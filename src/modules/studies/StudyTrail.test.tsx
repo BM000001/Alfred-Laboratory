@@ -63,3 +63,17 @@ it('não exibe trilha sem material e abre a importação ao solicitar', async ()
   fireEvent.click(await screen.findByRole('button', { name: 'Adicionar material' }));
   expect(addMaterial).toHaveBeenCalledWith('');
 });
+
+it('abre a disciplina no primeiro capítulo com material, ignorando unidade manual vazia', async () => {
+  await studyQuestionRepository.save({
+    id: 'q-pref', disciplineId: 'prefer', topicId: 'sourced', prompt: 'Questão de teste?',
+    options: ['A', 'B'], correctOptionIndex: 0, difficulty: 'easy', createdAt: '',
+  });
+  render(<StudyTrail discipline={{ id: 'prefer', name: 'Matéria', createdAt: '' }}
+    topics={[
+      { id: 'empty', title: 'Unidade sem material', disciplineId: 'prefer', status: 'pending', createdAt: '' },
+      { id: 'sourced', title: 'Unidade com material', sourceFileId: 'file-1', disciplineId: 'prefer', status: 'pending', createdAt: '' },
+    ]} refreshToken={0} onManage={vi.fn()} onMaterials={vi.fn()} onAddMaterial={vi.fn()} />);
+  expect(await screen.findByRole('list')).toBeInTheDocument();
+  expect(screen.getByLabelText('Capítulo')).toHaveValue('sourced');
+});
