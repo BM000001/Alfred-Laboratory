@@ -221,14 +221,17 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
           })}
         </aside>}
         {discipline && <div className="study-content">
-          <button className="text-action" onClick={()=>{
-            if (!window.dispatchEvent(new Event('alfred-before-navigate',{cancelable:true}))) return;
-            if(manage || studyView !== 'conteudos'){setManage(false);setStudyView('conteudos');}
-            else {setSelectedDiscipline('');setUnitId('');}
-          }}>{manage || studyView !== 'conteudos' ? 'Voltar ao percurso' : 'Todas as disciplinas'}</button>
           <header className="study-content-heading">
-            <div><h2>{discipline?.name}</h2>{discipline?.description && <p>{discipline.description}</p>}</div>
-            <details className="interface-disclosure study-management"><summary>Gerenciar disciplina</summary>
+            <div>
+              <button className="text-action" type="button" aria-label={manage || studyView !== 'conteudos' ? 'Voltar à trilha' : 'Voltar às disciplinas'} onClick={() => {
+                if (!window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) return;
+                if (manage || studyView !== 'conteudos') { setManage(false); setStudyView('conteudos'); }
+                else { setSelectedDiscipline(''); setUnitId(''); }
+              }}>← Voltar</button>
+              <h2>{discipline.name}</h2>
+              {discipline.description && <p>{discipline.description}</p>}
+            </div>
+            <details className="interface-disclosure study-management"><summary aria-label="Gerenciar matéria">Gerenciar</summary>
               <button className="text-action" type="button" onClick={() => { if (discipline) editDiscipline(discipline); }}>Editar disciplina</button>
               <button className="danger-action" type="button" onClick={() => { if (discipline) void deleteDiscipline(discipline); }}>Excluir disciplina</button>
             </details>
