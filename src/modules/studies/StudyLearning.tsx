@@ -7,6 +7,7 @@ import { buildStudyLearningUnits, createLearningProgress } from './studyLearning
 import { studyLearningContexts, type StudyLearningContext, type StudyLearningProgress } from './learningTypes';
 
 import { getAlfredLocalStorageKey } from '../../storage/namespace';
+import { displayStudyTitle } from './displayStudyTitle';
 
 const contextStorageKey = getAlfredLocalStorageKey('alfred-study-learning-context');
 
@@ -70,7 +71,7 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
     {error && <p className="module-error" role="alert">{error}</p>}
     {loading ? <p className="module-feedback">Preparando suas explicações...</p> : readyUnits.length === 0 ? <div className="study-learning-empty"><strong>Ainda não há conteúdo guiado.</strong><p>Ainda não há aulas completas e verificadas. Adicione um material; quando a IA estiver disponível, o Alfred poderá complementar o conteúdo. Respostas curtas de flashcards não serão apresentadas como aulas prontas.</p></div> : <div className="study-learning-list">
       {readyUnits.map((unit, index) => <article className={unit.completed ? 'study-learning-card completed' : 'study-learning-card'} key={unit.id}>
-        <div className="study-learning-card-heading"><div><div className="study-learning-meta"><span className="study-learning-step">{index + 1}</span><span className="study-learning-reason">{reasonLabel(unit.reviewReason)}</span></div><h4>{unit.concept}</h4></div><button type="button" className="text-action" aria-expanded={expandedId === unit.id} onClick={() => setExpandedId((current) => current === unit.id ? '' : unit.id)}>{expandedId === unit.id ? 'Fechar' : 'Abrir aula'}</button></div>
+        <div className="study-learning-card-heading"><div><div className="study-learning-meta"><span className="study-learning-step">{index + 1}</span><span className="study-learning-reason">{reasonLabel(unit.reviewReason)}</span></div><h4>{displayStudyTitle(unit.concept)}</h4></div><button type="button" className="text-action" aria-expanded={expandedId === unit.id} onClick={() => setExpandedId((current) => current === unit.id ? '' : unit.id)}>{expandedId === unit.id ? 'Fechar' : 'Abrir aula'}</button></div>
         {expandedId === unit.id && <div className="study-learning-body">
           <section><span className="card-label">{unit.didactic ? 'Conceito usado na aula' : unit.sourceExcerpt ? 'Explicação extrativa' : 'Resposta do cartão'}</span><p>{unit.formalExplanation}</p></section>
           {unit.needsReview && <p role="status">Revisão recomendada. Este cartão salvo pode descrever uma situação específica em vez de um conceito.</p>}
