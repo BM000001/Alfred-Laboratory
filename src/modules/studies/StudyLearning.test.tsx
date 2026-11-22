@@ -62,3 +62,10 @@ it('exibe uma aula gerada por IA separando explicação, exemplo e trecho origin
   fireEvent.click(within(article).getByRole('button', { name: 'Marcar como aprendido' }));
   expect(await within(article).findByRole('button', { name: 'Explicação concluída' })).toBeInTheDocument();
 });
+
+it('não apresenta conteúdo local pré-programado como aula gerada por IA na trilha', async () => {
+  render(<StudyLearning aiOnly disciplineId="software"
+    topics={[{ id: 'topic-1', disciplineId: 'software', title: 'Orientação a objetos', status: 'pending', createdAt: '' }]} />);
+  expect(await screen.findByText('Ainda não há conteúdo guiado.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Abrir aula' })).not.toBeInTheDocument();
+});
