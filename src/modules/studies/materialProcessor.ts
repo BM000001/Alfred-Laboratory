@@ -11,6 +11,8 @@ export interface MaterialProcessingState {
   assessment?: ReturnType<typeof assessMaterial>; structured?: { blocks?: ReturnType<typeof structureMaterial>; definitions: ReturnType<typeof extractStudyDefinitions>; formulas: string[]; summary: string };
   skipDefinitionReview?: boolean;
   ambiguities?: ReturnType<typeof relevantAmbiguities>;
+  /** AI-authored lessons tied to their original excerpt. Optional: no IndexedDB migration. */
+  aiLessons?: Array<{ id: string; title: string; explanation: string; example: string; check: string; answer: string; sourceExcerpt: string; createdAt: string }>;
   generated?: ReturnType<typeof validateMaterialResources>;
 }
 const active = new Set<string>();
