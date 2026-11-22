@@ -13,7 +13,7 @@ import { displayStudyTitle } from './displayStudyTitle';
 const contextStorageKey = getAlfredLocalStorageKey('alfred-study-learning-context');
 type AILesson = NonNullable<MaterialProcessingState['aiLessons']>[number];
 
-export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 }: { disciplineId: string; topics: StudyTopic[]; topicId?: string; refreshToken?: number }) {
+export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0, aiOnly = false }: { disciplineId: string; topics: StudyTopic[]; topicId?: string; refreshToken?: number; aiOnly?: boolean }) {
   const [cards, setCards] = useState<StudyFlashcard[]>([]);
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [aiLessons, setAILessons] = useState<AILesson[]>([]);
@@ -46,7 +46,7 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0 
   }, [disciplineId, topicId, refreshToken]);
 
   const units = useMemo(() => buildStudyLearningUnits({ cards, questions, attempts, topics: topics.filter((topic) => topic.disciplineId === disciplineId), progress, context }), [cards, questions, attempts, topics, progress, context, disciplineId]);
-  const readyUnits = units.filter((unit) => unit.didactic && !unit.needsReview);
+  const readyUnits = aiOnly ? [] : units.filter((unit) => unit.didactic && !unit.needsReview);
   const completedCount = readyUnits.filter((unit) => unit.completed).length + aiLessons.filter(lesson => progress.some(item => item.lessonId === 'lesson:' + lesson.id)).length;
   const focusCount = readyUnits.filter((unit) => unit.reviewReason === 'weak-topic').length;
 
