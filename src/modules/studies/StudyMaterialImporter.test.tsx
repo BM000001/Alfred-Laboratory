@@ -98,7 +98,7 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File(['Texto de aula sem definições explícitas.'], 'resumo.txt')] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/aguarda a conexão com uma IA real/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Questões aguardam uma prévia autenticada/)).toBeInTheDocument();
     expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
     expect(await fileRepository.getAll()).toHaveLength(1);
   });
@@ -116,7 +116,7 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File([pdfBytes], 'apostila.pdf', { type: 'application/pdf' })] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/aguarda a conexão com uma IA real/)).toBeInTheDocument();
+    expect(await screen.findByText(/Questões aguardam uma prévia autenticada/)).toBeInTheDocument();
     expect(await fileRepository.getAll()).toHaveLength(1);
     expect((await fileRepository.getById('scanned-pdf'))?.processing?.status).toBe('awaiting-ai');
     expect((await fileRepository.getById('scanned-pdf'))?.extraction?.text).toBe(definitions);
