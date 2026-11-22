@@ -94,7 +94,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
           questions: questions.length,
           cards: cards.length,
           sourced: questions.filter((q) => q.sourceExcerpt).length,
-          lessons: cards.length > 0 || aiLessonCount > 0,
+          lessons: aiLessonCount > 0,
           attempts: attempts.filter(
             (a) =>
               a.disciplineId === discipline.id &&
@@ -247,6 +247,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                     Abrir materiais
                   </button>
                   <StudyLearning
+                    aiOnly
                     disciplineId={discipline.id}
                     topicId={topic?.id}
                     topics={topic ? [topic] : []}
