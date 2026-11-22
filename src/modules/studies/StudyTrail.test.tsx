@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { StudyTrail } from './StudyTrail';
-import { studyQuestionRepository } from '../../storage/repositories';
+import { studyFlashcardRepository, studyQuestionRepository } from '../../storage/repositories';
 
 it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar domínio', async () => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
@@ -20,6 +20,11 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
     onMaterials: vi.fn(),
     onAddMaterial: vi.fn(),
   };
+  await studyFlashcardRepository.save({
+    id: 'card-a', disciplineId: 's', topicId: 'a', front: 'O que é o conceito?',
+    back: 'Explicação de referência.', createdAt: '', nextReviewAt: '2099-01-01T00:00:00.000Z',
+    intervalDays: 0, reviewCount: 0,
+  });
   await studyQuestionRepository.save({
     id: 'q',
     disciplineId: 's',
@@ -31,7 +36,7 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
     createdAt: '',
   });
   const view = render(<StudyTrail {...data} />);
-  expect(within(screen.getByRole('list')).getAllByRole('button')).toHaveLength(9);
+  expect(within(await screen.findByRole('list')).getAllByRole('button')).toHaveLength(9);
   fireEvent.click(await screen.findByRole('button', { name: /Castelo Conteúdo insuficiente/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Pular etapa' }));
   fireEvent.click(screen.getByRole('button', { name: 'Voltar à trilha' }));
