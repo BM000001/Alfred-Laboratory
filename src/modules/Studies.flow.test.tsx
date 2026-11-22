@@ -79,6 +79,7 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: 'Aprender' }));
   fireEvent.click(await screen.findByRole('button', { name: /Software sintético/ }));
+  fireEvent.click(screen.getByLabelText('Gerenciar matéria'));
   fireEvent.click(await screen.findByRole('button', { name: 'Unidades e materiais' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Praticar Orientação a objetos' }));
   expect(await screen.findByText('3 questão(ões) cadastrada(s) · simulados com até 50 questões')).toBeInTheDocument();
