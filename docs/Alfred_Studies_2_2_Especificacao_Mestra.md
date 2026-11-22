@@ -1,8 +1,8 @@
 # Alfred Studies 2.2 — Especificação mestra de produto e design
 
-**Versão:** 1.0 — consolidação de planejamento  
+**Versão:** 1.1 — consolidação de planejamento  
 **Data:** 22/11/2026  
-**Situação:** especificação em consolidação; **não implementada**  
+**Situação:** especificação registrada; início da implementação autorizado em 22/11/2026, somente em branch de desenvolvimento do Laboratory, sem merge automático  
 **Repositório de testes previsto:** `BM000001/Alfred-Laboratory`  
 **Produção:** `BM000001/Alfred` — não alterar sem autorização explícita.
 
@@ -38,7 +38,15 @@ Princípios inegociáveis:
 
 A paleta acima é referência de direção; contraste, acessibilidade e uso exato por componente devem ser validados no protótipo. Outros tons do design system original podem complementar sem descaracterizar a identidade.
 
-### 2.2 Tela da disciplina / trilha
+### 2.2 Modo claro e modo escuro (aprovado em 22/11/2026)
+
+- **Modo escuro:** fundo grafite esverdeado `#171B18`, superfícies `#282E29`, verde sálvia `#8FAE83`, dourado `#D8C293` e texto `#F3F1EA`.
+- **Modo claro:** fundo off-white `#F3F1EA`, superfícies claras, verde e dourado com contraste acessível.
+- Ambos devem preservar **as mesmas funcionalidades, estruturas e elementos pixel art**, com contraste, sombras e iluminação adaptados ao tema.
+- Respeitar o **tema global do Alfred**, sem criar seletor duplicado na Central de Estudos.
+- **Correção do mockup:** a biblioteca ilustrada colocada na área **Hoje** foi um adorno indevido. A construção Biblioteca pertence exclusivamente à trilha de aprendizagem, não à página inicial.
+
+### 2.3 Tela da disciplina / trilha
 
 - Cabeçalho **compacto**: voltar, nome da disciplina, capítulo ou atalho de navegação e indicadores discretos de progresso/domínio; não criar barra de abas excessiva.
 - **Uma trilha contínua, vertical e sinuosa**, ocupando o foco da tela; navegação entre capítulos sem transformar a tela em um painel complexo.
@@ -49,7 +57,7 @@ A paleta acima é referência de direção; contraste, acessibilidade e uso exat
 - Construções permanecem visíveis mesmo com conteúdo insuficiente; diferenciar **disponível**, **preparação necessária**, **conteúdo insuficiente** e **offline**.
 - Retornar à posição anterior da trilha após sair de uma atividade.
 
-### 2.3 Navegação e mascote
+### 2.4 Navegação e mascote
 
 - Não multiplicar abas dentro da trilha; preferir ações contextuais e navegação curta.
 - Atividades rápidas podem abrir no contexto da trilha; aulas, simulados e fluxos maiores usam telas focadas.
@@ -165,7 +173,7 @@ A última direção visual aproximou a paleta e simplificou o mapa, mas o usuár
 
 | Data | Versão | Mudança | Status |
 |---|---|---|---|
-| 22/11/2026 | 1.0 | Consolidação de princípios, decisões EST-TRILHA-006 a 037, requisitos visuais e fases propostas. | Documento criado; sem implementação. |
+| 22/11/2026 | 1.0 | Consolidação de princípios, decisões EST-TRILHA-006 a 037, requisitos visuais e fases propostas. | Documento criado; sem implementação. |\n| 22/11/2026 | 1.1 | Registrados modo claro/escuro, biblioteca fora do Hoje e autorização para iniciar implementação controlada no Laboratory. | Design da trilha ainda sujeito a validação; sem merge automático. |
 
 ---
 
