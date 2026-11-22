@@ -17,7 +17,7 @@ export function LocalQuestionPilot({ topic, onSaved, remote = false }: { topic: 
   const [preview, setPreview] = useState<LocalQuestionSource>();
   const [consent, setConsent] = useState(false);
   const [questions, setQuestions] = useState<SuggestedQuestion[]>([]);
-  const [busy, setBusy] = useState<'generate' | 'save'>();
+  const [busy, setBusy] = useState<'prepare' | 'generate' | 'save'>();
   const [status, setStatus] = useState('');
   const active = useRef<AbortController | null>(null);
   const saving = useRef(false);
@@ -29,13 +29,17 @@ export function LocalQuestionPilot({ topic, onSaved, remote = false }: { topic: 
     setConsent(false);
     setPreview(undefined);
     setQuestions([]);
-    setStatus('');
+    setBusy('prepare');
+    setStatus('Preparando trechos do material…');
     try {
       const file = await fileRepository.getById(topic.sourceFileId);
       if (!file) throw new Error('O material de origem foi removido.');
       setPreview(prepareLocalStudyQuestions(file, topic));
+      setStatus('Confira os trechos antes de autorizar o envio.');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Não foi possível abrir o material.');
+    } finally {
+      setBusy(undefined);
     }
   }
 
