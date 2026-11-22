@@ -12,6 +12,7 @@ import { STUDY_PREPARATION_STAGES, createStudyPreparationState, updateStudyPrepa
 import './studyPreparationProgress.css';
 import { isSameOriginAIAvailable, requestAIStudyQuestions } from './studyRemoteQuestions';
 import { saveValidatedAIStudyQuestions } from './studyAIQuestionStore';
+import { displayStudyTitle } from './displayStudyTitle';
 
 const files = createFileService(fileRepository);
 const study = createStudyService(disciplineRepository, studyTopicRepository);
@@ -278,7 +279,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
   const uploadFields = <div className="dialog-form">
     <div>
       <span className="card-label">MATERIAL DA DISCIPLINA</span>
-      <h3>{unit ? `Material de ${unit.title}` : 'Adicionar arquivos de estudo'}</h3>
+      <h3>{unit ? `Material de ${displayStudyTitle(unit.title)}` : 'Adicionar arquivos de estudo'}</h3>
       <p>{unit ? 'Selecione um arquivo para vincular a esta unidade.' : 'Selecione um ou vários materiais.'} Ao salvar, Alfred analisa e preserva o material. As novas atividades só serão geradas quando a IA real estiver disponível.</p>
     </div>
     <div className="study-filter">
