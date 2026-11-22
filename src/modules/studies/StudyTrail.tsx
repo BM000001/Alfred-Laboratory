@@ -35,9 +35,10 @@ type Props = {
   refreshToken: number;
   onManage: () => void;
   onMaterials: (unit: string) => void;
+  onAddMaterial: (unit: string) => void;
 };
 
-export function StudyTrail({ discipline, topics, refreshToken, onManage, onMaterials }: Props) {
+export function StudyTrail({ discipline, topics, refreshToken, onManage, onMaterials, onAddMaterial }: Props) {
   const [chapterId, selectChapter] = useState('');
   const topic = topics.find((t) => t.id === chapterId) ?? topics[0];
   const [active, select] = useState('');
@@ -110,7 +111,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     topic?.title ?? 'Toda a disciplina',
     counts,
   );
-  const hasLinkedMaterial = topics.some((entry) => Boolean(entry.sourceFileId));
+  const hasLinkedMaterial = Boolean(topic?.sourceFileId);
   const nodes = chapter.nodes.map((node) => ({ ...node, completion: marks[node.id] ?? node.completion }));
   const summary = summarizeTrailCompletion(nodes);
   const index = nodes.findIndex((n) => n.id === active),
@@ -150,7 +151,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
         <div className="empty-state" role="status">
           <strong>Adicione um material para começar</strong>
           <p>A trilha será preparada depois que você enviar um material da disciplina. Não vamos mostrar aulas ou desafios sem uma fonte.</p>
-          <button type="button" className="primary-action" onClick={() => onMaterials('')}>Adicionar material</button>
+          <button type="button" className="primary-action" onClick={() => onAddMaterial(topic?.id ?? '')}>Adicionar material</button>
         </div>
       ) : !node ? (
         <>
