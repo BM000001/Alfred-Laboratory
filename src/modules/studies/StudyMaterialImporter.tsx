@@ -343,13 +343,13 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         {item.preparation && <ol className="study-preparation-steps" aria-label={`Etapas de preparação de ${item.name}`}>
           {STUDY_PREPARATION_STAGES.map(({ id, label }) => {
             const stage = item.preparation?.stages.find((entry) => entry.id === id);
-            return <li key={id}><strong>{label}</strong><span>{
+            return <li key={id} data-status={stage?.status}><strong>{label}</strong><span>{
               stage?.status === 'completed' ? 'Concluído'
                 : stage?.status === 'running' ? 'Em andamento'
                 : stage?.status === 'failed' ? 'Falhou'
                 : stage?.status === 'unavailable' ? 'Aguardando conexão com IA'
                 : 'Aguardando'
-            }</span></li>;
+            }{stage?.completedItems !== undefined && stage?.totalItems !== undefined ? ` · ${stage.completedItems}/${stage.totalItems} salvo(s)` : ''}</span></li>;
           })}
         </ol>}
         {!!item.contextSources?.length && <details><summary>Comparar trechos da fonte</summary><ul>
