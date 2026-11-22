@@ -10,7 +10,7 @@ describe('displayStudyTitle', () => {
   });
 
   it('preserves meaningful syntax in code-like labels', () => {
-    expect(displayStudyTitle('**kwargs')).toBe('kwargs'); // ambiguous import styling, display only
+    expect(displayStudyTitle('**kwargs')).toBe('**kwargs'); // preserve valid Python syntax
     expect(displayStudyTitle('HTTP/2')).toBe('HTTP/2');
     expect(displayStudyTitle('C++')).toBe('C++');
   });
