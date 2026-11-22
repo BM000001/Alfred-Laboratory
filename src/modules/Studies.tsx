@@ -3,6 +3,7 @@ import { Notes, NoteEditor } from './Notes';
 import { EditDialog } from '../components/EditDialog';
 import { useEffect, useLayoutEffect, useMemo, useState, type FormEvent } from 'react';
 import type { Discipline, StudyTopic } from './studies/types';
+import { StudyTrail } from './studies/StudyTrail';
 import { StudyLearning } from './studies/StudyLearning';
 import { StudyFlashcards } from './studies/StudyFlashcards';
 import { QuestionBank } from './studies/QuestionBank';
@@ -26,6 +27,7 @@ export type StudyAction = { label: string; run: () => void };
 export type StudyStart = { disciplineId: string; unitId: string; view?: 'materiais' | 'aprender' | 'praticar' };
 export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; onActions?: (actions: StudyAction[]) => void } = {}) {
   const [studyView, setStudyView] = useState(initialUnit?.view ?? (initialUnit ? 'materiais' : 'conteudos'));
+  const [manage, setManage] = useState(false);
   const [practiceView, setPracticeView] = useState<typeof practiceViews[number][0]>('questions');
   const [showDisciplineForm, setShowDisciplineForm] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -134,7 +136,7 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
       const input = { title: topicTitle, notes: topicNotes };
       if (editingTopicId) await studies.updateTopic(editingTopicId, input);
       else await studies.createTopic({ disciplineId: selectedDiscipline, ...input });
-      setStudyView('conteudos');
+      setManage(true);setStudyView('conteudos');
       setTopicTitle(''); setTopicNotes(''); setEditingTopicId(null); setShowTopicForm(false); await refresh();
     } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Não foi possível salvar o conteúdo.'); }
     finally { setSaving(false); }
@@ -172,18 +174,16 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
 
   return <section className="studies-module">
     {error && <p className="module-error" role="alert">{error}</p>}
-    <section className="study-index-heading" aria-labelledby="disciplines-title">
+    {!discipline && <section className="study-index-heading" aria-labelledby="disciplines-title">
       <div className="section-heading">
         <h2 id="disciplines-title">Disciplinas</h2>
-        {discipline && <button className="text-action" type="button" onClick={() => {
-          setSelectedDiscipline(''); setUnitId(''); setStudyView('conteudos');
-        }}>Todas as disciplinas</button>}
+
       </div>
       {progress.total > 0 && <div className="study-overall">
         <progress aria-label="Progresso geral dos estudos" value={progress.completed} max={progress.total} />
         <span>{progress.completed} de {progress.total} unidades concluídas</span>
       </div>}
-    </section>
+    </section>}
 
     {showDisciplineForm && <EditDialog title={editingDisciplineId ? 'Editar disciplina' : 'Nova disciplina'} onClose={cancelDisciplineEdit}>
       <form className="dialog-form" onSubmit={createDiscipline} data-saving={saving || undefined}>
@@ -209,18 +209,23 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
     </EditDialog>}
 
     {disciplines.length === 0 ? <div className="empty-state"><strong>Seu espaço de estudos começa aqui.</strong><p>Use + para criar a primeira disciplina.</p></div> : <>
-      <div className={discipline ? "study-layout" : "study-library"}>
-        <aside className="discipline-list" aria-label="Disciplinas">
+      <div className={discipline ? "study-workspace" : "study-library"}>
+        {!discipline && <aside className="discipline-list" aria-label="Disciplinas">
           {disciplines.map((discipline) => {
             const summary = summarizeStudyProgress(topics.filter((topic) => topic.disciplineId === discipline.id));
-            return <button type="button" key={discipline.id} className={selectedDiscipline === discipline.id ? 'discipline-option selected' : 'discipline-option'} aria-pressed={selectedDiscipline === discipline.id} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) { setSelectedDiscipline(discipline.id); setUnitId(''); setStudyView('conteudos'); setPracticeView('questions'); setShowTopicForm(false); setEditingTopicId(null); setTopicTitle(''); setTopicNotes(''); } }}>
+            return <button type="button" key={discipline.id} className={selectedDiscipline === discipline.id ? 'discipline-option selected' : 'discipline-option'} aria-pressed={selectedDiscipline === discipline.id} onClick={() => { if (window.dispatchEvent(new Event('alfred-before-navigate', { cancelable: true }))) { setManage(false); setSelectedDiscipline(discipline.id); setUnitId(''); setStudyView('conteudos'); setPracticeView('questions'); setShowTopicForm(false); setEditingTopicId(null); setTopicTitle(''); setTopicNotes(''); } }}>
               <strong>{discipline.name}</strong>
               <span>{summary.total ? `${summary.completed}/${summary.total} unidades concluídas` : 'Sem unidades'}</span>
               {summary.total > 0 && <progress aria-hidden="true" value={summary.completed} max={summary.total} />}
             </button>;
           })}
-        </aside>
+        </aside>}
         {discipline && <div className="study-content">
+          <button className="text-action" onClick={()=>{
+            if (!window.dispatchEvent(new Event('alfred-before-navigate',{cancelable:true}))) return;
+            if(manage || studyView !== 'conteudos'){setManage(false);setStudyView('conteudos');}
+            else {setSelectedDiscipline('');setUnitId('');}
+          }}>{manage || studyView !== 'conteudos' ? 'Voltar ao percurso' : 'Todas as disciplinas'}</button>
           <header className="study-content-heading">
             <div><h2>{discipline?.name}</h2>{discipline?.description && <p>{discipline.description}</p>}</div>
             <details className="interface-disclosure study-management"><summary>Gerenciar disciplina</summary>
@@ -228,7 +233,9 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
               <button className="danger-action" type="button" onClick={() => { if (discipline) void deleteDiscipline(discipline); }}>Excluir disciplina</button>
             </details>
           </header>
-          <nav className="view-switcher" aria-label="Conteúdo da disciplina">{studyViews.map(([key, label]) =>
+          <div hidden={manage || studyView !== 'conteudos'}><StudyTrail key={discipline.id} discipline={discipline} topics={disciplineTopics}
+            onManage={()=>setManage(true)} onMaterials={id=>openUnit(id,'materiais')} refreshToken={studyRefreshVersion}/></div>
+          {(manage || studyView !== 'conteudos') && <><nav className="view-switcher" aria-label="Conteúdo da disciplina">{studyViews.map(([key, label]) =>
             <button type="button" key={key} aria-current={studyView === key ? 'page' : undefined} onClick={() => openUnit(unitId, key)}>{label}</button>
           )}</nav>
           {(studyView === 'materiais' || studyView === 'praticar' || studyView === 'aprender') && <div className="study-filter">
@@ -271,6 +278,7 @@ export function Studies({ initialUnit, onActions }: { initialUnit?: StudyStart; 
                 refreshToken={studyRefreshVersion + practiceVersion} onCardCreated={() => setCardVersion((version) => version + 1)} />
             </div>
           </div>}
+          </>}
         </div>}
       </div>
     </>}

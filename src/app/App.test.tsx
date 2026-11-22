@@ -140,7 +140,7 @@ describe('App', () => {
     create('Nova disciplina');
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Estrutura de Dados' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
-    expect(await screen.findByRole('button', { name: /Estrutura de Dados/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Estrutura de Dados' })).toBeInTheDocument();
 
     create('Nova unidade');
     fireEvent.change(screen.getByLabelText('Nome da unidade'), { target: { value: 'Listas encadeadas' } });
@@ -155,7 +155,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Matemática para edição' } });
     fireEvent.change(screen.getByLabelText(/Descrição/), { target: { value: 'Estudo inicial' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Matemática para edição/ }));
+    await screen.findByRole('heading', { name: 'Matemática para edição' });
     fireEvent.click(screen.getByText('Gerenciar disciplina'));
     fireEvent.click(screen.getByRole('button', { name: 'Editar disciplina' }));
 
@@ -174,7 +174,7 @@ describe('App', () => {
     create('Nova disciplina');
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Matemática tópicos' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Matemática tópicos/ }));
+    await screen.findByRole('heading', { name: 'Matemática tópicos' });
     create('Nova unidade');
     fireEvent.change(screen.getByLabelText('Nome da unidade'), { target: { value: 'Funções' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar unidade' }));
@@ -228,6 +228,7 @@ describe('App', () => {
     create('Nova disciplina');
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Disciplina da biblioteca' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Unidades e materiais' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Materiais' }));
     expect(await screen.findByText('Sua biblioteca está vazia.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Materiais' })).toHaveAttribute('aria-current', 'page');

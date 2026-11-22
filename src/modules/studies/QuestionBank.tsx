@@ -11,12 +11,12 @@ const service = createQuestionService(studyQuestionRepository, studyQuizAttemptR
 const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
-export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; onChanged?: () => void }) {
+export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, trailMode, onFinished, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; trailMode?: 'quick' | 'quiz' | 'lab' | 'final'; onFinished?: () => void; onChanged?: () => void }) {
   const pilotTopic = import.meta.env.DEV && import.meta.env.VITE_ALFRED_LOCAL_OLLAMA === '1' &&
     window.location.origin === 'http://127.0.0.1:5173'
     ? topics.find(topic => topic.id === unitId && topic.sourceFileId)
     : undefined;
-  const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]);
+  const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]) + (trailMode ? ':' + trailMode : '');
   const [draftWarning, setDraftWarning] = useState(false);
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [history, setHistory] = useState<StudyQuizAttempt[]>([]);
@@ -28,7 +28,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
   const [difficulty, setDifficulty] = useState<StudyQuestionDifficulty>('medium');
   const [quizTopicFilter, setQuizTopicFilter] = useState('all');
   const [quizDifficultyFilter, setQuizDifficultyFilter] = useState<StudyQuestionDifficulty | 'all'>('all');
-  const [quizQuestionCount, setQuizQuestionCount] = useState(10);
+  const [quizQuestionCount, setQuizQuestionCount] = useState(trailMode === 'quick' ? 3 : trailMode === 'final' ? 50 : 10);
   const [phase, setPhase] = useState<'idle' | 'quiz' | 'result'>('idle');
   const [quizQuestions, setQuizQuestions] = useState<StudyQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -87,7 +87,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
     }));
   }, [phase, draftKey, quizStartedAt, quizQuestions, quizAnswers, selectedOptionIndex, revealed]);
 
-  const unitQuestions = useMemo(() => unitId ? questions.filter((question) => question.topicId === unitId) : questions, [questions, unitId]);
+  const unitQuestions = useMemo(() => questions.filter(q => (!unitId || q.topicId === unitId) && (trailMode !== 'lab' || q.sourceExcerpt)), [questions, unitId, trailMode]);
   const unitHistory = useMemo(() => {
     if (!unitId) return history;
     const questionIds = new Set(unitQuestions.map((question) => question.id));
@@ -212,6 +212,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
       setQuizAnswers(updatedAnswers);
       setLastAttempt(saved);
       setPhase('result');
+      onFinished?.();
       setHistory((previous) => [saved, ...previous.filter((item) => item.id !== saved.id)]);
       onChanged?.();
     } catch (cause) {
@@ -262,6 +263,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, o
     {phase === 'quiz' && currentQuestion && <article className="study-quiz-card">
       <div className="study-quiz-progress"><span>Questão {questionIndex + 1} de {quizQuestions.length}</span><span>{difficultyLabels[currentQuestion.difficulty]}</span></div>
       <div className="progress-track"><span style={{ width: `${((questionIndex + 1) / quizQuestions.length) * 100}%` }} /></div>
+      {trailMode === 'lab' && <blockquote>{currentQuestion.sourceExcerpt}</blockquote>}
       <h4>{currentQuestion.prompt}</h4>
       <div className="study-quiz-options">
         {currentQuestion.options.map((option, index) => <label key={index} className={revealed && index === currentQuestion.correctOptionIndex ? 'correct' : revealed && index === selectedOptionIndex ? 'incorrect' : ''}>
