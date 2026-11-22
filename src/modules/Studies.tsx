@@ -232,7 +232,14 @@ export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { in
               <h2>{discipline.name}</h2>
               {discipline.description && <p>{discipline.description}</p>}
             </div>
-            <details className="interface-disclosure study-management"><summary aria-label="Gerenciar matéria">Gerenciar</summary>
+            <details className="interface-disclosure study-management"><summary aria-label="Gerenciar matéria" title="Gerenciar matéria">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15l1.1 1.1-1.4 2.4-1.7-.6-1.6.9-.3 1.8h-2.8l-.3-1.8-1.6-.9-1.7.6-1.4-2.4 1.4-1.1v-1.9l-1.4-1.1 1.4-2.4 1.7.6 1.6-.9.3-1.8h2.8l.3 1.8 1.6.9 1.7-.6 1.4 2.4-1.1 1.1z" transform="translate(-1 -1) scale(1.08)" />
+              </svg>
+              <span className="sr-only">Gerenciar matéria</span>
+            </summary>
+              <button className="text-action" type="button" onClick={() => { setManage(true); setStudyView('conteudos'); }}>Unidades e materiais</button>
               <button className="text-action" type="button" onClick={() => { if (discipline) editDiscipline(discipline); }}>Editar disciplina</button>
               <button className="danger-action" type="button" onClick={() => { if (discipline) void deleteDiscipline(discipline); }}>Excluir disciplina</button>
             </details>
