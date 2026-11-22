@@ -9,6 +9,7 @@ import type { StudyTopic } from './types';
 import { confirmMaterialDefinition, processStoredMaterial } from './materialProcessor';
 import { PROCESSING_PROFILES, definitionDifferences, relevantAmbiguities, type ProcessingProfile } from './materialReliability';
 import { STUDY_PREPARATION_STAGES, createStudyPreparationState, updateStudyPreparationStage, type StudyPreparationState, type StudyPreparationStageId, type StudyPreparationStatus } from './studyPreparationProgress';
+import './studyPreparationProgress.css';
 
 const files = createFileService(fileRepository);
 const study = createStudyService(disciplineRepository, studyTopicRepository);
