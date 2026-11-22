@@ -13,10 +13,12 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
       disciplineId: 's',
       createdAt: '',
       status: 'pending' as const,
+      sourceFileId: `material-${id}`,
     })),
     refreshToken: 0,
     onManage: vi.fn(),
     onMaterials: vi.fn(),
+    onAddMaterial: vi.fn(),
   };
   await studyQuestionRepository.save({
     id: 'q',
@@ -46,4 +48,13 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
   ).toBeInTheDocument();
   window.dispatchEvent(new Event('offline'));
   vi.restoreAllMocks();
+});
+
+it('não exibe trilha sem material e abre a importação ao solicitar', () => {
+  const addMaterial = vi.fn();
+  render(<StudyTrail discipline={{ id: 'empty', name: 'Vazia', createdAt: '' }} topics={[]}
+    refreshToken={0} onManage={vi.fn()} onMaterials={vi.fn()} onAddMaterial={addMaterial} />);
+  expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Adicionar material' }));
+  expect(addMaterial).toHaveBeenCalledWith('');
 });
