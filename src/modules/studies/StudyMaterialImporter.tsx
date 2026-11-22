@@ -14,7 +14,7 @@ const study = createStudyService(disciplineRepository, studyTopicRepository);
 
 type PendingMaterial = { file: StoredFile; topic?: StudyTopic };
 
-interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'insufficient' | 'error'; detail: string; contextSources?: string[]; }
+interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'insufficient' | 'awaiting-ai' | 'error'; detail: string; contextSources?: string[]; }
 
 function readBlob(blob: Blob): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -73,7 +73,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         ?? await study.createTopic({ disciplineId, title: file.name.slice(0, 120), sourceFileId: file.id, sourceFileName: file.name });
       const controller = new AbortController();
       processingController.current = controller;
-      await processStoredMaterial(file.id, 'printed', controller.signal, () => {}, undefined, target);
+      await processStoredMaterial(file.id, 'printed', controller.signal, () => {}, undefined, target, { requireAI: true });
       await onProcessed?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível retomar este material.');
@@ -156,16 +156,19 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         const controller = new AbortController();
         processingController.current = controller;
         try {
-          const { state, cardsAdded, questionsAdded } = await processStoredMaterial(
+          const result = await processStoredMaterial(
             sourceId, profile, controller.signal, detail => updateStatus(index, 'processing', detail), file, topic,
+            { requireAI: true },
           );
-          const resourceMessage = state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
+          const { state, cardsAdded, questionsAdded } = result;
+          const awaitingAI = 'awaitingAI' in result && result.awaitingAI === true;
+          const resourceMessage = awaitingAI ? 'Material analisado e preservado. A geração de aulas, exercícios e flashcards aguarda a conexão com uma IA real.' : state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
             : cardsAdded || questionsAdded ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados.`
             : `Texto salvo (${state.raw?.wordCount ?? 0} palavras), mas não encontrei novas definições explícitas ou outros trechos adequados para gerar cartões ou questões com segurança. O enriquecimento semântico depende de IA.`;
           const differences = state.corrected && state.status !== 'review' ? definitionDifferences(state.corrected) : [];
           const contextSources = differences.flat().map(entry => entry.sourceExcerpt).slice(0, 8);
           const contextNote = differences && differences.length ? ' Há definições diferentes para um mesmo termo. Podem ser complementares ou pertencer a contextos diferentes. Confira os trechos na fonte; esse termo ficou fora da geração automática.' : '';
-          updateStatus(index, state.status === 'review' ? 'review' : state.generated && !state.generated.flashcards.length && !state.generated.questions.length ? 'insufficient' : 'success', `${resourceMessage}${contextNote} Original e texto extraído estão associados à disciplina.`, contextSources);
+          updateStatus(index, state.status === 'review' ? 'review' : awaitingAI ? 'awaiting-ai' : state.generated && !state.generated.flashcards.length && !state.generated.questions.length ? 'insufficient' : 'success', `${resourceMessage}${contextNote} Original e texto extraído estão associados à disciplina.`, contextSources);
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : 'Falha inesperada ao processar este arquivo.';
           updateStatus(index, 'error', `${message} O original foi preservado na biblioteca.`);
@@ -195,7 +198,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     <div>
       <span className="card-label">MATERIAL DA DISCIPLINA</span>
       <h3>{unit ? `Material de ${unit.title}` : 'Adicionar arquivos de estudo'}</h3>
-      <p>{unit ? 'Selecione um arquivo para vincular a esta unidade.' : 'Selecione um ou vários materiais.'} Ao salvar, Alfred guarda os originais e cria atividades localmente quando encontra definições explícitas.</p>
+      <p>{unit ? 'Selecione um arquivo para vincular a esta unidade.' : 'Selecione um ou vários materiais.'} Ao salvar, Alfred analisa e preserva o material. As novas atividades só serão geradas quando a IA real estiver disponível.</p>
     </div>
     <div className="study-filter">
       <label className="field-label" htmlFor="study-processing-profile">Perfil do material</label>
@@ -231,7 +234,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     </div>}
     {statuses.length > 0 && <div className="study-material-results" aria-live="polite">
       {statuses.map((item, index) => <article key={`${item.name}:${index}`} className={`study-material-result ${item.status}`}>
-        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : item.status === 'review' ? 'Revisão recomendada' : item.status === 'insufficient' ? 'Evidência insuficiente' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
+        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : item.status === 'review' ? 'Revisão recomendada' : item.status === 'insufficient' ? 'Evidência insuficiente' : item.status === 'awaiting-ai' ? 'Aguardando IA' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
         {!!item.contextSources?.length && <details><summary>Comparar trechos da fonte</summary><ul>
           {item.contextSources.map(excerpt => <li key={excerpt}>{excerpt}</li>)}
         </ul></details>}
@@ -245,10 +248,11 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         {choices?.length ? <><p>Os trechos usam o mesmo termo com predicados opostos. Confira o contexto antes de escolher.</p>{choices.map(({ sourceExcerpt }) =>
           <button className="text-action" type="button" key={sourceExcerpt} disabled={saving}
             onClick={() => void resume(file, topic, sourceExcerpt)}>Manter: {sourceExcerpt}</button>)}<button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic, null)}>Continuar sem usar as definições em disputa</button></>
+          : file.processing?.status === 'awaiting-ai' ? <p role="status">Fonte analisada. A geração será disponibilizada após a conexão com a IA; nenhuma questão automática foi inventada.</p>
           : <button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic)}>Retomar processamento</button>}
       </article>;
     })}
-    <p className="study-material-privacy">Privacidade: extração e geração são locais. PDFs digitalizados continuam exigindo OCR local acionado na área Arquivos antes de serem usados aqui. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
+    <p className="study-material-privacy">Privacidade: o material é extraído e preservado localmente. A geração por IA ainda não foi configurada nesta tela. PDFs digitalizados continuam exigindo OCR local acionado na área Arquivos antes de serem usados aqui. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
   </section>;
 }
 
