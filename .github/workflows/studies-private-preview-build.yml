@@ -38,9 +38,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-      - name: Install exact lockfile
-        run: npm ci
+      - name: Install dependencies (repository has no npm lockfile)
+        run: npm install --no-audit --no-fund
       - name: Validate the application
         run: npm test
       - name: Build root-path assets for private Worker
