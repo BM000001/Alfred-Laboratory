@@ -23,7 +23,7 @@ jobs:
       VITE_STUDIES_AI_ORIGIN: https://alfred-studies-iphone-preview.brianmarcondes2000.workers.dev
     steps:
       - name: Checkout isolated deploy branch
-        uses: actions/checkout@767c416494ebd353bb13c8e2a97af6c539648576 # actions/checkout v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # actions/checkout v6.0.3
         with:
           persist-credentials: false
 
@@ -38,7 +38,7 @@ jobs:
           echo "Pinned Server source for the gated job: $SERVER_SOURCE_SHA"
 
       - name: Set up Node.js
-        uses: actions/setup-node@fbc851b6e56c64db8ad81b50878c5cfe4531505d # actions/setup-node v5.0.0
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # actions/setup-node v5.0.0
         with:
           node-version: '22'
           package-manager-cache: false
@@ -82,7 +82,7 @@ jobs:
           (cd dist && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
 
       - name: Upload verified root-path build
-        uses: actions/upload-artifact@28f04cc696830ad0609506e0888d8b3b83d5d616 # actions/upload-artifact v6.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # actions/upload-artifact v6.0.0
         with:
           name: alfred-studies-iphone-preview-root
           path: dist/
@@ -99,12 +99,12 @@ jobs:
       url: https://alfred-studies-iphone-preview.brianmarcondes2000.workers.dev
     steps:
       - name: Checkout workflow commit
-        uses: actions/checkout@767c416494ebd353bb13c8e2a97af6c539648576 # actions/checkout v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # actions/checkout v6.0.3
         with:
           persist-credentials: false
 
       - name: Download the build from this exact run
-        uses: actions/download-artifact@7f962f087522e9c09884f7f58153ea056fe19818 # actions/download-artifact v7.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # actions/download-artifact v7.0.0
         with:
           name: alfred-studies-iphone-preview-root
           path: dist
@@ -130,7 +130,7 @@ jobs:
           NODE
 
       - name: Checkout private Server PR #8 at its reviewed SHA
-        uses: actions/checkout@767c416494ebd353bb13c8e2a97af6c539648576 # actions/checkout v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # actions/checkout v6.0.3
         with:
           repository: BM000001/Alfred-Server
           ref: fbb82e2daf268b41e9a31f51141ae05646b18d50
@@ -139,7 +139,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js for Worker validation
-        uses: actions/setup-node@fbc851b6e56c64db8ad81b50878c5cfe4531505d # actions/setup-node v5.0.0
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # actions/setup-node v5.0.0
         with:
           node-version: '22'
           package-manager-cache: false
