@@ -21,11 +21,11 @@ POC experimental de três experiências sobre o mesmo conteúdo de Introdução 
 
 - A interface usa o tema escuro, verde e dourado do Alfred como estudo visual independente; não incorpora nem substitui o mascote.
 - Blockly 13.3.0, licença Apache-2.0; Vite 6.4.5 e vite-plugin-pwa 1.3.0. Vite PWA é MIT e gera precache com Workbox.
-- A PWA procura cachear os assets locais, incluindo o chunk lazy-load de Blockly. A mídia padrão do Blockly ainda tem URL remota do pacote 13.3.0: isso pode impedir a primeira carga offline e precisa ser removido/empacotado antes de afirmar offline integral.
-- Os testes de lógica estão em tests/core.test.mjs.
-- **Não executado nesta sessão:** npm install, npm test, npm run build, WebKit, toque, inspeção visual, offline, memória/CPU ou medição real do bundle. O executor de arquivos/comandos estava indisponível. Nenhum teste é declarado aprovado.
-- Sem teste em iPhone físico/Safari. Sem geração de imagem IA executada.
-- package-lock.json ainda não gerado; instalação transitiva não está congelada.
+- Build/CI verificados em 24/11/2026: 5 testes Node de lógica, build Vite/PWA e 4 testes Playwright 1.65.1 com WebKit em emulação mobile 390×844 passaram. Os E2E cobrem editar/reordenar vetor, prever, avançar/voltar, Blockly com JavaScript/Python como texto e interpretador restrito, seis quadros com feedback, e reload offline após cachear a aplicação e abrir Blockly.
+- O app empacota localmente as mídias Blockly e inclui no precache o app e chunks lazy-loaded. O teste offline confirma a experiência após a primeira carga/cache; não mede sincronização nem primeira instalação sem rede.
+- Bundle de produção: Blockly core 634.98 kB minificado / 177.56 kB gzip; catálogo pt-BR 80.98 / 18.74 kB gzip; demais chunks separados e lazy-loaded. Artifact estático do build anterior: ZIP 258,025 bytes (não é o tamanho descompactado total).
+- O E2E usa Playwright WebKit 27.2 com viewport/touch declarados; isso não é Safari rodando em iPhone real. Não foi medido consumo de memória/CPU no aparelho, toque manual ou tempo frio de carregamento. Não houve geração de imagem com IA.
+- package-lock.json não está versionado; versões diretas estão fixadas, mas a árvore transitiva é resolvida no CI e pode variar. Gerar e revisar lockfile antes da integração definitiva.
 
 ## Tangible: identidade, utilidade e limitação mobile
 
@@ -56,7 +56,7 @@ A prévia silenciosa de autoria precisa de Node 22, Git e pnpm, sem modelo/FFmpe
 | StoryDiffusion | Código Apache-2.0 para projeto; usa PyTorch/Diffusers. README recomenda >20 GB VRAM; reporta teste low-memory em NVIDIA A10 24 GB e 30 GB RAM. | Pesos/modelos e assets requerem licença separada; repo atualizado por último em 2024 nos metadados consultados; recurso não cabe em Safari. | Adiada por custo/hardware/licença de pesos e atividade. |
 | Comic Drama | MIT no repositório, descrito como experimental; transforma script em cenas em fluxo de produção. | Dependência/modelo/asset não cobertos pela licença MIT; baixa maturidade e sem execução. | Promissor, precisa de avaliação e inventário de pesos/recursos. |
 
-O rótulo “GPL?” para Skulpt é intencionalmente cauteloso: não foi possível validar o manifesto do pacote em runtime nesta sessão, então não aprovar código antes de ler licença do release instalado. No uso de qualquer modelo, verificar em conjunto código, checkpoint, VAE, LoRA, fonte de personagens, imagens e condições de publicação.
+Skulpt: o repositório principal declara MIT; a distribuição contém notices de terceiros que devem ser preservados e verificados para a versão empacotada. No uso de qualquer modelo, verificar em conjunto código, checkpoint, VAE, LoRA, fonte de personagens, imagens e condições de publicação.
 
 ## Três abordagens de quadrinhos
 
@@ -96,20 +96,36 @@ A nota alta para PhET/Mafs não os torna candidatos a algoritmos: domínio de co
 
 | Estado | Próxima missão |
 |---|---|
-| Aprovada tecnicamente | Validar a lógica pura, instalar e gerar lockfile, rodar tests/build para a pasta isolada. |
-| Promissora, precisa de testes | Teste touch/portrait/landscape e WebKit Safari real da interação de vetor e Blockly. |
-| Promissora, precisa de testes | Avaliar Tangible como autoria desktop/tablet e medir tamanho/export/offline; não migrar o player inteiro. |
-| Adiada por custo/infraestrutura | Medir geração procedural e um checkpoint local somente após hardware, model card, licenças e tempo de inferência conhecidos. |
-| Aprovada tecnicamente | Usar SVG/Canvas como visualização determinística, acessível e offline-first com imagem IA opcional. |
-| Bloqueada | Prévia remota no Render: a conta exige identificação explícita de workspace antes de criar serviço; nenhum serviço do PR #88 será alterado. |
-| Rejeitada para uso automático | FLUX.1 dev sem licença comercial; execução de código arbitrário dos estudantes; imagem de IA como fonte factual sem revisão. |
-| Ideia | Conectar um objeto de experiência ao contrato acadêmico central existente, sem banco paralelo, após homologação e fim da Fase 1. |
+| Validada em CI | 5 testes Node, build PWA e 4 E2E WebKit mobile-sim passaram; captures de tela são produzidas no job para revisão. |
+| Promissora, precisa de teste físico | Homologar toque e layout no Safari/iPhone real; conferir landscape/VoiceOver e desempenho/memória no aparelho. |
+| Promissora, precisa de teste | Avaliar Tangible como autoria desktop/tablet e medir export/offline; não migrar player inteiro sem provar portrait. |
+| Aprovada tecnicamente para POC | SVG/DOM determinístico para aula, quiz e quadrinho; seguir com modelo visual acessível, offline e com referências de fonte. |
+| Bloqueada por seleção de workspace | Prévia no Render. Static sites são gratuitos, mas contam contra limites mensais compartilhados; a ferramenta exige que o usuário confirme o workspace. Nenhum serviço #88 será alterado. |
+| Adiada por custo/infraestrutura | Executar modelo real de imagem somente com pesos licenciados para uso pretendido, hardware/cota comprovadamente R$0 e revisão humana de conteúdo. |
+| Rejeitada para automação | FLUX.1 dev sem licença comercial; execução de código arbitrário dos estudantes; imagem de IA como fonte factual sem revisão. |
+| Ideia após Fase 1 | Conectar as experiências ao contrato acadêmico existente, sem banco paralelo, mantendo progresso e material na persistência atual. |
+
+## Esforço estimado de integração
+
+Estimativas de planejamento para um desenvolvedor familiarizado com o app, excluindo escrita/revisão do conteúdo acadêmico e homologação de iPhone. São intervalos, não medições:
+
+| Solução | Escopo inicial | Esforço provável | Condição |
+|---|---|---:|---|
+| Aula SVG/DOM da ordenação | Migrar o protótipo para componente do Alfred e ligar conceito/fonte/progresso aos stores existentes | 2–4 dias | Contrato do conteúdo e persistência existentes confirmados; manter regra e feedback determinísticos. |
+| Blockly com DSL restrita | Adaptar área e guardar workspace/resultado no modelo atual | 5–8 dias | Definir DSL por atividade e limites antes de habilitar mais blocos; testes de toque/iPhone. |
+| Quadrinho procedural | Generalizar o template de seis quadros com storyboard ligado a conceitos e fontes | 3–5 dias | Revisão pedagógica/artística de cada template; imagens IA permanecem opcionais. |
+| Runtime Tangible | Avaliação/adaptação, focada no player e telas portrait, não contada como aprovada | 1–2 semanas de experimento | Só avançar se a restrição de layout de telefone for superada ou houver uso tablet/desktop. |
+| Geração real local por IA | Estação de autoria e fluxo de revisão; não runtime mobile | 2–4 semanas de investigação | Requer máquina/modelo licenciado disponível sem custo marginal; duração e qualidade não foram medidas nesta missão. |
+
+## Capturas e artefatos
+
+O job de CI guarda dist/ e as capturas Playwright (aula, Blockly e história em viewport 390×844) como artifact de 7 dias. A aba Actions do PR #90 contém os artefatos e logs; eles são evidência de browser emulado, não de Safari/iPhone físico.
 
 ## Próximos passos do Codex
 
 1. Revalidar a reserva na issue #89 e trabalhar somente em visual-learning-poc/**.
-2. Restaurar a disponibilidade de um executor e executar npm install, npm test e npm run build. Resolver erros e gerar package-lock.json.
-3. Remover a URL externa de mídia do Blockly e empacotar assets licenciados localmente; revisar tamanho PWA, cache offline e fontes acessíveis.
+2. Gerar/revisar package-lock.json com um executor local e repetir npm ci, tests e build.
+3. Revisar tamanho PWA/caches, mídia Blockly local, teclado, screen reader e acessibilidade dos blocos.
 4. Executar browser, teclado, leitura por screen reader, touch responsivo e WebKit; separar simulação de telefone e iPhone físico.
 5. Fazer preview gratuito somente após selecionar workspace existente; registrar cotas e build, sem método de pagamento ou alteração no serviço antigo.
 6. Considerar POC de IA real somente com modelo permissivo para uso pretendido, máquina apropriada e custo comprovado R$0; comparar consistência/fidelidade com a folha de personagem procedural.
