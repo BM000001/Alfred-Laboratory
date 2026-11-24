@@ -27,13 +27,15 @@ jobs:
       - name: Install WebKit for browser checks
         run: npx playwright install --with-deps webkit
       - name: WebKit interaction and offline checks
-        run: npm run test:e2e
+        run: mkdir -p evidence && npm run test:e2e
       - name: Report bundle size
         run: du -ah dist | sort -h | tail -n 20
       - name: Save static preview artifact
         uses: actions/upload-artifact@v4
         with:
           name: visual-learning-poc-static-preview
-          path: visual-learning-poc/dist/
+          path: |
+            visual-learning-poc/dist/
+            visual-learning-poc/evidence/
           if-no-files-found: error
           retention-days: 7
