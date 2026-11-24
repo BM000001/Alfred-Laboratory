@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+
+await mkdir('evidence', { recursive: true });
 
 test('edita e reordena valores, prevê e avança/retrocede', async ({ page }) => {
   await page.goto('/');
@@ -14,6 +17,7 @@ test('edita e reordena valores, prevê e avança/retrocede', async ({ page }) =>
   await expect(page.locator('#predictionPrompt')).toContainText('3 e 2');
   await page.getByRole('button', { name: 'Voltar passo' }).click();
   await expect(page.locator('#predictionPrompt')).toContainText('1 e 3');
+  await page.screenshot({ path: 'evidence/aula-webkit-390x844.png' });
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(391);
 });
@@ -27,6 +31,7 @@ test('Blockly mostra código e executa o interpretador limitado', async ({ page 
   await expect(page.locator('#runResult')).toContainText('Vetor final: 1, 2, 3, 4');
   await page.locator('#codeLanguage').selectOption('py');
   await expect(page.locator('#generatedCode')).toContainText('for passagem in range');
+  await page.screenshot({ path: 'evidence/blockly-webkit-390x844.png' });
 });
 
 test('história tem seis quadros e explica resposta incorreta/correta', async ({ page }) => {
@@ -37,6 +42,7 @@ test('história tem seis quadros e explica resposta incorreta/correta', async ({
   await expect(page.locator('#comicFeedback')).toContainText('Reveja a regra');
   await page.getByRole('button', { name: 'Trocar os cartões' }).click();
   await expect(page.locator('#comicFeedback')).toContainText('Correto');
+  await page.screenshot({ path: 'evidence/historia-webkit-390x844.png' });
 });
 
 test('shell e Blockly abrem depois de cachear; app continua disponível offline', async ({ page, context }) => {
