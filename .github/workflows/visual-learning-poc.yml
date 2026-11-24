@@ -29,7 +29,11 @@ jobs:
         run: npm test
       - name: Build PWA
         run: npm run build
-      - name: Install WebKit for browser checks\n        run: npx playwright install --with-deps webkit\n      - name: WebKit interaction and offline checks\n        run: npm run test:e2e\n      - name: Report bundle size
+      - name: Install WebKit for browser checks
+        run: npx playwright install --with-deps webkit
+      - name: WebKit interaction and offline checks
+        run: npm run test:e2e
+      - name: Report bundle size
         run: du -ah dist | sort -h | tail -n 20
       - name: Save static preview artifact
         uses: actions/upload-artifact@v4
