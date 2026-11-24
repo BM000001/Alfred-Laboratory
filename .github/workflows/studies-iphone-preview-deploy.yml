@@ -1,0 +1,181 @@
+name: Alfred Studies isolated iPhone preview
+
+on:
+  push:
+    branches:
+      - codex/studies-iphone-preview-deploy
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studies-iphone-preview-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate-and-build:
+    name: Validate PR #87 and build the pinned candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      LABORATORY_SOURCE_SHA: 5c30183ba728c1ffb15b6a999d0e855642511da6
+      SERVER_SOURCE_SHA: fbb82e2daf268b41e9a31f51141ae05646b18d50
+      VITE_STUDIES_AI_ORIGIN: https://alfred-studies-iphone-preview.brianmarcondes2000.workers.dev
+    steps:
+      - name: Checkout isolated deploy branch
+        uses: actions/checkout@767c416494ebd353bb13c8e2a97af6c539648576 # actions/checkout v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Confirm source is exactly PR #87 plus this workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${LABORATORY_SOURCE_SHA}^{commit}"
+          git merge-base --is-ancestor "$LABORATORY_SOURCE_SHA" HEAD
+          git diff --quiet "$LABORATORY_SOURCE_SHA" HEAD -- . ':(exclude).github/workflows/studies-iphone-preview-deploy.yml'
+          echo "Pinned Laboratory source verified: $LABORATORY_SOURCE_SHA"
+          echo "Pinned Server source for the gated job: $SERVER_SOURCE_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@fbc851b6e56c64db8ad81b50878c5cfe4531505d # actions/setup-node v5.0.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Install Laboratory dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run Laboratory test suite
+        run: npm test
+
+      - name: Build root-path app for the private Worker
+        run: npm run build
+
+      - name: Verify build identity and create integrity manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          test -s dist/sw.js
+          test -s dist/manifest.webmanifest
+          test -s dist/version.json
+          grep -q '/assets/' dist/index.html
+          if grep -q '/Alfred-Laboratory/assets/' dist/index.html; then
+            echo "GitHub Pages base path found in private root-path build." >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const version = JSON.parse(await readFile('dist/version.json', 'utf8'));
+          if (version.revision !== process.env.GITHUB_SHA) {
+            throw new Error('Build revision does not match the workflow commit.');
+          }
+          const manifest = {
+            laboratoryPr87Source: process.env.LABORATORY_SOURCE_SHA,
+            serverPr8Source: process.env.SERVER_SOURCE_SHA,
+            buildCommit: version.revision,
+            buildId: version.build,
+          };
+          await writeFile('dist/deployment-manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+          (cd dist && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+
+      - name: Upload verified root-path build
+        uses: actions/upload-artifact@28f04cc696830ad0609506e0888d8b3b83d5d616 # actions/upload-artifact v6.0.0
+        with:
+          name: alfred-studies-iphone-preview-root
+          path: dist/
+          retention-days: 3
+          if-no-files-found: error
+
+  deploy-isolated-worker:
+    name: Publish only the isolated Worker (manual approval required)
+    needs: validate-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: studies-preview-deploy
+      url: https://alfred-studies-iphone-preview.brianmarcondes2000.workers.dev
+    steps:
+      - name: Checkout workflow commit
+        uses: actions/checkout@767c416494ebd353bb13c8e2a97af6c539648576 # actions/checkout v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Download the build from this exact run
+        uses: actions/download-artifact@7f962f087522e9c09884f7f58153ea056fe19818 # actions/download-artifact v7.0.0
+        with:
+          name: alfred-studies-iphone-preview-root
+          path: dist
+
+      - name: Verify artifact integrity and pinned source SHAs
+        shell: bash
+        env:
+          LABORATORY_SOURCE_SHA: 5c30183ba728c1ffb15b6a999d0e855642511da6
+          SERVER_SOURCE_SHA: fbb82e2daf268b41e9a31f51141ae05646b18d50
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum -c SHA256SUMS)
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const manifest = JSON.parse(await readFile('dist/deployment-manifest.json', 'utf8'));
+          const version = JSON.parse(await readFile('dist/version.json', 'utf8'));
+          if (manifest.laboratoryPr87Source !== process.env.LABORATORY_SOURCE_SHA ||
+              manifest.serverPr8Source !== process.env.SERVER_SOURCE_SHA ||
+              manifest.buildCommit !== process.env.GITHUB_SHA ||
+              version.revision !== process.env.GITHUB_SHA) {
+            throw new Error('Artifact provenance does not match the pinned commits and workflow run.');
+          }
+          NODE
+
+      - name: Checkout private Server PR #8 at its reviewed SHA
+        uses: actions/checkout@767c416494ebd353bb13c8e2a97af6c539648576 # actions/checkout v6.0.3
+        with:
+          repository: BM000001/Alfred-Server
+          ref: fbb82e2daf268b41e9a31f51141ae05646b18d50
+          token: ${{ secrets.ALFRED_SERVER_READ_TOKEN }}
+          path: server
+          persist-credentials: false
+
+      - name: Set up Node.js for Worker validation
+        uses: actions/setup-node@fbc851b6e56c64db8ad81b50878c5cfe4531505d # actions/setup-node v5.0.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Install reviewed Worker dependencies
+        working-directory: server/worker
+        run: npm ci --no-audit --no-fund
+
+      - name: Test, typecheck, and dry-run the Worker
+        working-directory: server/worker
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+          bash scripts/prepare-studies-private-preview.sh "$GITHUB_WORKSPACE/dist" --dry-run
+
+      - name: Confirm Cloudflare Access challenges unauthenticated requests
+        run: |
+          node --input-type=module <<'NODE'
+          const response = await fetch('https://alfred-studies-iphone-preview.brianmarcondes2000.workers.dev/', { redirect: 'manual' });
+          const location = response.headers.get('location') ?? '';
+          let target;
+          try { target = new URL(location); } catch { target = null; }
+          if (![301, 302, 303, 307, 308].includes(response.status) ||
+              !target || !target.hostname.endsWith('.cloudflareaccess.com') ||
+              !target.pathname.includes('/cdn-cgi/access/')) {
+            throw new Error('Cloudflare Access challenge was not confirmed; refusing deployment.');
+          }
+          console.log('Unauthenticated request receives the Cloudflare Access challenge.');
+          NODE
+
+      - name: Deploy isolated Worker and root-path assets
+        working-directory: server/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 1e5bbb634c938880c3e4807c4ee3238c
+          ALFRED_STUDIES_ACCESS_VERIFIED: '1'
+          WRANGLER_SEND_METRICS: 'false'
+        run: bash scripts/prepare-studies-private-preview.sh "$GITHUB_WORKSPACE/dist" --deploy
