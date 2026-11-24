@@ -1,6 +1,7 @@
 name: Alfred Studies isolated iPhone preview
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - codex/studies-iphone-preview-deploy
