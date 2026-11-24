@@ -1,10 +1,5 @@
 name: Visual learning POC checks
 on:
-  push:
-    branches: [research/visual-learning-poc]
-    paths:
-      - 'visual-learning-poc/**'
-      - '.github/workflows/visual-learning-poc.yml'
   pull_request:
     branches: [main]
     paths:
