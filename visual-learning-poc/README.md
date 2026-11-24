@@ -100,7 +100,7 @@ A nota alta para PhET/Mafs não os torna candidatos a algoritmos: domínio de co
 | Promissora, precisa de teste físico | Homologar toque e layout no Safari/iPhone real; conferir landscape/VoiceOver e desempenho/memória no aparelho. |
 | Promissora, precisa de teste | Avaliar Tangible como autoria desktop/tablet e medir export/offline; não migrar player inteiro sem provar portrait. |
 | Aprovada tecnicamente para POC | SVG/DOM determinístico para aula, quiz e quadrinho; seguir com modelo visual acessível, offline e com referências de fonte. |
-| Bloqueada por seleção de workspace | Prévia no Render. Static sites são gratuitos, mas contam contra limites mensais compartilhados; a ferramenta exige que o usuário confirme o workspace. Nenhum serviço #88 será alterado. |
+| Validada ao vivo | Prévia estática no Render: https://alfred-visual-learning-poc.onrender.com/ , branch research/visual-learning-poc. Workspace My Workspace; nenhum backend, chave ou dado pessoal. Serviço estático usa cotas compartilhadas de banda/build. Serviço do PR #88 não foi alterado. |
 | Adiada por custo/infraestrutura | Executar modelo real de imagem somente com pesos licenciados para uso pretendido, hardware/cota comprovadamente R$0 e revisão humana de conteúdo. |
 | Rejeitada para automação | FLUX.1 dev sem licença comercial; execução de código arbitrário dos estudantes; imagem de IA como fonte factual sem revisão. |
 | Ideia após Fase 1 | Conectar as experiências ao contrato acadêmico existente, sem banco paralelo, mantendo progresso e material na persistência atual. |
@@ -119,7 +119,7 @@ Estimativas de planejamento para um desenvolvedor familiarizado com o app, exclu
 
 ## Capturas e artefatos
 
-O job de CI guarda dist/ e as capturas Playwright (aula, Blockly e história em viewport 390×844) como artifact de 7 dias. A aba Actions do PR #90 contém os artefatos e logs; eles são evidência de browser emulado, não de Safari/iPhone físico.
+O job de CI guarda dist/ e as capturas Playwright (aula, Blockly e história em viewport 390×844) como artifact de 7 dias. A aba Actions do PR #90 contém os artefatos e logs. A prévia pública foi aberta e exercitada no navegador: aula avançou com feedback, Blockly gerou código/executou a DSL e a história mostrou seis quadros com respostas certa e errada. Esta inspeção é browser desktop e a emulação CI não equivale a Safari/iPhone físico.
 
 ## Próximos passos do Codex
 
@@ -127,7 +127,7 @@ O job de CI guarda dist/ e as capturas Playwright (aula, Blockly e história em 
 2. Gerar/revisar package-lock.json com um executor local e repetir npm ci, tests e build.
 3. Revisar tamanho PWA/caches, mídia Blockly local, teclado, screen reader e acessibilidade dos blocos.
 4. Executar browser, teclado, leitura por screen reader, touch responsivo e WebKit; separar simulação de telefone e iPhone físico.
-5. Fazer preview gratuito somente após selecionar workspace existente; registrar cotas e build, sem método de pagamento ou alteração no serviço antigo.
+5. Homologar a prévia estática no Safari/iPhone real e confirmar cotas de banda/build antes de compartilhar com mais usuários.
 6. Considerar POC de IA real somente com modelo permissivo para uso pretendido, máquina apropriada e custo comprovado R$0; comparar consistência/fidelidade com a folha de personagem procedural.
 7. Não fazer merge nem integrar ao Alfred principal antes da Fase 1 e autorização posterior do proprietário.
 
