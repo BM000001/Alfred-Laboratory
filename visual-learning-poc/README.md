@@ -182,3 +182,11 @@ Ver [docs/FORMATO_CONTEUDO.md](docs/FORMATO_CONTEUDO.md). O runtime implementa `
 2. Blockly demonstra vetores, repetição, condição e ordenação; variáveis/matrizes/funções ainda não têm exercícios independentes com objetivos verificáveis. Esta POC não afirma cobertura de todos os tópicos introdutórios listados na missão.
 3. Geração de imagem real e geração/validação pedagógica por IA não foram executadas. Dependem de provedor/modelo, hardware, licença de checkpoint/derivados/assets e revisão; não são necessárias para abrir estas experiências.
 4. O novo PR permanece draft e não pode ser mesclado sem autorização. Integração à Central depende da conclusão da Fase 1, homologação física no iPhone e revisão do adaptador de progresso.
+
+
+### Resultado CI da revisão (25/11/2026)
+
+- Workflow `Visual learning POC checks` #44: aprovado. Os 13 testes de lógica passaram, build PWA passou e os 7 E2E WebKit passaram, incluindo visualização e interação a 320, 390 e 768 px, teclado, mapa, progresso e reload offline após cache inicial.
+- Workflow `Laboratory iPhone homologation build` #265: aprovado. É uma build de homologação isolada; não foi publicada na produção.
+- O overflow horizontal em 320 px encontrado no workflow #43 foi corrigido e a nova execução confirmou o layout sem overflow.
+- Esta evidência é Playwright/WebKit emulado; Safari e toque em iPhone físico continuam pendentes. Os testes locais seguem 13/13, build aprovada e auditoria de dependências runtime sem vulnerabilidades conhecidas na consulta de 25/11/2026.
