@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 5089)
+Total output lines: 295
+
 import { Files } from './Files';
 import { Notes, NoteEditor } from './Notes';
 import { EditDialog } from '../components/EditDialog';
@@ -12,7 +15,7 @@ import { StudyMaterialImporter } from './studies/StudyMaterialImporter';
 import { StudyPerformance } from './studies/StudyPerformance';
 import { createStudyService } from './studies/studyService';
 import { summarizeStudyProgress } from './studies/studyRules';
-import { disciplineRepository, studyFlashcardRepository, studyQuestionRepository, studyQuizAttemptRepository, studyTopicRepository } from '../storage/repositories';
+import { disciplineRepository, studyTopicRepository } from '../storage/repositories';
 
 const studies = createStudyService(disciplineRepository, studyTopicRepository);
 
@@ -163,10 +166,6 @@ export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { in
   async function deleteDiscipline(discipline: Discipline) {
     if (!window.confirm(`Excluir "${discipline.name}" e todos os conteúdos vinculados? Essa ação não pode ser desfeita.`)) return;
     try {
-      const [cards, questions, attempts] = await Promise.all([studyFlashcardRepository.getAll(), studyQuestionRepository.getAll(), studyQuizAttemptRepository.getAll()]);
-      await Promise.all(cards.filter((item) => item.disciplineId === discipline.id).map((item) => studyFlashcardRepository.delete(item.id)));
-      await Promise.all(questions.filter((item) => item.disciplineId === discipline.id).map((item) => studyQuestionRepository.delete(item.id)));
-      await Promise.all(attempts.filter((item) => item.disciplineId === discipline.id).map((item) => studyQuizAttemptRepository.delete(item.id)));
       await studies.deleteDiscipline(discipline.id); await refresh();
     }
     catch { setError('Não foi possível excluir a disciplina.'); }
@@ -190,9 +189,7 @@ export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { in
     {showDisciplineForm && <EditDialog title={editingDisciplineId ? 'Editar disciplina' : 'Nova disciplina'} onClose={cancelDisciplineEdit}>
       <form className="dialog-form" onSubmit={createDiscipline} data-saving={saving || undefined}>
       <label className="field-label" htmlFor="discipline-name">Nome</label>
-      <input id="discipline-name" value={disciplineName} onChange={(event) => setDisciplineName(event.target.value)} maxLength={80} placeholder="Ex.: Estrutura de Dados" required />
-      <label className="field-label" htmlFor="discipline-description">Descrição <span className="optional-label">· opcional</span></label>
-      <textarea id="discipline-description" value={disciplineDescription} onChange={(event) => setDisciplineDescription(event.target.value)} rows={2} placeholder="Professor, objetivo ou observações" />
+      <input id="discipline-name"…89 tokens truncated…scription} onChange={(event) => setDisciplineDescription(event.target.value)} rows={2} placeholder="Professor, objetivo ou observações" />
         {formError && <p role="alert" className="module-error">{formError}</p>}
         <button className="primary-action" type="submit" disabled={saving}>Salvar disciplina</button>
       </form>
