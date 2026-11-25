@@ -1,1 +1,60 @@
-aW1wb3J0IHRlc3QgZnJvbSAnbm9kZTp0ZXN0JzsKaW1wb3J0IGFzc2VydCBmcm9tICdub2RlOmFzc2VydC9zdHJpY3QnOwppbXBvcnQgeyByZWFkRmlsZSB9IGZyb20gJ25vZGU6ZnMvcHJvbWlzZXMnOwppbXBvcnQgY29udGVudCBmcm9tICcuLi9jb250ZW50L29yZGVuYWNhby1ib2xoYXMudjEuanNvbicgd2l0aCB7IHR5cGU6ICdqc29uJyB9OwppbXBvcnQgeyBjcmVhdGVQcm9ncmVzc1JlY29yZCwgZXZhbHVhdGVDb21wbGV0aW9uLCBncmFkZUNob2ljZSwgdmFsaWRhdGVMZWFybmluZ0NvbnRlbnQgfSBmcm9tICcuLi9zcmMvY29udGVudC1lbmdpbmUuanMnOwoKdGVzdCgnc2FtcGxlIGhhcyB2ZXJzaW9uZWQgbGVhcm5pbmcgZ29hbHMsIGZlZWRiYWNrLCBhY2Nlc3NpYmxlIHZpc3VhbHMsIGNvbXBsZXRpb24gYW5kIHNvdXJjZScsICgpID0+IHsKICBhc3NlcnQuZGVlcEVxdWFsKHZhbGlkYXRlTGVhcm5pbmdDb250ZW50KGNvbnRlbnQpLCB7IG9rOiB0cnVlLCBlcnJvcnM6IFtdIH0pOwp9KTsKCnRlc3QoJ2Nob2ljZSBncmFkaW5nIHJldHVybnMgc3BlY2lmaWMgY29udGV4dHVhbCBmZWVkYmFjaycsICgpID0+IHsKICBjb25zdCBjaG9pY2UgPSBjb250ZW50LmludGVyYWN0aW9uc1swXTsKICBhc3NlcnQuZGVlcEVxdWFsKGdyYWRlQ2hvaWNlKGNob2ljZSwgJ3N3YXAnKSwgeyBjb3JyZWN0OiB0cnVlLCBmZWVkYmFjazogY2hvaWNlLmZlZWRiYWNrQ29ycmVjdCB9KTsKICBhc3NlcnQuZGVlcEVxdWFsKGdyYWRlQ2hvaWNlKGNob2ljZSwgJ2tlZXAnKSwgeyBjb3JyZWN0OiBmYWxzZSwgZmVlZGJhY2s6IGNob2ljZS5mZWVkYmFja0luY29ycmVjdCB9KTsKfSk7Cgp0ZXN0KCdjb21wbGV0aW9uIHJlcXVpcmVzIGJvdGggY29ycmVjdCBldmlkZW5jZSBhbmQgc29ydGVkIHJlc3VsdCcsICgpID0+IHsKICBjb25zdCBydWxlcyA9IGNvbnRlbnQuY29tcGxldGlvbi5ydWxlczsKICBhc3NlcnQuZXF1YWwoZXZhbHVhdGVDb21wbGV0aW9uKHJ1bGVzLCB7IHRvdGFsOiAxLCBjb3JyZWN0OiAxLCB2ZWN0b3I6IFsxLCAyLCA0XSB9KSwgdHJ1ZSk7CiAgYXNzZXJ0LmVxdWFsKGV2YWx1YXRlQ29tcGxldGlvbihydWxlcywgeyB0b3RhbDogMSwgY29ycmVjdDogMCwgdmVjdG9yOiBbMSwgMiwgNF0gfSksIGZhbHNlKTsKICBhc3NlcnQuZXF1YWwoZXZhbHVhdGVDb21wbGV0aW9uKHJ1bGVzLCB7IHRvdGFsOiAxLCBjb3JyZWN0OiAxLCB2ZWN0b3I6IFsyLCAxXSB9KSwgZmFsc2UpOwp9KTsKCnRlc3QoJ3Byb2dyZXNzIGlzIHZlcnNpb25lZCBhbmQgY29udGFpbnMgb25seSBhbGxvd2xpc3RlZCBsZWFybmluZyBldmlkZW5jZScsICgpID0+IHsKICBjb25zdCBwcm9ncmVzcyA9IGNyZWF0ZVByb2dyZXNzUmVjb3JkKGNvbnRlbnQsIHsgY29tcGxldGVkOiBbJ2ZpcnN0LXBhaXInLCAnZmlyc3QtcGFpciddLCBhbnN3ZXJzOiBbeyBpbnRlcmFjdGlvbklkOiAnZmlyc3QtcGFpcicsIHNlbGVjdGVkT3B0aW9uSWQ6ICdzd2FwJywgY29ycmVjdDogdHJ1ZSwgYXJiaXRyYXJ5Q29kZTogJ2FsZXJ0KDEpJyB9XSB9KTsKICBhc3NlcnQuZGVlcEVxdWFsKHByb2dyZXNzLmNvbXBsZXRlZCwgWydmaXJzdC1wYWlyJ10pOwogIGFzc2VydC5kZWVwRXF1YWwocHJvZ3Jlc3MuYW5zd2Vyc1swXSwgeyBpbnRlcmFjdGlvbklkOiAnZmlyc3QtcGFpcicsIHNlbGVjdGVkT3B0aW9uSWQ6ICdzd2FwJywgY29ycmVjdDogdHJ1ZSB9KTsKICBhc3NlcnQuZXF1YWwocHJvZ3Jlc3MuY29udGVudFZlcnNpb24sICcxLjAuMCcpOwogIGFzc2VydC50aHJvd3MoKCkgPT4gY3JlYXRlUHJvZ3Jlc3NSZWNvcmQoY29udGVudCwgeyBhbnN3ZXJzOiBbeyBpbnRlcmFjdGlvbklkOiAnbWlzc2luZycsIHNlbGVjdGVkT3B0aW9uSWQ6ICd4JywgY29ycmVjdDogdHJ1ZSB9XSB9KSwgL291dHNpZGUgdGhlIGNvbnRlbnQgY29udHJhY3QvKTsKfSk7Cgp0ZXN0KCd1bmtub3duIHZlcnNpb25zLCB1bnN1cHBvcnRlZCBydWxlcyBhbmQgbWlzc2luZyByZWZlcmVuY2VzIGZhaWwgY2xvc2VkJywgKCkgPT4gewogIGFzc2VydC5lcXVhbCh2YWxpZGF0ZUxlYXJuaW5nQ29udGVudCh7IC4uLmNvbnRlbnQsIHZlcnNpb246ICcyLjAuMCcgfSkub2ssIGZhbHNlKTsKICBhc3NlcnQuZXF1YWwodmFsaWRhdGVMZWFybmluZ0NvbnRlbnQoeyAuLi5jb250ZW50LCByZWZlcmVuY2VzOiBbXSB9KS5vaywgZmFsc2UpOwogIGFzc2VydC5lcXVhbCh2YWxpZGF0ZUxlYXJuaW5nQ29udGVudCh7IC4uLmNvbnRlbnQsIGNvbXBsZXRpb246IHsgLi4uY29udGVudC5jb21wbGV0aW9uLCBydWxlczogW3sgdHlwZTogJ2V2YWwtY29kZScgfV0gfSB9KS5vaywgZmFsc2UpOwogIGFzc2VydC5lcXVhbChldmFsdWF0ZUNvbXBsZXRpb24oW3sgdHlwZTogJ2V4ZWN1dGUtY29kZScgfV0sIHt9KSwgZmFsc2UpOwp9KTsKCnRlc3QoJ2NvbmNlcHQgbWFwcyByZWplY3QgZGFuZ2xpbmcgbm9kZXMgYW5kIGN5Y2xpYyBwYXJlbnQgcmVsYXRpb25zaGlwcycsICgpID0+IHsKICBjb25zdCBkYW5nbGluZyA9IHN0cnVjdHVyZWRDbG9uZShjb250ZW50KTsKICBkYW5nbGluZy5jb25jZXB0TWFwLnJlbGF0aW9uc1swXS50byA9ICdtaXNzaW5nLW5vZGUnOwogIGFzc2VydC5lcXVhbCh2YWxpZGF0ZUxlYXJuaW5nQ29udGVudChkYW5nbGluZykub2ssIGZhbHNlKTsKICBjb25zdCBjeWNsaWMgPSBzdHJ1Y3R1cmVkQ2xvbmUoY29udGVudCk7CiAgY3ljbGljLmNvbmNlcHRNYXAubm9kZXNbMF0ucGFyZW50SWQgPSAnc3RvcCc7CiAgYXNzZXJ0LmVxdWFsKHZhbGlkYXRlTGVhcm5pbmdDb250ZW50KGN5Y2xpYykub2ssIGZhbHNlKTsKfSk7Cgp0ZXN0KCd0aGUgcHVibGlzaGVkIEpTT04gc2NoZW1hIGlzIHZhbGlkIEpTT04gYW5kIGV4cGxpY2l0bHkgcGlucyB0aGUgZm9ybWF0IHZlcnNpb24nLCBhc3luYyAoKSA9PiB7CiAgY29uc3Qgc2NoZW1hID0gSlNPTi5wYXJzZShhd2FpdCByZWFkRmlsZShuZXcgVVJMKCcuLi9jb250ZW50L2xlYXJuaW5nLWNvbnRlbnQuc2NoZW1hLmpzb24nLCBpbXBvcnQubWV0YS51cmwpLCAndXRmOCcpKTsKICBhc3NlcnQuZXF1YWwoc2NoZW1hLnByb3BlcnRpZXMuZm9ybWF0LmNvbnN0LCAnYWxmcmVkLmxlYXJuaW5nLWNvbnRlbnQnKTsKICBhc3NlcnQuZXF1YWwoc2NoZW1hLnByb3BlcnRpZXMudmVyc2lvbi5jb25zdCwgJzEuMC4wJyk7Cn0pOwoKdGVzdCgnaW50ZXJhY3RpdmUgY29udGVudCByZW5kZXJlciB1c2VzIHRleHQgbm9kZXMgYW5kIG5vIGR5bmFtaWMgY29kZSBleGVjdXRpb24nLCBhc3luYyAoKSA9PiB7CiAgY29uc3QgcmVuZGVyZXIgPSBhd2FpdCByZWFkRmlsZShuZXcgVVJMKCcuLi9zcmMvY29uY2VwdC1tYXAuanMnLCBpbXBvcnQubWV0YS51cmwpLCAndXRmOCcpOwogIGNvbnN0IGFwcCA9IGF3YWl0IHJlYWRGaWxlKG5ldyBVUkwoJy4uL3NyYy9tYWluLmpzJywgaW1wb3J0Lm1ldGEudXJsKSwgJ3V0ZjgnKTsKICBhc3NlcnQubWF0Y2gocmVuZGVyZXIsIC9cLnRleHRDb250ZW50XHMqPS8pOwogIGFzc2VydC5kb2VzTm90TWF0Y2gocmVuZGVyZXIsIC9pbm5lckhUTUx8XGJldmFsXHMqXCh8bmV3XHMrRnVuY3Rpb25ccypcKC8pOwogIGFzc2VydC5kb2VzTm90TWF0Y2goYXBwLCAvXGJldmFsXHMqXCh8bmV3XHMrRnVuY3Rpb25ccypcKC8pOwp9KTsK
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import content from '../content/ordenacao-bolhas.v1.json' with { type: 'json' };
+import { createProgressRecord, evaluateCompletion, gradeChoice, validateLearningContent } from '../src/content-engine.js';
+
+test('sample has versioned learning goals, feedback, accessible visuals, completion and source', () => {
+  assert.deepEqual(validateLearningContent(content), { ok: true, errors: [] });
+});
+
+test('choice grading returns specific contextual feedback', () => {
+  const choice = content.interactions[0];
+  assert.deepEqual(gradeChoice(choice, 'swap'), { correct: true, feedback: choice.feedbackCorrect });
+  assert.deepEqual(gradeChoice(choice, 'keep'), { correct: false, feedback: choice.feedbackIncorrect });
+});
+
+test('completion requires both correct evidence and sorted result', () => {
+  const rules = content.completion.rules;
+  assert.equal(evaluateCompletion(rules, { total: 1, correct: 1, vector: [1, 2, 4] }), true);
+  assert.equal(evaluateCompletion(rules, { total: 1, correct: 0, vector: [1, 2, 4] }), false);
+  assert.equal(evaluateCompletion(rules, { total: 1, correct: 1, vector: [2, 1] }), false);
+});
+
+test('progress is versioned and contains only allowlisted learning evidence', () => {
+  const progress = createProgressRecord(content, { completed: ['first-pair', 'first-pair'], answers: [{ interactionId: 'first-pair', selectedOptionId: 'swap', correct: true, arbitraryCode: 'alert(1)' }] });
+  assert.deepEqual(progress.completed, ['first-pair']);
+  assert.deepEqual(progress.answers[0], { interactionId: 'first-pair', selectedOptionId: 'swap', correct: true });
+  assert.equal(progress.contentVersion, '1.0.0');
+  assert.throws(() => createProgressRecord(content, { answers: [{ interactionId: 'missing', selectedOptionId: 'x', correct: true }] }), /outside the content contract/);
+});
+
+test('unknown versions, unsupported rules and missing references fail closed', () => {
+  assert.equal(validateLearningContent({ ...content, version: '2.0.0' }).ok, false);
+  assert.equal(validateLearningContent({ ...content, references: [] }).ok, false);
+  assert.equal(validateLearningContent({ ...content, completion: { ...content.completion, rules: [{ type: 'eval-code' }] } }).ok, false);
+  assert.equal(evaluateCompletion([{ type: 'execute-code' }], {}), false);
+});
+
+test('concept maps reject dangling nodes and cyclic parent relationships', () => {
+  const dangling = structuredClone(content);
+  dangling.conceptMap.relations[0].to = 'missing-node';
+  assert.equal(validateLearningContent(dangling).ok, false);
+  const cyclic = structuredClone(content);
+  cyclic.conceptMap.nodes[0].parentId = 'stop';
+  assert.equal(validateLearningContent(cyclic).ok, false);
+});
+
+test('the published JSON schema is valid JSON and explicitly pins the format version', async () => {
+  const schema = JSON.parse(await readFile(new URL('../content/learning-content.schema.json', import.meta.url), 'utf8'));
+  assert.equal(schema.properties.format.const, 'alfred.learning-content');
+  assert.equal(schema.properties.version.const, '1.0.0');
+});
+
+test('interactive content renderer uses text nodes and no dynamic code execution', async () => {
+  const renderer = await readFile(new URL('../src/concept-map.js', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.match(renderer, /\.textContent\s*=/);
+  assert.doesNotMatch(renderer, /innerHTML|\beval\s*\(|new\s+Function\s*\(/);
+  assert.doesNotMatch(app, /\beval\s*\(|new\s+Function\s*\(/);
+});
