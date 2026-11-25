@@ -1,1 +1,9 @@
-bm9kZV9tb2R1bGVzLwpkaXN0LwoqLnRzYnVpbGRpbmZvCnB1YmxpYy9vY3IvCnZpc3VhbC1sZWFybmluZy1wb2MvcHVibGljL2Jsb2NrbHktbWVkaWEvCnZpc3VhbC1sZWFybmluZy1wb2MvdGVzdC1yZXN1bHRzLwp2aXN1YWwtbGVhcm5pbmctcG9jL2V2aWRlbmNlLwouZW52Ci5lbnYuKi5sb2NhbAo=
+node_modules/
+dist/
+*.tsbuildinfo
+public/ocr/
+visual-learning-poc/public/blockly-media/
+visual-learning-poc/test-results/
+visual-learning-poc/evidence/
+.env
+.env.*.local
