@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 5089)
-Total output lines: 295
-
 import { Files } from './Files';
 import { Notes, NoteEditor } from './Notes';
 import { EditDialog } from '../components/EditDialog';
@@ -189,7 +186,9 @@ export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { in
     {showDisciplineForm && <EditDialog title={editingDisciplineId ? 'Editar disciplina' : 'Nova disciplina'} onClose={cancelDisciplineEdit}>
       <form className="dialog-form" onSubmit={createDiscipline} data-saving={saving || undefined}>
       <label className="field-label" htmlFor="discipline-name">Nome</label>
-      <input id="discipline-name"…89 tokens truncated…scription} onChange={(event) => setDisciplineDescription(event.target.value)} rows={2} placeholder="Professor, objetivo ou observações" />
+      <input id="discipline-name" value={disciplineName} onChange={(event) => setDisciplineName(event.target.value)} maxLength={80} placeholder="Ex.: Estrutura de Dados" required />
+      <label className="field-label" htmlFor="discipline-description">Descrição <span className="optional-label">· opcional</span></label>
+      <textarea id="discipline-description" value={disciplineDescription} onChange={(event) => setDisciplineDescription(event.target.value)} rows={2} placeholder="Professor, objetivo ou observações" />
         {formError && <p role="alert" className="module-error">{formError}</p>}
         <button className="primary-action" type="submit" disabled={saving}>Salvar disciplina</button>
       </form>
