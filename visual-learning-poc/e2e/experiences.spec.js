@@ -1,1 +1,103 @@
-aW1wb3J0IHsgdGVzdCwgZXhwZWN0IH0gZnJvbSAnQHBsYXl3cmlnaHQvdGVzdCc7CmltcG9ydCB7IG1rZGlyIH0gZnJvbSAnbm9kZTpmcy9wcm9taXNlcyc7Cgphd2FpdCBta2RpcignZXZpZGVuY2UnLCB7IHJlY3Vyc2l2ZTogdHJ1ZSB9KTsKCnRlc3QoJ2VkaXRhIGUgcmVvcmRlbmEgdmFsb3JlcywgcHJldsOqIGUgYXZhbsOnYS9yZXRyb2NlZGUnLCBhc3luYyAoeyBwYWdlIH0pID0+IHsKICBhd2FpdCBwYWdlLmdvdG8oJy8nKTsKICBhd2FpdCBleHBlY3QocGFnZS5nZXRCeVJvbGUoJ2hlYWRpbmcnLCB7IG5hbWU6ICdFbnRlbmRhIGEgb3JkZW5hw6fDo28gZmF6ZW5kbycgfSkpLnRvQmVWaXNpYmxlKCk7CiAgYXdhaXQgcGFnZS5sb2NhdG9yKCcjdmVjdG9ySW5wdXQnKS5maWxsKCczLCAxLCAyJyk7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogJ0FwbGljYXInIH0pLmNsaWNrKCk7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogJ01vdmVyIHBhcmEgZGlyZWl0YSBhIHBvc2nDp8OjbyAwJyB9KS5jbGljaygpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJyNhcnJheVN0YXR1cycpKS50b0NvbnRhaW5UZXh0KCcxLCAzLCAyJyk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UubG9jYXRvcignI3ByZWRpY3Rpb25Qcm9tcHQnKSkudG9Db250YWluVGV4dCgnMSBlIDMnKTsKICBhd2FpdCBwYWdlLmdldEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAnRmljYSBpZ3VhbCcgfSkuY2xpY2soKTsKICBhd2FpdCBleHBlY3QocGFnZS5sb2NhdG9yKCcjcHJlZGljdGlvbkZlZWRiYWNrJykpLnRvQ29udGFpblRleHQoJ0JvYSBwcmV2aXPDo28nKTsKICBhd2FpdCBwYWdlLmdldEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAnVmVyIHJlc3VsdGFkbyBlIGF2YW7Dp2FyJyB9KS5jbGljaygpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJyNwcmVkaWN0aW9uUHJvbXB0JykpLnRvQ29udGFpblRleHQoJzMgZSAyJyk7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogJ1ZvbHRhciBwYXNzbycgfSkuY2xpY2soKTsKICBhd2FpdCBleHBlY3QocGFnZS5sb2NhdG9yKCcjcHJlZGljdGlvblByb21wdCcpKS50b0NvbnRhaW5UZXh0KCcxIGUgMycpOwogIGF3YWl0IHBhZ2Uuc2NyZWVuc2hvdCh7IHBhdGg6ICdldmlkZW5jZS9hdWxhLXdlYmtpdC0zOTB4ODQ0LnBuZycgfSk7CiAgY29uc3Qgd2lkdGggPSBhd2FpdCBwYWdlLmV2YWx1YXRlKCgpID0+IGRvY3VtZW50LmRvY3VtZW50RWxlbWVudC5zY3JvbGxXaWR0aCk7CiAgZXhwZWN0KHdpZHRoKS50b0JlTGVzc1RoYW5PckVxdWFsKDM5MSk7Cn0pOwoKdGVzdCgnQmxvY2tseSBtb3N0cmEgY8OzZGlnbyBlIGV4ZWN1dGEgbyBpbnRlcnByZXRhZG9yIGxpbWl0YWRvJywgYXN5bmMgKHsgcGFnZSB9KSA9PiB7CiAgYXdhaXQgcGFnZS5nb3RvKCcvJyk7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogL1Byb2dyYW1hciBjb20gYmxvY29zLyB9KS5jbGljaygpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJyNibG9ja2x5V29ya3NwYWNlIC5ibG9ja2x5U3ZnJykpLnRvQmVWaXNpYmxlKCk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UubG9jYXRvcignI2dlbmVyYXRlZENvZGUnKSkudG9Db250YWluVGV4dCgnZm9yIChsZXQgcGFzc2FnZW0nKTsKICBhd2FpdCBwYWdlLmdldEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAnRXhlY3V0YXIgY29tIHNlZ3VyYW7Dp2EnIH0pLmNsaWNrKCk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UubG9jYXRvcignI3J1blJlc3VsdCcpKS50b0NvbnRhaW5UZXh0KCdWZXRvciBmaW5hbDogMSwgMiwgMywgNCcpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJy5leGVjdXRpb24tc3RlcCcpKS50b0NvbnRhaW5UZXh0KCd2ZXRvcltpXScpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJy5leGVjdXRpb24tc3RlcCcpKS50b0NvbnRhaW5UZXh0KCd0cm9jb3UnKTsKICBhd2FpdCBwYWdlLmdldEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAnUHLDs3hpbW8gcGFzc28nIH0pLmNsaWNrKCk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UubG9jYXRvcignLmV4ZWN1dGlvbi1zdGVwJykpLnRvQ29udGFpblRleHQoJ1Bhc3NvIDIgZGUnKTsKICBhd2FpdCBwYWdlLmxvY2F0b3IoJyNjb2RlTGFuZ3VhZ2UnKS5zZWxlY3RPcHRpb24oJ3B5Jyk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UubG9jYXRvcignI2dlbmVyYXRlZENvZGUnKSkudG9Db250YWluVGV4dCgnZm9yIHBhc3NhZ2VtIGluIHJhbmdlJyk7CiAgYXdhaXQgcGFnZS5zY3JlZW5zaG90KHsgcGF0aDogJ2V2aWRlbmNlL2Jsb2NrbHktd2Via2l0LTM5MHg4NDQucG5nJyB9KTsKfSk7Cgp0ZXN0KCdoaXN0w7NyaWEgdGVtIHNlaXMgcXVhZHJvcyBlIGV4cGxpY2EgcmVzcG9zdGEgaW5jb3JyZXRhL2NvcnJldGEnLCBhc3luYyAoeyBwYWdlIH0pID0+IHsKICBhd2FpdCBwYWdlLmdvdG8oJy8nKTsKICBhd2FpdCBwYWdlLmdldEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAvSGlzdMOzcmlhIGlsdXN0cmFkYS8gfSkuY2xpY2soKTsKICBhd2FpdCBleHBlY3QocGFnZS5sb2NhdG9yKCcuY29taWMtcGFuZWwnKSkudG9IYXZlQ291bnQoNik7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogJ01hbnRlciBjb21vIGVzdMOhJyB9KS5jbGljaygpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJyNjb21pY0ZlZWRiYWNrJykpLnRvQ29udGFpblRleHQoJ1JldmVqYSBhIHJlZ3JhJyk7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogJ1Ryb2NhciBvcyBjYXJ0w7VlcycgfSkuY2xpY2soKTsKICBhd2FpdCBleHBlY3QocGFnZS5sb2NhdG9yKCcjY29taWNGZWVkYmFjaycpKS50b0NvbnRhaW5UZXh0KCdDb3JyZXRvJyk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UubG9jYXRvcignI2xlYXJuaW5nUHJvZ3Jlc3MnKSkudG9Db250YWluVGV4dCgnUmVzcG9zdGEgcmVnaXN0cmFkYScpOwogIGF3YWl0IHBhZ2UucmVsb2FkKCk7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogL0hpc3TDs3JpYSBpbHVzdHJhZGEvIH0pLmNsaWNrKCk7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogJ01hbnRlciBjb21vIGVzdMOhJyB9KS5jbGljaygpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJyNsZWFybmluZ1Byb2dyZXNzJykpLnRvQ29udGFpblRleHQoJ1Jlc3Bvc3RhIHJlZ2lzdHJhZGEnKTsKICBhd2FpdCBwYWdlLnNjcmVlbnNob3QoeyBwYXRoOiAnZXZpZGVuY2UvaGlzdG9yaWEtd2Via2l0LTM5MHg4NDQucG5nJyB9KTsKfSk7Cgp0ZXN0KCdsYXlvdXQgZSB0b3F1ZSBmdW5jaW9uYW0gZW0gbGFyZ3VyYSBlc3RyZWl0YSBlIHRhYmxldCcsIGFzeW5jICh7IHBhZ2UgfSkgPT4gewogIGF3YWl0IHBhZ2UuZ290bygnLycpOwogIGZvciAoY29uc3Qgd2lkdGggb2YgWzMyMCwgMzkwLCA3NjhdKSB7CiAgICBhd2FpdCBwYWdlLnNldFZpZXdwb3J0U2l6ZSh7IHdpZHRoLCBoZWlnaHQ6IDg0NCB9KTsKICAgIGF3YWl0IGV4cGVjdChwYWdlLmdldEJ5Um9sZSgnaGVhZGluZycsIHsgbmFtZTogJ0VudGVuZGEgYSBvcmRlbmHDp8OjbyBmYXplbmRvJyB9KSkudG9CZVZpc2libGUoKTsKICAgIGV4cGVjdChhd2FpdCBwYWdlLmV2YWx1YXRlKCgpID0+IGRvY3VtZW50LmRvY3VtZW50RWxlbWVudC5zY3JvbGxXaWR0aCkpLnRvQmVMZXNzVGhhbk9yRXF1YWwod2lkdGggKyAxKTsKICB9CiAgYXdhaXQgcGFnZS5zZXRWaWV3cG9ydFNpemUoeyB3aWR0aDogMzIwLCBoZWlnaHQ6IDc0MCB9KTsKICBhd2FpdCBwYWdlLmdldEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAnVmFpIHRyb2NhcicgfSkudGFwKCk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UubG9jYXRvcignI3ByZWRpY3Rpb25GZWVkYmFjaycpKS50b0NvbnRhaW5UZXh0KCdCb2EgcHJldmlzw6NvJyk7Cn0pOwoKdGVzdCgnaW50ZXJhY3RpdmUgY29udHJvbHMgZXhwb3NlIG5hbWVzIGFuZCB3b3JrIHdpdGgga2V5Ym9hcmQgZm9jdXMnLCBhc3luYyAoeyBwYWdlIH0pID0+IHsKICBhd2FpdCBwYWdlLmdvdG8oJy8nKTsKICBhd2FpdCBleHBlY3QocGFnZS5nZXRCeVJvbGUoJ25hdmlnYXRpb24nLCB7IG5hbWU6ICdFeHBlcmnDqm5jaWFzIGRlIGFwcmVuZGl6YWdlbScgfSkpLnRvQmVWaXNpYmxlKCk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UuZ2V0QnlSb2xlKCdidXR0b24nLCB7IG5hbWU6ICdWb2x0YXIgcGFzc28nIH0pKS50b0JlRGlzYWJsZWQoKTsKICBhd2FpdCBwYWdlLmdldEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAvUHJvZ3JhbWFyIGNvbSBibG9jb3MvIH0pLmZvY3VzKCk7CiAgYXdhaXQgcGFnZS5rZXlib2FyZC5wcmVzcygnRW50ZXInKTsKICBhd2FpdCBleHBlY3QocGFnZS5sb2NhdG9yKCcjYmxvY2tseVdvcmtzcGFjZSAuYmxvY2tseVN2ZycpKS50b0JlVmlzaWJsZSgpOwp9KTsKCnRlc3QoJ2NvbmNlcHQgbWFwIGV4cGFuZHMgYnkgdG91Y2ggYW5kIGV4cGxhaW5zIGxpbmtlZCB0b3BpY3MnLCBhc3luYyAoeyBwYWdlIH0pID0+IHsKICBhd2FpdCBwYWdlLmdvdG8oJy8nKTsKICBhd2FpdCBwYWdlLmdldEJ5Um9sZSgnYnV0dG9uJywgeyBuYW1lOiAvTWFwYSBjb25jZWl0dWFsLyB9KS50YXAoKTsKICBhd2FpdCBleHBlY3QocGFnZS5nZXRCeVJvbGUoJ25hdmlnYXRpb24nLCB7IG5hbWU6ICdNYXBhIGRlIGNvbmNlaXRvcycgfSkpLnRvQmVWaXNpYmxlKCk7CiAgYXdhaXQgcGFnZS5sb2NhdG9yKCdzdW1tYXJ5JywgeyBoYXNUZXh0OiAnQ29tcGFyYXIgdml6aW5ob3MnIH0pLnRhcCgpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJy5jb25jZXB0LW1hcC1kZXRhaWwnKSkudG9Db250YWluVGV4dCgnQ29tcGFyZSBkb2lzIHZhbG9yZXMgdml6aW5ob3MnKTsKICBhd2FpdCBleHBlY3QocGFnZS5sb2NhdG9yKCcuY29uY2VwdC1tYXAtZGV0YWlsJykpLnRvQ29udGFpblRleHQoJ3BvZGUgbGV2YXIgYTogVHJvY2FyIGZvcmEgZGUgb3JkZW0nKTsKfSk7Cgp0ZXN0KCdzaGVsbCBlIEJsb2NrbHkgYWJyZW0gZGVwb2lzIGRlIGNhY2hlYXI7IGFwcCBjb250aW51YSBkaXNwb27DrXZlbCBvZmZsaW5lJywgYXN5bmMgKHsgcGFnZSwgY29udGV4dCB9KSA9PiB7CiAgYXdhaXQgcGFnZS5nb3RvKCcvJyk7CiAgYXdhaXQgcGFnZS5nZXRCeVJvbGUoJ2J1dHRvbicsIHsgbmFtZTogL1Byb2dyYW1hciBjb20gYmxvY29zLyB9KS5jbGljaygpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJyNibG9ja2x5V29ya3NwYWNlIC5ibG9ja2x5U3ZnJykpLnRvQmVWaXNpYmxlKCk7CiAgYXdhaXQgcGFnZS5ldmFsdWF0ZShhc3luYyAoKSA9PiB7CiAgICBpZiAoISgnc2VydmljZVdvcmtlcicgaW4gbmF2aWdhdG9yKSkgdGhyb3cgbmV3IEVycm9yKCdTZXJ2aWNlIFdvcmtlciBpbmRpc3BvbsOtdmVsJyk7CiAgICBhd2FpdCBuYXZpZ2F0b3Iuc2VydmljZVdvcmtlci5yZWFkeTsKICB9KTsKICBhd2FpdCBwYWdlLnJlbG9hZCgpOwogIGF3YWl0IHBhZ2Uud2FpdEZvckZ1bmN0aW9uKCgpID0+ICEhbmF2aWdhdG9yLnNlcnZpY2VXb3JrZXIuY29udHJvbGxlcik7CiAgYXdhaXQgY29udGV4dC5zZXRPZmZsaW5lKHRydWUpOwogIGF3YWl0IHBhZ2UucmVsb2FkKCk7CiAgYXdhaXQgZXhwZWN0KHBhZ2UuZ2V0QnlSb2xlKCdoZWFkaW5nJywgeyBuYW1lOiAnRW50ZW5kYSBhIG9yZGVuYcOnw6NvIGZhemVuZG8nIH0pKS50b0JlVmlzaWJsZSgpOwogIGF3YWl0IHBhZ2UuZ2V0QnlSb2xlKCdidXR0b24nLCB7IG5hbWU6IC9Qcm9ncmFtYXIgY29tIGJsb2Nvcy8gfSkuY2xpY2soKTsKICBhd2FpdCBleHBlY3QocGFnZS5sb2NhdG9yKCcjYmxvY2tseVdvcmtzcGFjZSAuYmxvY2tseVN2ZycpKS50b0JlVmlzaWJsZSgpOwogIGF3YWl0IGV4cGVjdChwYWdlLmxvY2F0b3IoJyNnZW5lcmF0ZWRDb2RlJykpLnRvQ29udGFpblRleHQoJ2ZvciAobGV0IHBhc3NhZ2VtJyk7Cn0pOwo=
+import { test, expect } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+
+await mkdir('evidence', { recursive: true });
+
+test('edita e reordena valores, prevê e avança/retrocede', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Entenda a ordenação fazendo' })).toBeVisible();
+  await page.locator('#vectorInput').fill('3, 1, 2');
+  await page.getByRole('button', { name: 'Aplicar' }).click();
+  await page.getByRole('button', { name: 'Mover para direita a posição 0' }).click();
+  await expect(page.locator('#arrayStatus')).toContainText('1, 3, 2');
+  await expect(page.locator('#predictionPrompt')).toContainText('1 e 3');
+  await page.getByRole('button', { name: 'Fica igual' }).click();
+  await expect(page.locator('#predictionFeedback')).toContainText('Boa previsão');
+  await page.getByRole('button', { name: 'Ver resultado e avançar' }).click();
+  await expect(page.locator('#predictionPrompt')).toContainText('3 e 2');
+  await page.getByRole('button', { name: 'Voltar passo' }).click();
+  await expect(page.locator('#predictionPrompt')).toContainText('1 e 3');
+  await page.screenshot({ path: 'evidence/aula-webkit-390x844.png' });
+  const width = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(width).toBeLessThanOrEqual(391);
+});
+
+test('Blockly mostra código e executa o interpretador limitado', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Programar com blocos/ }).click();
+  await expect(page.locator('#blocklyWorkspace .blocklySvg')).toBeVisible();
+  await expect(page.locator('#generatedCode')).toContainText('for (let passagem');
+  await page.getByRole('button', { name: 'Executar com segurança' }).click();
+  await expect(page.locator('#runResult')).toContainText('Vetor final: 1, 2, 3, 4');
+  await expect(page.locator('.execution-step')).toContainText('vetor[i]');
+  await expect(page.locator('.execution-step')).toContainText('trocou');
+  await page.getByRole('button', { name: 'Próximo passo' }).click();
+  await expect(page.locator('.execution-step')).toContainText('Passo 2 de');
+  await page.locator('#codeLanguage').selectOption('py');
+  await expect(page.locator('#generatedCode')).toContainText('for passagem in range');
+  await page.screenshot({ path: 'evidence/blockly-webkit-390x844.png' });
+});
+
+test('história tem seis quadros e explica resposta incorreta/correta', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /História ilustrada/ }).click();
+  await expect(page.locator('.comic-panel')).toHaveCount(6);
+  await page.getByRole('button', { name: 'Manter como está' }).click();
+  await expect(page.locator('#comicFeedback')).toContainText('Reveja a regra');
+  await page.getByRole('button', { name: 'Trocar os cartões' }).click();
+  await expect(page.locator('#comicFeedback')).toContainText('Correto');
+  await expect(page.locator('#learningProgress')).toContainText('Resposta registrada');
+  await page.reload();
+  await page.getByRole('button', { name: /História ilustrada/ }).click();
+  await page.getByRole('button', { name: 'Manter como está' }).click();
+  await expect(page.locator('#learningProgress')).toContainText('Resposta registrada');
+  await page.screenshot({ path: 'evidence/historia-webkit-390x844.png' });
+});
+
+test('layout e toque funcionam em largura estreita e tablet', async ({ page }) => {
+  await page.goto('/');
+  for (const width of [320, 390, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(page.getByRole('heading', { name: 'Entenda a ordenação fazendo' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+  }
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.getByRole('button', { name: 'Vai trocar' }).tap();
+  await expect(page.locator('#predictionFeedback')).toContainText('Boa previsão');
+});
+
+test('interactive controls expose names and work with keyboard focus', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('navigation', { name: 'Experiências de aprendizagem' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Voltar passo' })).toBeDisabled();
+  await page.getByRole('button', { name: /Programar com blocos/ }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#blocklyWorkspace .blocklySvg')).toBeVisible();
+});
+
+test('concept map expands by touch and explains linked topics', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Mapa conceitual/ }).tap();
+  await expect(page.getByRole('navigation', { name: 'Mapa de conceitos' })).toBeVisible();
+  await page.locator('summary', { hasText: 'Comparar vizinhos' }).tap();
+  await expect(page.locator('.concept-map-detail')).toContainText('Compare dois valores vizinhos');
+  await expect(page.locator('.concept-map-detail')).toContainText('pode levar a: Trocar fora de ordem');
+});
+
+test('shell e Blockly abrem depois de cachear; app continua disponível offline', async ({ page, context }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Programar com blocos/ }).click();
+  await expect(page.locator('#blocklyWorkspace .blocklySvg')).toBeVisible();
+  await page.evaluate(async () => {
+    if (!('serviceWorker' in navigator)) throw new Error('Service Worker indisponível');
+    await navigator.serviceWorker.ready;
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Entenda a ordenação fazendo' })).toBeVisible();
+  await page.getByRole('button', { name: /Programar com blocos/ }).click();
+  await expect(page.locator('#blocklyWorkspace .blocklySvg')).toBeVisible();
+  await expect(page.locator('#generatedCode')).toContainText('for (let passagem');
+});
