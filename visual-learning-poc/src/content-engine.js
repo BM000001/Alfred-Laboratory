@@ -1,1 +1,104 @@
-LyoqIFNtYWxsLCBkZXBlbmRlbmN5LWZyZWUgcnVudGltZSBjb250cmFjdCBzaGFyZWQgYnkgZXZlcnkgbGVhcm5pbmcgc3VyZmFjZS4gKi8KZXhwb3J0IGNvbnN0IENPTlRFTlRfRk9STUFUID0gJ2FsZnJlZC5sZWFybmluZy1jb250ZW50JzsKZXhwb3J0IGNvbnN0IENPTlRFTlRfVkVSU0lPTiA9ICcxLjAuMCc7Cgpjb25zdCBpc1RleHQgPSB2YWx1ZSA9PiB0eXBlb2YgdmFsdWUgPT09ICdzdHJpbmcnICYmIHZhbHVlLnRyaW0oKS5sZW5ndGggPiAwOwoKZXhwb3J0IGZ1bmN0aW9uIHZhbGlkYXRlTGVhcm5pbmdDb250ZW50KGNvbnRlbnQpIHsKICBjb25zdCBlcnJvcnMgPSBbXTsKICBjb25zdCBwYXRoID0gKG5hbWUsIG1lc3NhZ2UpID0+IGVycm9ycy5wdXNoKGAke25hbWV9OiAke21lc3NhZ2V9YCk7CiAgaWYgKCFjb250ZW50IHx8IHR5cGVvZiBjb250ZW50ICE9PSAnb2JqZWN0JyB8fCBBcnJheS5pc0FycmF5KGNvbnRlbnQpKSByZXR1cm4geyBvazogZmFsc2UsIGVycm9yczogWydjb250ZW50OiBleHBlY3RlZCBhbiBvYmplY3QnXSB9OwogIGlmIChjb250ZW50LmZvcm1hdCAhPT0gQ09OVEVOVF9GT1JNQVQpIHBhdGgoJ2Zvcm1hdCcsIGBleHBlY3RlZCAke0NPTlRFTlRfRk9STUFUfWApOwogIGlmIChjb250ZW50LnZlcnNpb24gIT09IENPTlRFTlRfVkVSU0lPTikgcGF0aCgndmVyc2lvbicsIGB1bnN1cHBvcnRlZCB2ZXJzaW9uICR7U3RyaW5nKGNvbnRlbnQudmVyc2lvbil9YCk7CiAgaWYgKCFpc1RleHQoY29udGVudC5pZCkpIHBhdGgoJ2lkJywgJ2V4cGVjdGVkIGEgbm9uLWVtcHR5IHN0cmluZycpOwogIGlmICghaXNUZXh0KGNvbnRlbnQudGl0bGUpKSBwYXRoKCd0aXRsZScsICdleHBlY3RlZCBhIG5vbi1lbXB0eSBzdHJpbmcnKTsKICBpZiAoIUFycmF5LmlzQXJyYXkoY29udGVudC5vYmplY3RpdmVzKSB8fCBjb250ZW50Lm9iamVjdGl2ZXMubGVuZ3RoID09PSAwKSBwYXRoKCdvYmplY3RpdmVzJywgJ2V4cGVjdGVkIGF0IGxlYXN0IG9uZSBsZWFybmluZyBvYmplY3RpdmUnKTsKICBlbHNlIGNvbnRlbnQub2JqZWN0aXZlcy5mb3JFYWNoKChvLCBpKSA9PiB7CiAgICBpZiAoIW8gfHwgIWlzVGV4dChvLmlkKSB8fCAhaXNUZXh0KG8uZGVzY3JpcHRpb24pKSBwYXRoKGBvYmplY3RpdmVzWyR7aX1dYCwgJ2V4cGVjdGVkIGlkIGFuZCBkZXNjcmlwdGlvbicpOwogIH0pOwogIGNvbnN0IG9iamVjdGl2ZUlkcyA9IG5ldyBTZXQoKGNvbnRlbnQub2JqZWN0aXZlcyB8fCBbXSkubWFwKG8gPT4gbz8uaWQpKTsKICBpZiAoIUFycmF5LmlzQXJyYXkoY29udGVudC5leHBsYW5hdGlvbnMpIHx8IGNvbnRlbnQuZXhwbGFuYXRpb25zLmxlbmd0aCA9PT0gMCkgcGF0aCgnZXhwbGFuYXRpb25zJywgJ2V4cGVjdGVkIGF0IGxlYXN0IG9uZSBleHBsYW5hdGlvbicpOwogIGVsc2UgY29udGVudC5leHBsYW5hdGlvbnMuZm9yRWFjaCgoZSwgaSkgPT4gewogICAgaWYgKCFlIHx8ICFpc1RleHQoZS5pZCkgfHwgIWlzVGV4dChlLmJvZHkpKSBwYXRoKGBleHBsYW5hdGlvbnNbJHtpfV1gLCAnZXhwZWN0ZWQgaWQgYW5kIGJvZHknKTsKICB9KTsKICBjb25zdCBleHBsYW5hdGlvbklkcyA9IG5ldyBTZXQoKGNvbnRlbnQuZXhwbGFuYXRpb25zIHx8IFtdKS5tYXAoZSA9PiBlPy5pZCkpOwogIGNvbnN0IG1hcCA9IGNvbnRlbnQuY29uY2VwdE1hcDsKICBpZiAoIW1hcCB8fCAhQXJyYXkuaXNBcnJheShtYXAubm9kZXMpIHx8IG1hcC5ub2Rlcy5sZW5ndGggPCAyIHx8ICFBcnJheS5pc0FycmF5KG1hcC5yZWxhdGlvbnMpIHx8ICFpc1RleHQobWFwLnJvb3RJZCkpIHBhdGgoJ2NvbmNlcHRNYXAnLCAnZXhwZWN0ZWQgcm9vdElkLCBhdCBsZWFzdCB0d28gbm9kZXMgYW5kIGEgcmVsYXRpb25zIGFycmF5Jyk7CiAgZWxzZSB7CiAgICBjb25zdCBub2RlSWRzID0gbmV3IFNldChtYXAubm9kZXMubWFwKG4gPT4gbj8uaWQpKTsKICAgIGlmIChub2RlSWRzLnNpemUgIT09IG1hcC5ub2Rlcy5sZW5ndGgpIHBhdGgoJ2NvbmNlcHRNYXAubm9kZXMnLCAnbm9kZSBpZHMgbXVzdCBiZSB1bmlxdWUnKTsKICAgIGlmICghbm9kZUlkcy5oYXMobWFwLnJvb3RJZCkpIHBhdGgoJ2NvbmNlcHRNYXAucm9vdElkJywgJ211c3QgaWRlbnRpZnkgYW4gZXhpc3Rpbmcgbm9kZScpOwogICAgaWYgKG1hcC5ub2Rlcy5maW5kKG5vZGUgPT4gbm9kZS5pZCA9PT0gbWFwLnJvb3RJZCk/LnBhcmVudElkKSBwYXRoKCdjb25jZXB0TWFwLnJvb3RJZCcsICdyb290IG5vZGUgY2Fubm90IGhhdmUgYSBwYXJlbnQnKTsKICAgIG1hcC5ub2Rlcy5mb3JFYWNoKChuLCBpKSA9PiB7CiAgICAgIGlmICghbiB8fCAhaXNUZXh0KG4uaWQpIHx8ICFpc1RleHQobi5sYWJlbCkgfHwgIWV4cGxhbmF0aW9uSWRzLmhhcyhuLmV4cGxhbmF0aW9uSWQpKSBwYXRoKGBjb25jZXB0TWFwLm5vZGVzWyR7aX1dYCwgJ2V4cGVjdGVkIGlkLCBsYWJlbCBhbmQgYSB2YWxpZCBleHBsYW5hdGlvbklkJyk7CiAgICAgIGlmIChuPy5wYXJlbnRJZCAmJiAoIW5vZGVJZHMuaGFzKG4ucGFyZW50SWQpIHx8IG4ucGFyZW50SWQgPT09IG4uaWQpKSBwYXRoKGBjb25jZXB0TWFwLm5vZGVzWyR7aX1dLnBhcmVudElkYCwgJ211c3QgaWRlbnRpZnkgYW5vdGhlciBleGlzdGluZyBub2RlJyk7CiAgICAgIGlmIChuPy5pZCAhPT0gbWFwLnJvb3RJZCAmJiAhbj8ucGFyZW50SWQpIHBhdGgoYGNvbmNlcHRNYXAubm9kZXNbJHtpfV0ucGFyZW50SWRgLCAnZXZlcnkgbm9uLXJvb3Qgbm9kZSBtdXN0IGJlIGNvbm5lY3RlZCB0byB0aGUgcm9vdCcpOwogICAgfSk7CiAgICBtYXAucmVsYXRpb25zLmZvckVhY2goKHJlbGF0aW9uLCBpKSA9PiB7CiAgICAgIGlmICghcmVsYXRpb24gfHwgIW5vZGVJZHMuaGFzKHJlbGF0aW9uLmZyb20pIHx8ICFub2RlSWRzLmhhcyhyZWxhdGlvbi50bykgfHwgIWlzVGV4dChyZWxhdGlvbi5sYWJlbCkpIHBhdGgoYGNvbmNlcHRNYXAucmVsYXRpb25zWyR7aX1dYCwgJ2V4cGVjdGVkIGV4aXN0aW5nIG5vZGUgaWRzIGFuZCBhIGxhYmVsJyk7CiAgICB9KTsKICAgIGNvbnN0IHJlYWNoYWJsZSA9IG5ldyBTZXQoKTsKICAgIGNvbnN0IHZpc2l0ID0gaWQgPT4geyBpZiAocmVhY2hhYmxlLmhhcyhpZCkpIHJldHVybjsgcmVhY2hhYmxlLmFkZChpZCk7IG1hcC5ub2Rlcy5maWx0ZXIobm9kZSA9PiBub2RlLnBhcmVudElkID09PSBpZCkuZm9yRWFjaChub2RlID0+IHZpc2l0KG5vZGUuaWQpKTsgfTsKICAgIGlmIChub2RlSWRzLmhhcyhtYXAucm9vdElkKSkgdmlzaXQobWFwLnJvb3RJZCk7CiAgICBpZiAocmVhY2hhYmxlLnNpemUgIT09IG1hcC5ub2Rlcy5sZW5ndGgpIHBhdGgoJ2NvbmNlcHRNYXAubm9kZXMnLCAnZXZlcnkgbm9kZSBtdXN0IGJlIHJlYWNoYWJsZSBmcm9tIHJvb3RJZCcpOwogICAgZm9yIChjb25zdCBub2RlIG9mIG1hcC5ub2RlcykgewogICAgICBjb25zdCBzZWVuID0gbmV3IFNldChbbm9kZS5pZF0pOyBsZXQgcGFyZW50ID0gbm9kZS5wYXJlbnRJZDsKICAgICAgd2hpbGUgKHBhcmVudCkgewogICAgICAgIGlmIChzZWVuLmhhcyhwYXJlbnQpKSB7IHBhdGgoJ2NvbmNlcHRNYXAubm9kZXMnLCAncGFyZW50IHJlbGF0aW9uc2hpcHMgbXVzdCBiZSBhY3ljbGljJyk7IGJyZWFrOyB9CiAgICAgICAgc2Vlbi5hZGQocGFyZW50KTsgcGFyZW50ID0gbWFwLm5vZGVzLmZpbmQoY2FuZGlkYXRlID0+IGNhbmRpZGF0ZS5pZCA9PT0gcGFyZW50KT8ucGFyZW50SWQ7CiAgICAgIH0KICAgIH0KICB9CiAgaWYgKCFBcnJheS5pc0FycmF5KGNvbnRlbnQuaW50ZXJhY3Rpb25zKSkgcGF0aCgnaW50ZXJhY3Rpb25zJywgJ2V4cGVjdGVkIGFuIGFycmF5Jyk7CiAgZWxzZSBjb250ZW50LmludGVyYWN0aW9ucy5mb3JFYWNoKCh4LCBpKSA9PiB7CiAgICBpZiAoIXggfHwgIWlzVGV4dCh4LmlkKSB8fCAhaXNUZXh0KHgudHlwZSkgfHwgIW9iamVjdGl2ZUlkcy5oYXMoeC5vYmplY3RpdmVJZCkpIHBhdGgoYGludGVyYWN0aW9uc1ske2l9XWAsICdleHBlY3RlZCBpZC90eXBlIGFuZCBhIHZhbGlkIG9iamVjdGl2ZUlkJyk7CiAgICBpZiAoeD8udHlwZSA9PT0gJ2Nob2ljZScpIHsKICAgICAgaWYgKCFBcnJheS5pc0FycmF5KHgub3B0aW9ucykgfHwgeC5vcHRpb25zLmxlbmd0aCA8IDIpIHBhdGgoYGludGVyYWN0aW9uc1ske2l9XS5vcHRpb25zYCwgJ2Nob2ljZSBuZWVkcyBhdCBsZWFzdCB0d28gb3B0aW9ucycpOwogICAgICBpZiAobmV3IFNldCgoeC5vcHRpb25zIHx8IFtdKS5tYXAob3B0aW9uID0+IG9wdGlvbj8uaWQpKS5zaXplICE9PSAoeC5vcHRpb25zIHx8IFtdKS5sZW5ndGgpIHBhdGgoYGludGVyYWN0aW9uc1ske2l9XS5vcHRpb25zYCwgJ29wdGlvbiBpZHMgbXVzdCBiZSB1bmlxdWUnKTsKICAgICAgaWYgKCF4Lm9wdGlvbnM/LnNvbWUob3B0aW9uID0+IG9wdGlvbi5pZCA9PT0geC5hbnN3ZXJJZCkpIHBhdGgoYGludGVyYWN0aW9uc1ske2l9XS5hbnN3ZXJJZGAsICdtdXN0IGlkZW50aWZ5IG9uZSBvcHRpb24nKTsKICAgICAgaWYgKCFpc1RleHQoeC5mZWVkYmFja0NvcnJlY3QpIHx8ICFpc1RleHQoeC5mZWVkYmFja0luY29ycmVjdCkpIHBhdGgoYGludGVyYWN0aW9uc1ske2l9XS5mZWVkYmFja2AsICdjb3JyZWN0IGFuZCBpbmNvcnJlY3QgZmVlZGJhY2sgYXJlIHJlcXVpcmVkJyk7CiAgICB9CiAgfSk7CiAgaWYgKCFBcnJheS5pc0FycmF5KGNvbnRlbnQudmlzdWFscykpIHBhdGgoJ3Zpc3VhbHMnLCAnZXhwZWN0ZWQgYW4gYXJyYXknKTsKICBlbHNlIGNvbnRlbnQudmlzdWFscy5mb3JFYWNoKCh2LCBpKSA9PiB7CiAgICBpZiAoIXYgfHwgIWlzVGV4dCh2LmlkKSB8fCAhWydzdmcnLCAnbG9jYWwtaW1hZ2UnLCAnZGlhZ3JhbSddLmluY2x1ZGVzKHYua2luZCkgfHwgIWlzVGV4dCh2LmFsdCkpIHBhdGgoYHZpc3VhbHNbJHtpfV1gLCAnZXhwZWN0ZWQgaWQsIHN1cHBvcnRlZCBraW5kIGFuZCBhY2Nlc3NpYmxlIGFsdCB0ZXh0Jyk7CiAgfSk7CiAgaWYgKCFjb250ZW50LmNvbXBsZXRpb24gfHwgIWlzVGV4dChjb250ZW50LmNvbXBsZXRpb24uaWQpIHx8ICFBcnJheS5pc0FycmF5KGNvbnRlbnQuY29tcGxldGlvbi5ydWxlcykgfHwgY29udGVudC5jb21wbGV0aW9uLnJ1bGVzLmxlbmd0aCA9PT0gMCkgcGF0aCgnY29tcGxldGlvbicsICdleHBlY3RlZCBhbiBpZCBhbmQgYXQgbGVhc3Qgb25lIHZlcmlmaWFibGUgcnVsZScpOwogIGVsc2UgY29udGVudC5jb21wbGV0aW9uLnJ1bGVzLmZvckVhY2goKHJ1bGUsIGkpID0+IHsKICAgIGNvbnN0IHZhbGlkID0gcnVsZT8udHlwZSA9PT0gJ2FsbC1xdWVzdGlvbnMtY29ycmVjdCcgfHwgcnVsZT8udHlwZSA9PT0gJ3NvcnRlZC12ZWN0b3InIHx8IChydWxlPy50eXBlID09PSAnbWluaW11bS1jb3JyZWN0JyAmJiBOdW1iZXIuaXNJbnRlZ2VyKHJ1bGUudmFsdWUpICYmIHJ1bGUudmFsdWUgPiAwKTsKICAgIGlmICghdmFsaWQpIHBhdGgoYGNvbXBsZXRpb24ucnVsZXNbJHtpfV1gLCAndW5zdXBwb3J0ZWQgb3IgbWFsZm9ybWVkIGNvbXBsZXRpb24gcnVsZScpOwogIH0pOwogIGlmICghQXJyYXkuaXNBcnJheShjb250ZW50LnJlZmVyZW5jZXMpIHx8IGNvbnRlbnQucmVmZXJlbmNlcy5sZW5ndGggPT09IDApIHBhdGgoJ3JlZmVyZW5jZXMnLCAnY2l0ZSB0aGUgb3JpZ2luYWwgYWNhZGVtaWMgbWF0ZXJpYWwgb3IgbGFiZWwgdGhlIGNvbnRlbnQgYXMgYXV0aG9yZWQgZGVtb25zdHJhdGlvbiBtYXRlcmlhbCcpOwogIGVsc2UgY29udGVudC5yZWZlcmVuY2VzLmZvckVhY2goKHIsIGkpID0+IHsKICAgIGlmICghciB8fCAhaXNUZXh0KHIua2luZCkgfHwgIWlzVGV4dChyLmxhYmVsKSkgcGF0aChgcmVmZXJlbmNlc1ske2l9XWAsICdleHBlY3RlZCBraW5kIGFuZCBsYWJlbCcpOwogIH0pOwogIHJldHVybiB7IG9rOiBlcnJvcnMubGVuZ3RoID09PSAwLCBlcnJvcnMgfTsKfQoKZXhwb3J0IGZ1bmN0aW9uIGdyYWRlQ2hvaWNlKGludGVyYWN0aW9uLCBzZWxlY3RlZE9wdGlvbklkKSB7CiAgaWYgKCFpbnRlcmFjdGlvbiB8fCBpbnRlcmFjdGlvbi50eXBlICE9PSAnY2hvaWNlJykgdGhyb3cgbmV3IFR5cGVFcnJvcignRXhwZWN0ZWQgYSBjaG9pY2UgaW50ZXJhY3Rpb24uJyk7CiAgY29uc3QgY29ycmVjdCA9IHNlbGVjdGVkT3B0aW9uSWQgPT09IGludGVyYWN0aW9uLmFuc3dlcklkOwogIHJldHVybiB7IGNvcnJlY3QsIGZlZWRiYWNrOiBjb3JyZWN0ID8gaW50ZXJhY3Rpb24uZmVlZGJhY2tDb3JyZWN0IDogaW50ZXJhY3Rpb24uZmVlZGJhY2tJbmNvcnJlY3QgfTsKfQoKZXhwb3J0IGZ1bmN0aW9uIGV2YWx1YXRlQ29tcGxldGlvbihydWxlcywgZXZpZGVuY2UpIHsKICBpZiAoIUFycmF5LmlzQXJyYXkocnVsZXMpIHx8ICFldmlkZW5jZSB8fCB0eXBlb2YgZXZpZGVuY2UgIT09ICdvYmplY3QnKSByZXR1cm4gZmFsc2U7CiAgcmV0dXJuIHJ1bGVzLmV2ZXJ5KHJ1bGUgPT4gewogICAgaWYgKHJ1bGUudHlwZSA9PT0gJ2FsbC1xdWVzdGlvbnMtY29ycmVjdCcpIHJldHVybiBldmlkZW5jZS50b3RhbCA+IDAgJiYgZXZpZGVuY2UuY29ycmVjdCA9PT0gZXZpZGVuY2UudG90YWw7CiAgICBpZiAocnVsZS50eXBlID09PSAnbWluaW11bS1jb3JyZWN0JykgcmV0dXJuIGV2aWRlbmNlLmNvcnJlY3QgPj0gcnVsZS52YWx1ZTsKICAgIGlmIChydWxlLnR5cGUgPT09ICdzb3J0ZWQtdmVjdG9yJykgcmV0dXJuIEFycmF5LmlzQXJyYXkoZXZpZGVuY2UudmVjdG9yKSAmJiBldmlkZW5jZS52ZWN0b3IuZXZlcnkoKG4sIGksIGEpID0+IGkgPT09IDAgfHwgYVtpIC0gMV0gPD0gbik7CiAgICByZXR1cm4gZmFsc2U7CiAgfSk7Cn0KCmV4cG9ydCBmdW5jdGlvbiBjcmVhdGVQcm9ncmVzc1JlY29yZChjb250ZW50LCB7IGNvbXBsZXRlZCA9IFtdLCBhbnN3ZXJzID0gW10gfSA9IHt9KSB7CiAgaWYgKCF2YWxpZGF0ZUxlYXJuaW5nQ29udGVudChjb250ZW50KS5vaykgdGhyb3cgbmV3IFR5cGVFcnJvcignQ2Fubm90IHJlY29yZCBwcm9ncmVzcyBmb3IgaW52YWxpZCBsZWFybmluZyBjb250ZW50LicpOwogIGNvbnN0IGludGVyYWN0aW9ucyA9IG5ldyBNYXAoY29udGVudC5pbnRlcmFjdGlvbnMubWFwKGl0ZW0gPT4gW2l0ZW0uaWQsIGl0ZW1dKSk7CiAgaWYgKGNvbXBsZXRlZC5zb21lKGlkID0+ICFpbnRlcmFjdGlvbnMuaGFzKGlkKSkpIHRocm93IG5ldyBUeXBlRXJyb3IoJ1Byb2dyZXNzIHJlZmVyZW5jZXMgYW4gdW5rbm93biBpbnRlcmFjdGlvbi4nKTsKICBjb25zdCBzYWZlQW5zd2VycyA9IGFuc3dlcnMubWFwKCh7IGludGVyYWN0aW9uSWQsIHNlbGVjdGVkT3B0aW9uSWQsIGNvcnJlY3QgfSkgPT4gewogICAgY29uc3QgaW50ZXJhY3Rpb24gPSBpbnRlcmFjdGlvbnMuZ2V0KGludGVyYWN0aW9uSWQpOwogICAgaWYgKCFpbnRlcmFjdGlvbiB8fCAoaW50ZXJhY3Rpb24udHlwZSA9PT0gJ2Nob2ljZScgJiYgIWludGVyYWN0aW9uLm9wdGlvbnMuc29tZShvcHRpb24gPT4gb3B0aW9uLmlkID09PSBzZWxlY3RlZE9wdGlvbklkKSkpIHRocm93IG5ldyBUeXBlRXJyb3IoJ1Byb2dyZXNzIGFuc3dlciBpcyBvdXRzaWRlIHRoZSBjb250ZW50IGNvbnRyYWN0LicpOwogICAgcmV0dXJuIHsgaW50ZXJhY3Rpb25JZCwgc2VsZWN0ZWRPcHRpb25JZCwgY29ycmVjdDogQm9vbGVhbihjb3JyZWN0KSB9OwogIH0pOwogIHJldHVybiB7IGZvcm1hdDogJ2FsZnJlZC5sZWFybmluZy1wcm9ncmVzcycsIHZlcnNpb246ICcxLjAuMCcsIGNvbnRlbnRJZDogY29udGVudC5pZCwgY29udGVudFZlcnNpb246IGNvbnRlbnQudmVyc2lvbiwgY29tcGxldGVkOiBbLi4ubmV3IFNldChjb21wbGV0ZWQpXSwgYW5zd2Vyczogc2FmZUFuc3dlcnMgfTsKfQo=
+/** Small, dependency-free runtime contract shared by every learning surface. */
+export const CONTENT_FORMAT = 'alfred.learning-content';
+export const CONTENT_VERSION = '1.0.0';
+
+const isText = value => typeof value === 'string' && value.trim().length > 0;
+
+export function validateLearningContent(content) {
+  const errors = [];
+  const path = (name, message) => errors.push(`${name}: ${message}`);
+  if (!content || typeof content !== 'object' || Array.isArray(content)) return { ok: false, errors: ['content: expected an object'] };
+  if (content.format !== CONTENT_FORMAT) path('format', `expected ${CONTENT_FORMAT}`);
+  if (content.version !== CONTENT_VERSION) path('version', `unsupported version ${String(content.version)}`);
+  if (!isText(content.id)) path('id', 'expected a non-empty string');
+  if (!isText(content.title)) path('title', 'expected a non-empty string');
+  if (!Array.isArray(content.objectives) || content.objectives.length === 0) path('objectives', 'expected at least one learning objective');
+  else content.objectives.forEach((o, i) => {
+    if (!o || !isText(o.id) || !isText(o.description)) path(`objectives[${i}]`, 'expected id and description');
+  });
+  const objectiveIds = new Set((content.objectives || []).map(o => o?.id));
+  if (!Array.isArray(content.explanations) || content.explanations.length === 0) path('explanations', 'expected at least one explanation');
+  else content.explanations.forEach((e, i) => {
+    if (!e || !isText(e.id) || !isText(e.body)) path(`explanations[${i}]`, 'expected id and body');
+  });
+  const explanationIds = new Set((content.explanations || []).map(e => e?.id));
+  const map = content.conceptMap;
+  if (!map || !Array.isArray(map.nodes) || map.nodes.length < 2 || !Array.isArray(map.relations) || !isText(map.rootId)) path('conceptMap', 'expected rootId, at least two nodes and a relations array');
+  else {
+    const nodeIds = new Set(map.nodes.map(n => n?.id));
+    if (nodeIds.size !== map.nodes.length) path('conceptMap.nodes', 'node ids must be unique');
+    if (!nodeIds.has(map.rootId)) path('conceptMap.rootId', 'must identify an existing node');
+    if (map.nodes.find(node => node.id === map.rootId)?.parentId) path('conceptMap.rootId', 'root node cannot have a parent');
+    map.nodes.forEach((n, i) => {
+      if (!n || !isText(n.id) || !isText(n.label) || !explanationIds.has(n.explanationId)) path(`conceptMap.nodes[${i}]`, 'expected id, label and a valid explanationId');
+      if (n?.parentId && (!nodeIds.has(n.parentId) || n.parentId === n.id)) path(`conceptMap.nodes[${i}].parentId`, 'must identify another existing node');
+      if (n?.id !== map.rootId && !n?.parentId) path(`conceptMap.nodes[${i}].parentId`, 'every non-root node must be connected to the root');
+    });
+    map.relations.forEach((relation, i) => {
+      if (!relation || !nodeIds.has(relation.from) || !nodeIds.has(relation.to) || !isText(relation.label)) path(`conceptMap.relations[${i}]`, 'expected existing node ids and a label');
+    });
+    const reachable = new Set();
+    const visit = id => { if (reachable.has(id)) return; reachable.add(id); map.nodes.filter(node => node.parentId === id).forEach(node => visit(node.id)); };
+    if (nodeIds.has(map.rootId)) visit(map.rootId);
+    if (reachable.size !== map.nodes.length) path('conceptMap.nodes', 'every node must be reachable from rootId');
+    for (const node of map.nodes) {
+      const seen = new Set([node.id]); let parent = node.parentId;
+      while (parent) {
+        if (seen.has(parent)) { path('conceptMap.nodes', 'parent relationships must be acyclic'); break; }
+        seen.add(parent); parent = map.nodes.find(candidate => candidate.id === parent)?.parentId;
+      }
+    }
+  }
+  if (!Array.isArray(content.interactions)) path('interactions', 'expected an array');
+  else content.interactions.forEach((x, i) => {
+    if (!x || !isText(x.id) || !isText(x.type) || !objectiveIds.has(x.objectiveId)) path(`interactions[${i}]`, 'expected id/type and a valid objectiveId');
+    if (x?.type === 'choice') {
+      if (!Array.isArray(x.options) || x.options.length < 2) path(`interactions[${i}].options`, 'choice needs at least two options');
+      if (new Set((x.options || []).map(option => option?.id)).size !== (x.options || []).length) path(`interactions[${i}].options`, 'option ids must be unique');
+      if (!x.options?.some(option => option.id === x.answerId)) path(`interactions[${i}].answerId`, 'must identify one option');
+      if (!isText(x.feedbackCorrect) || !isText(x.feedbackIncorrect)) path(`interactions[${i}].feedback`, 'correct and incorrect feedback are required');
+    }
+  });
+  if (!Array.isArray(content.visuals)) path('visuals', 'expected an array');
+  else content.visuals.forEach((v, i) => {
+    if (!v || !isText(v.id) || !['svg', 'local-image', 'diagram'].includes(v.kind) || !isText(v.alt)) path(`visuals[${i}]`, 'expected id, supported kind and accessible alt text');
+  });
+  if (!content.completion || !isText(content.completion.id) || !Array.isArray(content.completion.rules) || content.completion.rules.length === 0) path('completion', 'expected an id and at least one verifiable rule');
+  else content.completion.rules.forEach((rule, i) => {
+    const valid = rule?.type === 'all-questions-correct' || rule?.type === 'sorted-vector' || (rule?.type === 'minimum-correct' && Number.isInteger(rule.value) && rule.value > 0);
+    if (!valid) path(`completion.rules[${i}]`, 'unsupported or malformed completion rule');
+  });
+  if (!Array.isArray(content.references) || content.references.length === 0) path('references', 'cite the original academic material or label the content as authored demonstration material');
+  else content.references.forEach((r, i) => {
+    if (!r || !isText(r.kind) || !isText(r.label)) path(`references[${i}]`, 'expected kind and label');
+  });
+  return { ok: errors.length === 0, errors };
+}
+
+export function gradeChoice(interaction, selectedOptionId) {
+  if (!interaction || interaction.type !== 'choice') throw new TypeError('Expected a choice interaction.');
+  const correct = selectedOptionId === interaction.answerId;
+  return { correct, feedback: correct ? interaction.feedbackCorrect : interaction.feedbackIncorrect };
+}
+
+export function evaluateCompletion(rules, evidence) {
+  if (!Array.isArray(rules) || !evidence || typeof evidence !== 'object') return false;
+  return rules.every(rule => {
+    if (rule.type === 'all-questions-correct') return evidence.total > 0 && evidence.correct === evidence.total;
+    if (rule.type === 'minimum-correct') return evidence.correct >= rule.value;
+    if (rule.type === 'sorted-vector') return Array.isArray(evidence.vector) && evidence.vector.every((n, i, a) => i === 0 || a[i - 1] <= n);
+    return false;
+  });
+}
+
+export function createProgressRecord(content, { completed = [], answers = [] } = {}) {
+  if (!validateLearningContent(content).ok) throw new TypeError('Cannot record progress for invalid learning content.');
+  const interactions = new Map(content.interactions.map(item => [item.id, item]));
+  if (completed.some(id => !interactions.has(id))) throw new TypeError('Progress references an unknown interaction.');
+  const safeAnswers = answers.map(({ interactionId, selectedOptionId, correct }) => {
+    const interaction = interactions.get(interactionId);
+    if (!interaction || (interaction.type === 'choice' && !interaction.options.some(option => option.id === selectedOptionId))) throw new TypeError('Progress answer is outside the content contract.');
+    return { interactionId, selectedOptionId, correct: Boolean(correct) };
+  });
+  return { format: 'alfred.learning-progress', version: '1.0.0', contentId: content.id, contentVersion: content.version, completed: [...new Set(completed)], answers: safeAnswers };
+}
