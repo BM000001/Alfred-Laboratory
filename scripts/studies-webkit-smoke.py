@@ -32,7 +32,7 @@ SEED_DATABASE = r"""async () => {
       }
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onerror = () => reject(request.error ?? new Error('Could not open the test database.'));
   });
 
   const seed = {
@@ -67,10 +67,14 @@ SEED_DATABASE = r"""async () => {
 
   await new Promise((resolve, reject) => {
     const tx = database.transaction(Object.keys(seed), 'readwrite');
-    for (const [name, rows] of Object.entries(seed)) for (const row of rows) tx.objectStore(name).put(row);
+    let failedWrite = '';
+    for (const [name, rows] of Object.entries(seed)) for (const row of rows) {
+      const request = tx.objectStore(name).put(row);
+      request.onerror = () => { failedWrite = `${name}/${row.id}: ${request.error?.name ?? 'unknown'} ${request.error?.message ?? ''}`; };
+    }
     tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error ?? new Error(`Seed transaction failed: ${failedWrite || 'unknown request error'}`));
+    tx.onabort = () => reject(tx.error ?? new Error(`Seed transaction aborted: ${failedWrite || 'unknown request error'}`));
   });
   database.close();
 }"""
@@ -128,6 +132,8 @@ def main() -> None:
                         has_touch=viewport["touch"],
                     )
                     page = context.new_page()
+                    page.on("console", lambda message: print(f"Browser console ({viewport['width']}px): {message.text}") if message.type == "error" else None)
+                    page.on("pageerror", lambda error: print(f"Browser error ({viewport['width']}px): {error}"))
                     page.goto(URL, wait_until="domcontentloaded")
                     page.evaluate(SEED_DATABASE)
                     page.get_by_role("button", name="Aprender", exact=True).click()
