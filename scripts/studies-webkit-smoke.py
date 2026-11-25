@@ -61,7 +61,7 @@ SEED_DATABASE = r"""async () => {
       { id: 'd2:lesson:c2', disciplineId: 'd2', lessonId: 'lesson:c2', completedAt: '2026-11-25T00:00:00.000Z', context: 'technical' },
     ],
     files: [
-      { id: 'f1', name: 'original.txt', type: 'text/plain', size: 8, createdAt: '2026-11-25T00:00:00.000Z', disciplineId: 'd1', blob: new Blob(['original']) },
+      { id: 'f1', name: 'original.txt', type: 'text/plain', size: 8, createdAt: '2026-11-25T00:00:00.000Z', disciplineId: 'd1', extraction: { format: 'txt', text: 'original', characterCount: 8, wordCount: 1, extractedAt: '2026-11-25T00:00:00.000Z' } },
     ],
   };
 
