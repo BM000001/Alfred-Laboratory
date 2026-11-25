@@ -47,7 +47,13 @@ describe('studyService', () => {
   it('deletes a discipline and its linked topics', async () => {
     const disciplineRepo = memoryRepository<Discipline>();
     const topicRepo = memoryRepository<StudyTopic>();
-    const service = createStudyService(disciplineRepo, topicRepo, { createId: (() => { let id = 0; return () => String(++id); })() });
+    const service = createStudyService(disciplineRepo, topicRepo, {
+      createId: (() => { let id = 0; return () => String(++id); })(),
+      cleanupDiscipline: async id => {
+        for (const topic of await topicRepo.getAll()) if (topic.disciplineId === id) await topicRepo.delete(topic.id);
+        await disciplineRepo.delete(id);
+      },
+    });
     const discipline = await service.createDiscipline({ name: 'Programação' });
     await service.createTopic({ disciplineId: discipline.id, title: 'Variáveis' });
     await service.deleteDiscipline(discipline.id);
