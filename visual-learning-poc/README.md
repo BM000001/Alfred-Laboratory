@@ -148,3 +148,37 @@ O job de CI guarda dist/ e as capturas Playwright (aula, Blockly e história em 
 - FLUX.1 schnell model card: https://huggingface.co/black-forest-labs/FLUX.1-schnell
 - Stable Diffusion 1.5: https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5
 - vite-plugin-pwa: https://github.com/vite-pwa/vite-plugin-pwa
+
+## Continuação da engine — 25/11/2026
+
+O checkpoint inicial acima descreve a entrega do PR #90. Esta continuação mantém a POC e seus três experimentos, acrescentando uma quarta experiência (mapa expansível) e um contrato de conteúdo independente da interface.
+
+### Evolução frente aos experimentos anteriores
+
+| Antes | Agora | Estado/limite |
+|---|---|---|
+| Aula de ordenação em fluxo específico | Aula continua usando a mesma trilha, com conteúdo estruturado, feedback e evidência persistível | Demo local; sem leitura de fontes acadêmicas da conta |
+| Blockly mostrava JS/Python e executava uma operação permitida | Mantido; cada comparação exibe vetor antes/depois, índice e valores observados, sinalizador de troca e controle de passo | DSL fixa para ordenação; não é interpretador geral nem suporta ainda todos os temas de uma disciplina |
+| História SVG com seis quadros e uma pergunta | Feedback agora é definido no conteúdo versionado; resposta fica registrada localmente e pode ser retomada | Uma bifurcação avaliativa, ainda não uma narrativa com múltiplos caminhos e condições persistentes |
+| Mapa Markmap e demonstrações InkJS/TS-FSRS no PR #88 | Novo mapa nativo expansível, com relações em texto, controlável por toque/teclado e preenchido a partir do contrato | Mantém Markmap/InkJS/FSRS documentados em #88; não copia nem remove o experimento existente |
+| Conteúdo e formato implícitos nos protótipos | JSON `alfred.learning-content` 1.0.0, JSON Schema, validador sem dependência, avaliador de resposta/conclusão e progresso `alfred.learning-progress` | Adaptador para store acadêmico ainda depende de integração aprovada à Central |
+
+### Verificação desta continuação
+
+- `npm install` criou `package-lock.json`; direto em runtime continua apenas Blockly 13.3.0 (Apache-2.0). Não se adicionou dependência runtime para formato, mapa, feedback ou persistência. O lockfile fixa as dependências transitivas e o CI passará a poder reproduzir `npm ci` após ajuste do workflow.
+- Testes locais de lógica/contrato/segurança do renderer: 13 aprovados. Build da PWA aprovado; cache inclui JSON local e o carregamento Blockly continua sob demanda.
+- Auditoria do npm em dependências de produção: 0 vulnerabilidades conhecidas na consulta de 25/11/2026. É um retrato do registro naquele dia, não auditoria contínua dos termos dos pesos/recursos externos.
+- WebKit E2E ampliado para 7 casos (simulação 320, 390 e 768 px, toque, teclado, mapa, progresso e offline). Esta máquina não tem dependências do WebKit (`libgtk-4`, `libgraphene`, `libmanette` etc.); instalação do binário não resolve libs locais. Resultado local: bloqueado antes de iniciar o navegador, não falha funcional. A CI do GitHub precisa confirmar os novos casos antes de considerar WebKit desta revisão aprovado.
+- Nenhum teste foi realizado em Safari/iPhone físico, VoiceOver, desempenho/memória ou primeira instalação offline. O modo offline testado segue sendo reload após cache inicial.
+- O mapa é HTML nativo (sem Markmap) e as ilustrações permanecem SVG manual/procedural (sem geração por IA). A arte é previsível, pequena e offline, mas tem menos variação visual e exige autoria humana.
+
+### Interfaces para integração
+
+Ver [docs/FORMATO_CONTEUDO.md](docs/FORMATO_CONTEUDO.md). O runtime implementa `validateLearningContent`, `gradeChoice`, `evaluateCompletion` e `createProgressRecord`; nenhuma interface acessa IndexedDB ou servidor. A Central deve adaptar os registros ao store acadêmico existente, manter referência/versionamento de fonte, não persistir conteúdo inválido e tratar falha de armazenamento sem bloquear a aula.
+
+### Limitações e trabalho ainda necessário
+
+1. Conteúdo da demonstração é autoral, não está alinhado a um material real da disciplina e precisa revisão de docente antes de avaliação formal.
+2. Blockly demonstra vetores, repetição, condição e ordenação; variáveis/matrizes/funções ainda não têm exercícios independentes com objetivos verificáveis. Esta POC não afirma cobertura de todos os tópicos introdutórios listados na missão.
+3. Geração de imagem real e geração/validação pedagógica por IA não foram executadas. Dependem de provedor/modelo, hardware, licença de checkpoint/derivados/assets e revisão; não são necessárias para abrir estas experiências.
+4. O novo PR permanece draft e não pode ser mesclado sem autorização. Integração à Central depende da conclusão da Fase 1, homologação física no iPhone e revisão do adaptador de progresso.
