@@ -1,1 +1,55 @@
-ewogICJmb3JtYXQiOiAiYWxmcmVkLmxlYXJuaW5nLWNvbnRlbnQiLAogICJ2ZXJzaW9uIjogIjEuMC4wIiwKICAiaWQiOiAiaW50cm8tYWxnb3JpdG1vcy5vcmRlbmFjYW8tYm9saGFzIiwKICAidGl0bGUiOiAiT3JkZW5hw6fDo28gcG9yIGJvbGhhczogY29tcGFyYXIsIHByZXZlciBlIGV4cGxpY2FyIiwKICAibGFuZ3VhZ2UiOiAicHQtQlIiLAogICJvYmplY3RpdmVzIjogWwogICAgeyAiaWQiOiAiY29tcGFyZS1uZWlnaGJvcnMiLCAiZGVzY3JpcHRpb24iOiAiQ29tcGFyYXIgdmFsb3JlcyB2aXppbmhvcyBlIGRlY2lkaXIgc2UgZGV2ZW0gdHJvY2FyLiIgfSwKICAgIHsgImlkIjogImV4cGxhaW4tcGFzcyIsICJkZXNjcmlwdGlvbiI6ICJFeHBsaWNhciBjb21vIHVtYSBwYXNzYWdlbSBhcHJveGltYSBvIG1haW9yIHZhbG9yIGRvIGZpbS4iIH0sCiAgICB7ICJpZCI6ICJ0cmFjZS1hbGdvcml0aG0iLCAiZGVzY3JpcHRpb24iOiAiQWNvbXBhbmhhciBhcyBtdWRhbsOnYXMgZG8gdmV0b3IgZHVyYW50ZSBhIG9yZGVuYcOnw6NvLiIgfQogIF0sCiAgImV4cGxhbmF0aW9ucyI6IFsKICAgIHsgImlkIjogInJ1bGUiLCAiYm9keSI6ICJDb21wYXJlIGRvaXMgdmFsb3JlcyB2aXppbmhvcy4gVHJvcXVlLW9zIHNvbWVudGUgcXVhbmRvIG8gZGEgZXNxdWVyZGEgZm9yIG1haW9yIHF1ZSBvIGRhIGRpcmVpdGEuIiB9LAogICAgeyAiaWQiOiAicGFzcyIsICJib2R5IjogIlVtYSBwYXNzYWdlbSBjb21wYXJhIHBhcmVzIGNvbnNlY3V0aXZvcy4gTyBtYWlvciB2YWxvciBhaW5kYSBmb3JhIGRlIHBvc2nDp8OjbyBhdmFuw6dhIHBhcmEgYSBkaXJlaXRhLiIgfSwKICAgIHsgImlkIjogInN0b3AiLCAiYm9keSI6ICJRdWFuZG8gdW1hIHBhc3NhZ2VtIGludGVpcmEgdGVybWluYSBzZW0gdHJvY2FzLCB0b2RvcyBvcyBwYXJlcyB2aXppbmhvcyBlc3TDo28gZW0gb3JkZW0uIiB9CiAgXSwKICAiY29uY2VwdE1hcCI6IHsKICAgICJyb290SWQiOiAiYnViYmxlLXNvcnQiLAogICAgIm5vZGVzIjogWwogICAgICB7ICJpZCI6ICJidWJibGUtc29ydCIsICJsYWJlbCI6ICJPcmRlbmHDp8OjbyBwb3IgYm9saGFzIiwgImV4cGxhbmF0aW9uSWQiOiAicnVsZSIgfSwKICAgICAgeyAiaWQiOiAibmVpZ2hib3JzIiwgImxhYmVsIjogIkNvbXBhcmFyIHZpemluaG9zIiwgInBhcmVudElkIjogImJ1YmJsZS1zb3J0IiwgImV4cGxhbmF0aW9uSWQiOiAicnVsZSIgfSwKICAgICAgeyAiaWQiOiAic3dhcCIsICJsYWJlbCI6ICJUcm9jYXIgZm9yYSBkZSBvcmRlbSIsICJwYXJlbnRJZCI6ICJuZWlnaGJvcnMiLCAiZXhwbGFuYXRpb25JZCI6ICJydWxlIiB9LAogICAgICB7ICJpZCI6ICJwYXNzIiwgImxhYmVsIjogIlJlcGV0aXIgcGFzc2FnZW5zIiwgInBhcmVudElkIjogImJ1YmJsZS1zb3J0IiwgImV4cGxhbmF0aW9uSWQiOiAicGFzcyIgfSwKICAgICAgeyAiaWQiOiAic3RvcCIsICJsYWJlbCI6ICJFbmNlcnJhciBzZW0gdHJvY2FzIiwgInBhcmVudElkIjogImJ1YmJsZS1zb3J0IiwgImV4cGxhbmF0aW9uSWQiOiAic3RvcCIgfQogICAgXSwKICAgICJyZWxhdGlvbnMiOiBbCiAgICAgIHsgImZyb20iOiAibmVpZ2hib3JzIiwgInRvIjogInN3YXAiLCAibGFiZWwiOiAicG9kZSBsZXZhciBhIiB9LAogICAgICB7ICJmcm9tIjogInBhc3MiLCAidG8iOiAic3RvcCIsICJsYWJlbCI6ICJ0ZXJtaW5hIHF1YW5kbyIgfQogICAgXQogIH0sCiAgImludGVyYWN0aW9ucyI6IFsKICAgIHsKICAgICAgImlkIjogImZpcnN0LXBhaXIiLAogICAgICAidHlwZSI6ICJjaG9pY2UiLAogICAgICAib2JqZWN0aXZlSWQiOiAiY29tcGFyZS1uZWlnaGJvcnMiLAogICAgICAicHJvbXB0IjogIlBhcmEgb3JkZW5hciA0IGUgMiBlbSBvcmRlbSBjcmVzY2VudGUsIG8gcXVlIGFjb250ZWNlPyIsCiAgICAgICJvcHRpb25zIjogW3sgImlkIjogImtlZXAiLCAibGFiZWwiOiAiTWFudGVyIGNvbW8gZXN0w6EiIH0sIHsgImlkIjogInN3YXAiLCAibGFiZWwiOiAiVHJvY2FyIG9zIGNhcnTDtWVzIiB9XSwKICAgICAgImFuc3dlcklkIjogInN3YXAiLAogICAgICAiZmVlZGJhY2tDb3JyZWN0IjogIkNvcnJldG86IDQgw6kgbWFpb3IgcXVlIDIsIGVudMOjbyB0cm9jYXIgY29sb2NhIG8gbWVub3Igw6AgZXNxdWVyZGEuIiwKICAgICAgImZlZWRiYWNrSW5jb3JyZWN0IjogIlJldmVqYSBhIHJlZ3JhOiBjb21wYXJlIHZpemluaG9zIGUgdHJvcXVlIHF1YW5kbyBvIHZhbG9yIGRhIGVzcXVlcmRhIGZvciBtYWlvci4iCiAgICB9CiAgXSwKICAidmlzdWFscyI6IFsKICAgIHsgImlkIjogImFycmF5LXN0ZXAiLCAia2luZCI6ICJzdmciLCAic3JjIjogImdlbmVyYXRlZC1mcm9tLXN0YXRlIiwgImFsdCI6ICJWZXRvciBjb20gb3MgZG9pcyB2YWxvcmVzIGNvbXBhcmFkb3MgZGVzdGFjYWRvcyBlIGEgdHJvY2EgaW5kaWNhZGEgcXVhbmRvIG5lY2Vzc8OhcmlhLiIgfSwKICAgIHsgImlkIjogIm5pbmEtc3RvcnkiLCAia2luZCI6ICJzdmciLCAic3JjIjogImdlbmVyYXRlZC1mcm9tLWxvY2FsLWFzc2V0cyIsICJhbHQiOiAiTmluYSBvcmdhbml6YSBjYXJ0w7VlcyBudW1lcmFkb3Mgc2VndWluZG8gYSByZWdyYSBkZSBjb21wYXJhw6fDo28uIiB9CiAgXSwKICAiY29tcGxldGlvbiI6IHsKICAgICJpZCI6ICJkZW1vbnN0cmF0ZS1ydWxlLWFuZC1yZXN1bHQiLAogICAgInJ1bGVzIjogW3sgInR5cGUiOiAiYWxsLXF1ZXN0aW9ucy1jb3JyZWN0IiB9LCB7ICJ0eXBlIjogInNvcnRlZC12ZWN0b3IiIH1dCiAgfSwKICAicmVmZXJlbmNlcyI6IFsKICAgIHsgImtpbmQiOiAiYXV0aG9yZWQtZGVtbyIsICJsYWJlbCI6ICJFeHBsaWNhw6fDo28gYXV0b3JhbCBzaW1wbGlmaWNhZGEgcGFyYSBkZW1vbnN0cmHDp8Ojbzsgc3Vic3RpdHVpciBvdSBjb21wbGVtZW50YXIgcGVsYSByZWZlcsOqbmNpYSBkYSBkaXNjaXBsaW5hIGFudGVzIGRlIHVzbyBhY2Fkw6ptaWNvIGZvcm1hbC4iIH0KICBdLAogICJtZXRhZGF0YSI6IHsgImF1ZGllbmNlIjogIkludHJvZHXDp8OjbyBhIEFsZ29yaXRtb3MiLCAiY29udGVudFN0YXR1cyI6ICJkZW1vbnN0cmF0aW9uIiwgInJldmlld1JlcXVpcmVkIjogdHJ1ZSB9Cn0K
+{
+  "format": "alfred.learning-content",
+  "version": "1.0.0",
+  "id": "intro-algoritmos.ordenacao-bolhas",
+  "title": "Ordenação por bolhas: comparar, prever e explicar",
+  "language": "pt-BR",
+  "objectives": [
+    { "id": "compare-neighbors", "description": "Comparar valores vizinhos e decidir se devem trocar." },
+    { "id": "explain-pass", "description": "Explicar como uma passagem aproxima o maior valor do fim." },
+    { "id": "trace-algorithm", "description": "Acompanhar as mudanças do vetor durante a ordenação." }
+  ],
+  "explanations": [
+    { "id": "rule", "body": "Compare dois valores vizinhos. Troque-os somente quando o da esquerda for maior que o da direita." },
+    { "id": "pass", "body": "Uma passagem compara pares consecutivos. O maior valor ainda fora de posição avança para a direita." },
+    { "id": "stop", "body": "Quando uma passagem inteira termina sem trocas, todos os pares vizinhos estão em ordem." }
+  ],
+  "conceptMap": {
+    "rootId": "bubble-sort",
+    "nodes": [
+      { "id": "bubble-sort", "label": "Ordenação por bolhas", "explanationId": "rule" },
+      { "id": "neighbors", "label": "Comparar vizinhos", "parentId": "bubble-sort", "explanationId": "rule" },
+      { "id": "swap", "label": "Trocar fora de ordem", "parentId": "neighbors", "explanationId": "rule" },
+      { "id": "pass", "label": "Repetir passagens", "parentId": "bubble-sort", "explanationId": "pass" },
+      { "id": "stop", "label": "Encerrar sem trocas", "parentId": "bubble-sort", "explanationId": "stop" }
+    ],
+    "relations": [
+      { "from": "neighbors", "to": "swap", "label": "pode levar a" },
+      { "from": "pass", "to": "stop", "label": "termina quando" }
+    ]
+  },
+  "interactions": [
+    {
+      "id": "first-pair",
+      "type": "choice",
+      "objectiveId": "compare-neighbors",
+      "prompt": "Para ordenar 4 e 2 em ordem crescente, o que acontece?",
+      "options": [{ "id": "keep", "label": "Manter como está" }, { "id": "swap", "label": "Trocar os cartões" }],
+      "answerId": "swap",
+      "feedbackCorrect": "Correto: 4 é maior que 2, então trocar coloca o menor à esquerda.",
+      "feedbackIncorrect": "Reveja a regra: compare vizinhos e troque quando o valor da esquerda for maior."
+    }
+  ],
+  "visuals": [
+    { "id": "array-step", "kind": "svg", "src": "generated-from-state", "alt": "Vetor com os dois valores comparados destacados e a troca indicada quando necessária." },
+    { "id": "nina-story", "kind": "svg", "src": "generated-from-local-assets", "alt": "Nina organiza cartões numerados seguindo a regra de comparação." }
+  ],
+  "completion": {
+    "id": "demonstrate-rule-and-result",
+    "rules": [{ "type": "all-questions-correct" }, { "type": "sorted-vector" }]
+  },
+  "references": [
+    { "kind": "authored-demo", "label": "Explicação autoral simplificada para demonstração; substituir ou complementar pela referência da disciplina antes de uso acadêmico formal." }
+  ],
+  "metadata": { "audience": "Introdução a Algoritmos", "contentStatus": "demonstration", "reviewRequired": true }
+}
