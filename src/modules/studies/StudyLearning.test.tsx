@@ -56,11 +56,13 @@ it('exibe uma aula gerada por IA separando explicação, exemplo e trecho origin
   const article = heading.closest('article')!;
   fireEvent.click(within(article).getByRole('button', { name: 'Abrir aula' }));
   expect(within(article).getByText('Uma explicação elaborada por IA.')).toBeInTheDocument();
+  fireEvent.click(within(article).getByRole('button', { name: 'Etapa 2: Exemplo' }));
   expect(within(article).getByText(/Exemplo complementar da IA/)).toBeInTheDocument();
+  fireEvent.click(within(article).getByRole('button', { name: 'Etapa 4: Material de origem' }));
   fireEvent.click(within(article).getByText('Consultar material de origem'));
   expect(within(article).getByText(text)).toBeInTheDocument();
   fireEvent.click(within(article).getByRole('button', { name: 'Marcar como aprendido' }));
-  expect(await within(article).findByRole('button', { name: 'Explicação concluída' })).toBeInTheDocument();
+  expect(await within(article).findByRole('button', { name: 'Aula concluída' })).toBeInTheDocument();
 });
 
 it('não apresenta conteúdo local pré-programado como aula gerada por IA na trilha', async () => {

@@ -293,6 +293,16 @@ button.calendar-day { display: grid; align-content: start; text-align: start; mi
 .study-learning-body pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .study-learning-body blockquote { margin: .45rem 0; padding-inline-start: .65rem; border-inline-start: 2px solid var(--edge); }
 .study-learning-body summary, .study-material-result button { min-block-size: 44px; padding-block: .55rem; }
+.study-visual-lesson { display: grid; gap: .75rem; min-inline-size: 0; }
+.study-visual-lesson .study-quiz-progress { align-items: center; }
+.study-visual-lesson progress { inline-size: min(100%, 15rem); block-size: .5rem; }
+.study-visual-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: .4rem; }
+.study-visual-steps button { min-block-size: 44px; padding: .5rem; border: 1px solid var(--edge); border-radius: var(--small-radius); background: var(--surface); color: var(--ink); text-align: start; }
+.study-visual-steps button[aria-current="step"] { border-color: var(--accent); background: var(--accent-wash); }
+.study-visual-stage { min-inline-size: 0; padding: clamp(.8rem, 3vw, 1.1rem); border: 1px solid var(--edge); border-radius: var(--radius); background: var(--surface-raised); }
+.study-visual-stage h5 { margin-block: .5rem; }
+.study-visual-stage p, .study-visual-stage blockquote { overflow-wrap: anywhere; white-space: pre-wrap; }
+.study-visual-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; }
 .study-material-result > strong, .study-material-result > span { display: block; overflow-wrap: anywhere; }
 .study-material-result > span { margin-block-start: .25rem; color: var(--muted); }
 .study-material-result button { display: block; max-inline-size: 100%; text-align: start; overflow-wrap: anywhere; }

@@ -9,6 +9,7 @@ import { studyLearningContexts, type StudyLearningContext, type StudyLearningPro
 
 import { getAlfredLocalStorageKey } from '../../storage/namespace';
 import { displayStudyTitle } from './displayStudyTitle';
+import { StudyVisualLesson } from './StudyVisualLesson';
 
 const contextStorageKey = getAlfredLocalStorageKey('alfred-study-learning-context');
 type AILesson = NonNullable<MaterialProcessingState['aiLessons']>[number];
@@ -88,16 +89,8 @@ export function StudyLearning({ disciplineId, topics, topicId, refreshToken = 0,
             </button>
           </div>
           {expandedId === lesson.id && <div className="study-learning-body">
-            <section><span className="card-label">EXPLICAÇÃO ELABORADA POR IA</span><p>{lesson.explanation}</p></section>
-            <section><h5>Exemplo contextual da IA</h5><p>{lesson.example}</p></section>
-            <details><summary>Consultar material de origem</summary><blockquote>{lesson.sourceExcerpt}</blockquote></details>
-            <details><summary>Verificação de compreensão</summary><p>{lesson.check}</p>
-              <details><summary>Conferir resposta fundamentada no material</summary><p>{lesson.answer}</p></details>
-            </details>
-            <button type="button" className="primary-action" disabled={learned}
-              onClick={() => void markComplete('lesson:' + lesson.id)}>
-              {learned ? 'Explicação concluída' : 'Marcar como aprendido'}
-            </button>
+            <StudyVisualLesson lesson={lesson} learned={learned}
+              onComplete={() => void markComplete('lesson:' + lesson.id)} />
           </div>}
         </article>;
       })}
