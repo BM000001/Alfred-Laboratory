@@ -1,0 +1,61 @@
+/* Studies 2.2 — status real de preparação, sem animação/progresso fictício */
+.study-preparation-steps {
+  --preparation-border: #9da88d;
+  --preparation-surface: #f3f1ea;
+  --preparation-ink: #24362a;
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+:root[data-theme='dark'] .study-preparation-steps {
+  --preparation-border: #3b443c;
+  --preparation-surface: #282e29;
+  --preparation-ink: #f3f1ea;
+}
+.study-preparation-steps li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--preparation-border);
+  border-radius: 0.6rem;
+  color: var(--preparation-ink);
+  background: var(--preparation-surface);
+}
+.study-preparation-steps li strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.study-preparation-steps li span {
+  font-size: 0.8rem;
+}
+
+.study-preparation-steps li[data-status='running'] {
+  border-color: #8fae83;
+}
+.study-preparation-steps li[data-status='running'] strong::before {
+  content: '';
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.45rem;
+  border: 2px solid #8fae83;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: study-preparation-spin 1s linear infinite;
+}
+@keyframes study-preparation-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .study-preparation-steps li[data-status='running'] strong::before {
+    animation: none;
+    border-top-color: #8fae83;
+  }
+}

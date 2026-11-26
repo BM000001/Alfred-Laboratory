@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
+  fileRepository,
   studyFlashcardRepository,
   studyQuestionRepository,
   studyQuizAttemptRepository,
@@ -12,6 +13,7 @@ import { QuestionBank } from './QuestionBank';
 import { buildTrailChapter, summarizeTrailCompletion, type TrailCompletion } from './trailModel';
 import type { Discipline, StudyTopic } from './types';
 import './studyTrail.css';
+import { displayStudyTitle } from './displayStudyTitle';
 
 const labels = {
   available: 'Disponível',
@@ -34,11 +36,12 @@ type Props = {
   refreshToken: number;
   onManage: () => void;
   onMaterials: (unit: string) => void;
+  onAddMaterial: (unit: string) => void;
 };
 
-export function StudyTrail({ discipline, topics, refreshToken, onManage, onMaterials }: Props) {
+export function StudyTrail({ discipline, topics, refreshToken, onManage, onMaterials, onAddMaterial }: Props) {
   const [chapterId, selectChapter] = useState('');
-  const topic = topics.find((t) => t.id === chapterId) ?? topics[0];
+  const topic = topics.find((t) => t.id === chapterId) ?? topics.find((t) => Boolean(t.sourceFileId)) ?? topics[0];
   const [active, select] = useState('');
   const [decision, setDecision] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -78,16 +81,20 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
       studyQuestionRepository.getAll(),
       studyFlashcardRepository.getAll(),
       studyQuizAttemptRepository.getAll(),
+      fileRepository.getAll(),
     ])
-      .then(([allQuestions, allCards, attempts]) => {
+      .then(([allQuestions, allCards, attempts, allFiles]) => {
         if (!current) return;
         const questions = allQuestions.filter(matches),
           cards = allCards.filter(matches);
+        const aiLessonCount = allFiles.filter(file => file.disciplineId === discipline.id &&
+          (!topic || file.processing?.topicId === topic.id))
+          .reduce((count, file) => count + (file.processing?.aiLessons?.length ?? 0), 0);
         setCounts({
           questions: questions.length,
           cards: cards.length,
           sourced: questions.filter((q) => q.sourceExcerpt).length,
-          lessons: cards.length > 0,
+          lessons: aiLessonCount > 0,
           attempts: attempts.filter(
             (a) =>
               a.disciplineId === discipline.id &&
@@ -109,6 +116,8 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     topic?.title ?? 'Toda a disciplina',
     counts,
   );
+  const hasLinkedMaterial = Boolean(topic?.sourceFileId);
+  const hasActivities = counts.lessons || counts.questions > 0 || counts.cards > 0;
   const nodes = chapter.nodes.map((node) => ({ ...node, completion: marks[node.id] ?? node.completion }));
   const summary = summarizeTrailCompletion(nodes);
   const index = nodes.findIndex((n) => n.id === active),
@@ -144,7 +153,19 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     <section className="learning-trail" aria-label="Trilha de aprendizagem">
       {warning && <p role="alert">{warning}</p>}
       {!online && <p role="status">Offline · recursos locais disponíveis</p>}
-      {!node ? (
+      {load ? <p role="status">{load}</p> : !hasLinkedMaterial ? (
+        <div className="empty-state" role="status">
+          <strong>Adicione um material para começar</strong>
+          <p>A trilha será preparada depois que você enviar um material da disciplina. Não vamos mostrar aulas ou desafios sem uma fonte.</p>
+          <button type="button" className="primary-action" onClick={() => onAddMaterial(topic?.id ?? '')}>Adicionar material</button>
+        </div>
+      ) : !hasActivities ? (
+        <div className="empty-state" role="status">
+          <strong>Material salvo. Preparação da trilha pendente</strong>
+          <p>O material já está vinculado, mas ainda não há atividades preparadas com segurança. A geração por IA precisa estar disponível antes de liberar o percurso.</p>
+          <button type="button" className="primary-action" onClick={() => onMaterials(topic?.id ?? '')}>Ver material e preparação</button>
+        </div>
+      ) : !node ? (
         <>
           <div className="trail-tools">
             <label>
@@ -153,7 +174,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                 {!topics.length && <option value="">Toda a disciplina</option>}
                 {topics.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.title}
+                    {displayStudyTitle(t.title)}
                   </option>
                 ))}
               </select>
@@ -214,7 +235,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
             Voltar à trilha
           </button>
           <h3>{node.title}</h3>
-          <p>{chapter.title}</p>
+          <p>{displayStudyTitle(chapter.title)}</p>
           {(!decision || showResult) && (
             <>
               {(load || node.availability !== 'available') && (
@@ -226,6 +247,8 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                     Abrir materiais
                   </button>
                   <StudyLearning
+                    aiOnly
+                    refreshToken={refreshToken + revision}
                     disciplineId={discipline.id}
                     topicId={topic?.id}
                     topics={topic ? [topic] : []}
@@ -233,10 +256,11 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                 </>
               )}
               {(node.kind === 'flashcards' || active === 'flashcard-chest') && (
-                <StudyFlashcards disciplineId={discipline.id} topicId={topic?.id} />
+                <StudyFlashcards disciplineId={discipline.id} topicId={topic?.id} refreshToken={refreshToken + revision} />
               )}
               {active === 'review' && (
                 <StudyPerformance
+                  refreshToken={refreshToken + revision}
                   disciplineId={discipline.id}
                   topics={topic ? [topic] : []}
                   unitId={topic?.id}
@@ -245,6 +269,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
               {['targets', 'castle', 'quick', 'laboratory'].includes(active) && (
                 <QuestionBank
                   key={active}
+                  refreshToken={refreshToken + revision}
                   onFinished={() => {
                     setShowResult(true);
                     finish('completed');

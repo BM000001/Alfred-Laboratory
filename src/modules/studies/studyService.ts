@@ -1,12 +1,14 @@
 import type { EntityRepository } from '../../storage/repositories';
 import type { Discipline, CreateDisciplineInput, UpdateDisciplineInput, StudyTopic, CreateStudyTopicInput, UpdateStudyTopicInput } from './types';
 import { validateDisciplineName, validateStudyTopic } from './studyRules';
+import { deleteDisciplineStudyRecords } from '../../storage/studyCleanup';
 
-type Options = { createId?: () => string; now?: () => Date };
+type Options = { createId?: () => string; now?: () => Date; cleanupDiscipline?: (id: string) => Promise<void> };
 
 export function createStudyService(disciplines: EntityRepository<Discipline>, topics: EntityRepository<StudyTopic>, options: Options = {}) {
   const createId = options.createId ?? (() => crypto.randomUUID());
   const now = options.now ?? (() => new Date());
+  const cleanupDiscipline = options.cleanupDiscipline ?? deleteDisciplineStudyRecords;
 
   return {
     listDisciplines: () => disciplines.getAll(),
@@ -37,9 +39,7 @@ export function createStudyService(disciplines: EntityRepository<Discipline>, to
     async deleteDiscipline(id: string) {
       const current = await disciplines.getById(id);
       if (!current) throw new Error('Disciplina não encontrada.');
-      const linked = (await topics.getAll()).filter((topic) => topic.disciplineId === id);
-      for (const topic of linked) await topics.delete(topic.id);
-      await disciplines.delete(id);
+      await cleanupDiscipline(id);
     },
     async createTopic(input: CreateStudyTopicInput) {
       const error = validateStudyTopic(input, await disciplines.getAll());

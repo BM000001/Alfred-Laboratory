@@ -1,0 +1,65 @@
+name: Alfred Studies private Access preview build
+
+on:
+  push:
+    branches:
+      - ia/studies-2-2-fase-1-1
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'tsconfig*.json'
+      - '.github/workflows/studies-private-preview-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alfred-studies-private-preview-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-private-preview:
+    name: Build private root-path site for Cloudflare Access
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_STUDIES_AI_ORIGIN: https://alfred-studies-iphone-preview.brianmarcondes2000.workers.dev
+    steps:
+      - name: Checkout requested commit only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (repository has no npm lockfile)
+        run: npm install --no-audit --no-fund
+      - name: Validate the application
+        run: npm test
+      - name: Build root-path assets for private Worker
+        run: npm run build
+      - name: Verify root-path HTML and generated assets
+        shell: bash
+        run: |
+          test -s dist/index.html
+          test -s dist/sw.js
+          test -f dist/manifest.webmanifest
+          grep -q '/assets/' dist/index.html
+          if grep -q '/Alfred-Laboratory/assets/' dist/index.html; then
+            echo 'Error: public GitHub Pages base path cannot be used on the private Worker.' >&2
+            exit 1
+          fi
+          echo 'Root-path private preview ready for a separately authorized deployment.'
+      - name: Archive preview assets without deploying
+        uses: actions/upload-artifact@v4
+        with:
+          name: alfred-studies-private-access-root
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error

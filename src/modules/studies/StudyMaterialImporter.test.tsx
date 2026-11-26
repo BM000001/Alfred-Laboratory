@@ -20,7 +20,7 @@ beforeEach(async () => {
 afterEach(() => cleanup());
 
 describe('StudyMaterialImporter', () => {
-  it('saves multiple materials once, processes immediately, and persists source-linked cards and questions', async () => {
+  it('stores and analyzes multiple originals without creating unverified local questions', async () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     const files = [1, 2, 3].map((n) => new File([definitions], `aula-${n}.txt`, { type: 'text/plain', lastModified: n }));
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files } });
@@ -31,15 +31,14 @@ describe('StudyMaterialImporter', () => {
     await waitFor(async () => {
       expect(await fileRepository.getAll()).toHaveLength(3);
       expect(await studyTopicRepository.getAll()).toHaveLength(3);
-      expect(await studyFlashcardRepository.getAll()).toHaveLength(12);
-      expect(await studyQuestionRepository.getAll()).toHaveLength(12);
+      expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
+      expect(await studyQuestionRepository.getAll()).toHaveLength(0);
+      expect((await fileRepository.getAll()).every(file => file.processing?.status === 'awaiting-ai' && file.extraction?.text === definitions)).toBe(true);
     });
     const [storedFile] = await fileRepository.getAll();
     expect(storedFile.extraction?.text).toBe(definitions);
-    const [card] = await studyFlashcardRepository.getAll();
-    expect(card).toMatchObject({ disciplineId: 'software', sourceFileId: expect.any(String), sourceFileName: expect.stringMatching(/aula-/), topicId: expect.any(String) });
-    const [question] = await studyQuestionRepository.getAll();
-    expect(question.options[question.correctOptionIndex]).toBe(question.explanation?.replace(/^Trecho de origem: [^:]+:\s*/, ''));
+    expect((await fileRepository.getAll()).every(file => file.processing?.status === 'awaiting-ai')).toBe(true);
+    expect((await studyTopicRepository.getAll()).every(topic => Boolean(topic.sourceFileId))).toBe(true);
   });
 
   it('persists all originals before processing and resumes the queued file after cancellation', async () => {
@@ -74,11 +73,11 @@ describe('StudyMaterialImporter', () => {
     await waitFor(async () => {
       const stored = await fileRepository.getAll();
       expect(stored).toHaveLength(2);
-      expect(stored.find(file => file.name === 'segundo.txt')?.processing?.status).toBe('completed');
+      expect(stored.find(file => file.name === 'segundo.txt')?.processing?.status).toBe('awaiting-ai');
     });
   });
 
-  it('preserves successful output when a sibling file has an unsupported format', async () => {
+  it('preserves the analyzed original when a sibling file has an unsupported format', async () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     const valid = new File([definitions], 'material.txt', { type: 'text/plain' });
     const invalid = new File(['binary'], 'planilha.bin', { type: 'application/octet-stream' });
@@ -87,10 +86,10 @@ describe('StudyMaterialImporter', () => {
 
     expect(await screen.findByText(/Formato ainda não suportado/)).toBeInTheDocument();
     await waitFor(async () => {
-      expect(await studyFlashcardRepository.getAll()).toHaveLength(4);
+      expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
       expect(await fileRepository.getAll()).toHaveLength(2);
     });
-    expect(screen.getByText('Pronto')).toBeInTheDocument();
+    expect(screen.getByText('Aguardando IA')).toBeInTheDocument();
     expect(screen.getByText('Falha neste arquivo')).toBeInTheDocument();
     expect(screen.getByText(/O original foi preservado na biblioteca/)).toBeInTheDocument();
   });
@@ -99,7 +98,7 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File(['Texto de aula sem definições explícitas.'], 'resumo.txt')] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/enriquecimento semântico depende de IA/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Questões aguardam uma prévia autenticada/)).toBeInTheDocument();
     expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
     expect(await fileRepository.getAll()).toHaveLength(1);
   });
@@ -117,9 +116,10 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" />);
     fireEvent.change(screen.getByLabelText('Adicionar arquivos'), { target: { files: [new File([pdfBytes], 'apostila.pdf', { type: 'application/pdf' })] } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText(/4 flashcard\(s\) e 4 questão\(ões\) gerados/)).toBeInTheDocument();
+    expect(await screen.findByText(/Questões aguardam uma prévia autenticada/)).toBeInTheDocument();
     expect(await fileRepository.getAll()).toHaveLength(1);
-    expect((await studyFlashcardRepository.getAll())[0].sourceFileId).toBe('scanned-pdf');
+    expect((await fileRepository.getById('scanned-pdf'))?.processing?.status).toBe('awaiting-ai');
+    expect((await fileRepository.getById('scanned-pdf'))?.extraction?.text).toBe(definitions);
   });
   it('reabre a revisão de fonte após remontar e continua na unidade original', async () => {
     const view = render(<StudyMaterialImporter disciplineId="software" />);
@@ -136,10 +136,9 @@ describe('StudyMaterialImporter', () => {
     render(<StudyMaterialImporter disciplineId="software" unit={topic} />);
     fireEvent.click(await screen.findByRole('button', { name: `Manter: ${source}` }));
     await waitFor(async () => {
-      const [card] = await studyFlashcardRepository.getAll();
-      expect(card).toMatchObject({ topicId: topic.id, sourceFileId: topic.sourceFileId });
+      expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
       const file = await fileRepository.getById(topic.sourceFileId!);
-      expect(file?.processing?.status).toBe('completed');
+      expect(file?.processing?.status).toBe('awaiting-ai');
       expect(file?.extraction?.text).toContain(alternative);
     });
   });
@@ -160,8 +159,8 @@ describe('StudyMaterialImporter', () => {
     await waitFor(async () => {
       const [topic] = await studyTopicRepository.getAll();
       expect(topic).toMatchObject({ sourceFileId: 'material-legado' });
-      expect((await studyQuestionRepository.getAll()).filter((question) => question.topicId === topic.id)).toHaveLength(4);
-      expect((await fileRepository.getById('material-legado'))?.processing?.status).toBe('completed');
+      expect((await studyQuestionRepository.getAll()).filter((question) => question.topicId === topic.id)).toHaveLength(0);
+      expect((await fileRepository.getById('material-legado'))?.processing?.status).toBe('awaiting-ai');
     });
   });
 

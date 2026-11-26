@@ -35,13 +35,37 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
     files: [new File([definitions], 'conceitos.txt', { type: 'text/plain' })],
   } });
   fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-  expect(await screen.findByText(/4 flashcard\(s\) e 4 questão\(ões\) gerados/)).toBeInTheDocument();
+  expect(await screen.findByText(/Questões aguardam uma prévia autenticada/)).toBeInTheDocument();
   await screen.findByRole('button', { name: 'Ler texto de conceitos.txt' });
   await waitFor(async () => {
     const [material] = await fileRepository.getAll();
     expect(material).toMatchObject({ disciplineId: discipline.id, extraction: { text: definitions } });
     expect(await studyTopicRepository.getById(unit.id)).toMatchObject({ sourceFileId: material.id });
   });
+  // Legacy navigation/quiz tests use explicit fixtures; the importer must NOT invent these.
+  expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
+  expect((await studyQuestionRepository.getAll()).filter(q => q.topicId === unit.id)).toHaveLength(0);
+  const [source] = await fileRepository.getAll();
+  for (const [index, line] of definitions.split('\n').entries()) {
+    const separator = line.indexOf(':');
+    const subject = line.slice(0, separator);
+    const definition = line.slice(separator + 1).trim();
+    await studyFlashcardRepository.save({
+      id: `prepared-card-${index}`, disciplineId: discipline.id, topicId: unit.id,
+      sourceFileId: source.id, sourceFileName: source.name, sourceExcerpt: line,
+      front: `Explique ${subject}.`, back: definition, subject,
+      createdAt: new Date().toISOString(), nextReviewAt: '2026-01-01T00:00:00.000Z',
+      intervalDays: 0, reviewCount: 0,
+    });
+    await studyQuestionRepository.save({
+      id: `prepared-question-${index}`, disciplineId: discipline.id, topicId: unit.id,
+      sourceFileId: source.id, sourceFileName: source.name, sourceExcerpt: line,
+      subject, prompt: `Qual definição corresponde a ${subject}?`,
+      options: [definition, 'Alternativa incorreta A', 'Alternativa incorreta B', 'Alternativa incorreta C'],
+      correctOptionIndex: 0, difficulty: 'medium', explanation: `Trecho de origem: ${line}`,
+      createdAt: new Date().toISOString(),
+    });
+  }
   fireEvent.click(screen.getByRole('button', { name: 'Praticar' }));
   expect(await screen.findByText('4 questão(ões) cadastrada(s) · simulados com até 50 questões')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Revisar flashcards' }));
@@ -79,6 +103,7 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: 'Aprender' }));
   fireEvent.click(await screen.findByRole('button', { name: /Software sintético/ }));
+  fireEvent.click(screen.getByLabelText('Gerenciar matéria'));
   fireEvent.click(await screen.findByRole('button', { name: 'Unidades e materiais' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Praticar Orientação a objetos' }));
   expect(await screen.findByText('3 questão(ões) cadastrada(s) · simulados com até 50 questões')).toBeInTheDocument();
