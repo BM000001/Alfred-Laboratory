@@ -1,7 +1,7 @@
 const IS_LABORATORY_SCOPE = new URL(self.registration.scope).pathname.startsWith('/Alfred-Laboratory/');
 const IS_DEMO = new URL(self.registration.scope).pathname === '/Alfred-Laboratory/studies-app/';
 const CACHE_PREFIX = IS_DEMO ? 'studies-demo-' : IS_LABORATORY_SCOPE ? 'laboratory-alfred-' : 'alfred-';
-const SHELL_BUILD = 'ca80e742054942c1';
+const SHELL_BUILD = '2e40d7d7c792c5b4';
 const APP_CACHE = `${CACHE_PREFIX}app-shell-v3-${SHELL_BUILD}`;
 const OCR_CACHE = `${CACHE_PREFIX}ocr-assets-v1`;
 
