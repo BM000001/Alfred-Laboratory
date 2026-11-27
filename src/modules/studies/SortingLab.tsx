@@ -3,6 +3,9 @@ import { comicPanels, createBubbleTrace } from '../../../visual-learning-poc/src
 import { studyLearningProgressRepository } from '../../storage/repositories';
 import { createLearningProgress } from './studyLearning';
 
+import { addAuthoredBank } from './authoredBank';
+import { AuthoredPractice } from './AuthoredPractice';
+
 const SortingBlockly = lazy(() => import('./SortingBlockly'));
 const SortingConceptMap = lazy(() => import('./SortingConceptMap'));
 const SortingStory = lazy(() => import('./SortingStory'));
@@ -32,6 +35,18 @@ export function SortingLab({ disciplineId, topicId, onSaved }: {
   topicId?: string;
   onSaved: () => void;
 }) {
+  const [bankStatus, setBankStatus] = useState('');
+  const [adding, setAdding] = useState(false);
+  async function addBank() {
+    if (!topicId || adding) return;
+    setAdding(true);
+    try {
+      const added = await addAuthoredBank(disciplineId, topicId);
+      setBankStatus(added ? added + ' questões adicionadas à unidade.' : 'O banco autoral já está nesta unidade.');
+      onSaved();
+    } catch { setBankStatus('Falha ao adicionar as questões. Tente novamente.'); }
+    finally { setAdding(false); }
+  }
   const [resource, setResource] = useState<'map' | 'story' | 'blocks'>();
   const [input, setInput] = useState('4, 2, 3, 1');
   const [trace, setTrace] = useState(() => createBubbleTrace([4, 2, 3, 1]));
@@ -78,7 +93,11 @@ export function SortingLab({ disciplineId, topicId, onSaved }: {
     }
   }
 
-  return <section className="entry-panel sorting-lab" aria-label="Prática de ordenação">
+  return <><AuthoredPractice />
+    {topicId && <div className="entry-panel"><p>Banco autoral de programação · 10 questões por nível para praticar nesta unidade.</p>
+      <button type="button" disabled={adding} onClick={() => void addBank()}>Adicionar banco de programação à unidade</button>
+      <p role="status">{bankStatus}</p></div>}
+    <section className="entry-panel sorting-lab" aria-label="Prática de ordenação">
     <h4>Ordenação por bolhas</h4>
     <p>Prática complementar de autoria do Alfred. Compare vizinhos e preveja as trocas.</p>
     <details>
@@ -128,5 +147,5 @@ export function SortingLab({ disciplineId, topicId, onSaved }: {
         </button>}
     </div>
     {error && <p className="module-error" role="alert">{error}</p>}
-  </section>;
+  </section></>;
 }

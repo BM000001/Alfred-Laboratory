@@ -1,3 +1,4 @@
+@font-face { font-family: 'Alfred Noto Serif'; src: url('../assets/fonts/noto-serif-latin.woff') format('woff'); font-weight: 400; font-display: swap; }
 @font-face {
   font-family: 'Alfred Noto';
   src: url('../assets/fonts/noto-regular.ttf') format('truetype');
@@ -33,7 +34,7 @@
   --small-radius: .625rem;
   --space: clamp(.85rem, 2vw, 1.5rem);
   --body-font: 'Alfred Noto', system-ui, -apple-system, sans-serif;
-  --display-font: 'Iowan Old Style', Georgia, serif;
+  --display-font: 'Alfred Noto Serif', 'Iowan Old Style', Georgia, serif;
 }
 
 :root[data-theme=dark] {
@@ -88,3 +89,8 @@ input[type=checkbox], input[type=radio] { inline-size: 1.15rem; block-size: 1.15
 .module-error { color: var(--danger); background: var(--danger-wash); border-inline-start: 3px solid var(--error-base); }
 .module-feedback, .module-error, .empty-state { padding: .8rem 1rem; border-radius: var(--small-radius); }
 .empty-state, .module-feedback { background: var(--surface-raised); }
+
+.authored-practice { display: grid; gap: .8rem; min-width: 0; }
+.authored-practice pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-raised); padding: .75rem; }
+.authored-practice fieldset { min-width: 0; border: 1px solid var(--edge); border-radius: var(--small-radius); }
+.authored-practice button { min-height: 44px; margin: .25rem; }
