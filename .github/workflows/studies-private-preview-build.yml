@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      VITE_STUDIES_AI_ORIGIN: https://alfred-studies-iphone-preview.brianmarcondes2000.workers.dev
+      VITE_STUDIES_AI_ORIGIN: https://alfred-studies-iphone-preview.alfred-bm-laboratory.workers.dev
     steps:
       - name: Checkout requested commit only
         uses: actions/checkout@v4
