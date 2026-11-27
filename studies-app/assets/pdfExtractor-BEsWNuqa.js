@@ -1,0 +1,8 @@
+import{g as m,w as u,G as w}from"./pdf.worker.min-Y6dRQZ61.js";const g=300;w.workerSrc=u;function f(t){return new Promise((c,n)=>{const e=new FileReader;e.onload=()=>{e.result instanceof ArrayBuffer?c(e.result):n(new Error("Não foi possível decodificar o PDF."))},e.onerror=()=>n(e.error??new Error("Falha ao ler o PDF.")),e.onabort=()=>n(new Error("A leitura do PDF foi interrompida.")),e.readAsArrayBuffer(t)})}async function h(t,c=()=>new Date){if(t.size<=0)throw new Error("O arquivo PDF está vazio.");const n=new Uint8Array(await f(t)),e=m({data:n});let a;try{if(a=await e.promise,a.numPages>g)throw new Error("Este PDF possui mais de 300 páginas. Divida o documento em partes menores para leitura nesta versão.");const r=[];for(let o=1;o<=a.numPages;o+=1){const p=await a.getPage(o),l=(await p.getTextContent()).items.map(i=>"str"in i?i.str+("hasEOL"in i&&i.hasEOL?`
+`:" "):"").join("").replace(/[ \t]+\n/g,`
+`).replace(/\n{3,}/g,`
+
+`).trim();r.push({pageNumber:o,text:l}),p.cleanup()}const s=r.map(o=>"[Página "+o.pageNumber+`]
+`+o.text).join(`
+
+`).trim();if(!s.replace(/\[Página \d+\]/g,"").trim())throw new Error("O PDF não contém texto selecionável. Ele pode ser um documento digitalizado; será necessário aplicar OCR.");const d=s.match(/[\p{L}\p{N}_]+/gu)??[];return{fileName:t.name,format:"pdf",text:s,characterCount:s.length,wordCount:d.length,extractedAt:c().toISOString(),extractionMethod:"text",pageCount:a.numPages,pages:r}}catch(r){throw r instanceof Error&&r.name==="PasswordException"?new Error("Este PDF está protegido por senha. Remova a proteção antes de importá-lo."):r}finally{await e.destroy()}}export{g as MAX_PDF_PAGES_PER_EXTRACTION,h as extractPdfDocument};
