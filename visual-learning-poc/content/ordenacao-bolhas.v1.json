@@ -1,0 +1,55 @@
+{
+  "format": "alfred.learning-content",
+  "version": "1.0.0",
+  "id": "intro-algoritmos.ordenacao-bolhas",
+  "title": "Ordenação por bolhas: comparar, prever e explicar",
+  "language": "pt-BR",
+  "objectives": [
+    { "id": "compare-neighbors", "description": "Comparar valores vizinhos e decidir se devem trocar." },
+    { "id": "explain-pass", "description": "Explicar como uma passagem aproxima o maior valor do fim." },
+    { "id": "trace-algorithm", "description": "Acompanhar as mudanças do vetor durante a ordenação." }
+  ],
+  "explanations": [
+    { "id": "rule", "body": "Compare dois valores vizinhos. Troque-os somente quando o da esquerda for maior que o da direita." },
+    { "id": "pass", "body": "Uma passagem compara pares consecutivos. O maior valor ainda fora de posição avança para a direita." },
+    { "id": "stop", "body": "Quando uma passagem inteira termina sem trocas, todos os pares vizinhos estão em ordem." }
+  ],
+  "conceptMap": {
+    "rootId": "bubble-sort",
+    "nodes": [
+      { "id": "bubble-sort", "label": "Ordenação por bolhas", "explanationId": "rule" },
+      { "id": "neighbors", "label": "Comparar vizinhos", "parentId": "bubble-sort", "explanationId": "rule" },
+      { "id": "swap", "label": "Trocar fora de ordem", "parentId": "neighbors", "explanationId": "rule" },
+      { "id": "pass", "label": "Repetir passagens", "parentId": "bubble-sort", "explanationId": "pass" },
+      { "id": "stop", "label": "Encerrar sem trocas", "parentId": "bubble-sort", "explanationId": "stop" }
+    ],
+    "relations": [
+      { "from": "neighbors", "to": "swap", "label": "pode levar a" },
+      { "from": "pass", "to": "stop", "label": "termina quando" }
+    ]
+  },
+  "interactions": [
+    {
+      "id": "first-pair",
+      "type": "choice",
+      "objectiveId": "compare-neighbors",
+      "prompt": "Para ordenar 4 e 2 em ordem crescente, o que acontece?",
+      "options": [{ "id": "keep", "label": "Manter como está" }, { "id": "swap", "label": "Trocar os cartões" }],
+      "answerId": "swap",
+      "feedbackCorrect": "Correto: 4 é maior que 2, então trocar coloca o menor à esquerda.",
+      "feedbackIncorrect": "Reveja a regra: compare vizinhos e troque quando o valor da esquerda for maior."
+    }
+  ],
+  "visuals": [
+    { "id": "array-step", "kind": "svg", "src": "generated-from-state", "alt": "Vetor com os dois valores comparados destacados e a troca indicada quando necessária." },
+    { "id": "nina-story", "kind": "svg", "src": "generated-from-local-assets", "alt": "Nina organiza cartões numerados seguindo a regra de comparação." }
+  ],
+  "completion": {
+    "id": "demonstrate-rule-and-result",
+    "rules": [{ "type": "all-questions-correct" }, { "type": "sorted-vector" }]
+  },
+  "references": [
+    { "kind": "authored-demo", "label": "Explicação autoral simplificada para demonstração; substituir ou complementar pela referência da disciplina antes de uso acadêmico formal." }
+  ],
+  "metadata": { "audience": "Introdução a Algoritmos", "contentStatus": "demonstration", "reviewRequired": true }
+}
