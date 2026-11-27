@@ -1,11 +1,12 @@
 """Verify the deployed demo using a clean, disposable WebKit profile."""
 import re
 import sys
+from tempfile import TemporaryDirectory
 from playwright.sync_api import sync_playwright
 
-with sync_playwright() as playwright:
-    browser = playwright.webkit.launch()
-    page = browser.new_page(viewport={"width":390,"height":844})
+with TemporaryDirectory() as profile, sync_playwright() as playwright:
+    browser = playwright.webkit.launch_persistent_context(profile, viewport={"width":390,"height":844})
+    page = browser.new_page()
     api = []
     page.on("request", lambda request: api.append(request.url) if "/api/studies/" in request.url else None)
     page.goto(sys.argv[1])
