@@ -13,6 +13,8 @@ export interface MaterialProcessingState {
   ambiguities?: ReturnType<typeof relevantAmbiguities>;
   /** AI-authored lessons tied to their original excerpt. Optional: no IndexedDB migration. */
   aiLessons?: Array<{ id: string; title: string; explanation: string; example: string; check: string; answer: string; sourceExcerpt: string; createdAt: string }>;
+  /** Optional validated response awaiting local persistence. Revalidated against the source on resume. */
+  pendingStudyPack?: { version: 1; id: string; payload: unknown };
   generated?: ReturnType<typeof validateMaterialResources>;
 }
 const active = new Set<string>();

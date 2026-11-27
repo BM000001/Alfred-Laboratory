@@ -11,7 +11,7 @@ import { PROCESSING_PROFILES, definitionDifferences, relevantAmbiguities, type P
 import { STUDY_PREPARATION_STAGES, createStudyPreparationState, updateStudyPreparationStage, type StudyPreparationState, type StudyPreparationStageId, type StudyPreparationStatus } from './studyPreparationProgress';
 import './studyPreparationProgress.css';
 import { isSameOriginAIAvailable } from './studyRemoteQuestions';
-import { requestAIStudyPack } from './studyRemotePack';
+import { prepareMaterialPack } from './materialPackCheckpoint';
 import { saveValidatedAIStudyPack } from './studyAIStudyPackStore';
 import { displayStudyTitle } from './displayStudyTitle';
 
@@ -107,7 +107,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         item.disciplineId === disciplineId && item.sourceFileId === file.id);
       const source = file.processing?.raw?.text;
       if (!target || !source) throw new Error('Não foi possível recuperar o texto e a unidade de origem.');
-      const pack = await requestAIStudyPack({
+      const { pack, finish } = await prepareMaterialPack({ fileId: file.id, disciplineId, topicId: target.id, sourceText: source }, {
         configuredOrigin: aiOrigin, currentOrigin: window.location.origin,
         sourceText: source, consent: aiConsent, signal: controller.signal,
       });
@@ -116,6 +116,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         sourceText: source, pack, signal: controller.signal,
         onSaved: (kind, count) => setAINotice('Salvando ' + count + ' novo(s) item(ns) de ' + kind + '…'),
       });
+      await finish();
       setAINotice('IA: ' + saved.lessonsAdded + ' aula(s), ' +
         saved.questionsAdded + ' questão(ões) e ' + saved.flashcardsAdded +
         ' flashcard(s) novos salvos com origem identificada.');
@@ -222,7 +223,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
               updatePreparation(index, stage, 'running');
             }
             try {
-              const pack = await requestAIStudyPack({
+              const { pack, finish } = await prepareMaterialPack({ fileId: sourceId, disciplineId, topicId: topic.id, sourceText: state.raw.text }, {
                 configuredOrigin: aiOrigin, currentOrigin: window.location.origin,
                 sourceText: state.raw.text, consent: aiConsent, signal: controller.signal,
               });
@@ -231,6 +232,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
                 sourceText: state.raw.text, pack, signal: controller.signal,
                 onSaved: (kind, count) => updatePreparation(index, kind, 'running', undefined, count, pack[kind].length),
               });
+              await finish();
               for (const kind of ['lessons', 'questions', 'flashcards'] as const) {
                 const count = kind === 'lessons' ? saved.lessonsAdded : kind === 'questions'
                   ? saved.questionsAdded : saved.flashcardsAdded;

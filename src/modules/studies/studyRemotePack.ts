@@ -79,6 +79,7 @@ export async function requestAIStudyPack(args: {
   consent: boolean;
   signal: AbortSignal;
   fetcher?: typeof fetch;
+  onValidatedPayload?: (payload: unknown) => Promise<void>;
 }): Promise<ValidatedAIStudyPack> {
   const { configuredOrigin, currentOrigin, sourceText, consent, signal, fetcher = fetch } = args;
   if (!consent) throw new Error('Autorize o envio dos trechos do material à IA.');
@@ -95,5 +96,9 @@ export async function requestAIStudyPack(args: {
   }
   if (!response.ok) throw new Error('A IA não conseguiu preparar as atividades. O original continua salvo.');
   const data: unknown = await response.json();
-  return validateAIStudyPack(data, chunks);
+  const pack = validateAIStudyPack(data, chunks);
+  if (pack.lessons.length || pack.questions.length || pack.flashcards.length) {
+    await args.onValidatedPayload?.(data);
+  }
+  return pack;
 }
