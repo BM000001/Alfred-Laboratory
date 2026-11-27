@@ -20,3 +20,9 @@ describe('namespace de armazenamento por build', () => {
     expect(isLaboratoryBuild('/Alfred-Laboratory-preview/')).toBe(false);
   });
 });
+
+it('mantém a demonstração permanente separada dos dados do Laboratory e da raiz', () => {
+  const base = '/Alfred-Laboratory/studies-app/';
+  expect(getAlfredDatabaseName(base)).toBe('alfred-studies-demo');
+  expect(getAlfredLocalStorageKey('appearance',base)).toBe('alfred-studies-demo:appearance');
+});

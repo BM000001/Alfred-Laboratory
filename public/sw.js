@@ -1,5 +1,6 @@
 const IS_LABORATORY_SCOPE = new URL(self.registration.scope).pathname.startsWith('/Alfred-Laboratory/');
-const CACHE_PREFIX = IS_LABORATORY_SCOPE ? 'laboratory-alfred-' : 'alfred-';
+const IS_DEMO = new URL(self.registration.scope).pathname === '/Alfred-Laboratory/studies-app/';
+const CACHE_PREFIX = IS_DEMO ? 'studies-demo-' : IS_LABORATORY_SCOPE ? 'laboratory-alfred-' : 'alfred-';
 const SHELL_BUILD = '__ALFRED_SHELL_BUILD__';
 const APP_CACHE = `${CACHE_PREFIX}app-shell-v3-${SHELL_BUILD}`;
 const OCR_CACHE = `${CACHE_PREFIX}ocr-assets-v1`;
@@ -73,7 +74,7 @@ self.addEventListener('fetch', (event) => {
     const cache = await caches.open(isOcrAsset ? OCR_CACHE : APP_CACHE);
     const cached = await cache.match(request);
     // WebKit can abort an offline navigation before a rejected network fetch falls back.
-    if (request.mode === 'navigate' && self.navigator?.onLine === false) {
+    if (request.mode === 'navigate' && (IS_DEMO || self.navigator?.onLine === false)) {
       const shell = await cache.match(new URL('index.html', scope).href);
       if (shell) return shell;
     }
