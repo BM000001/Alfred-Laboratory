@@ -33,8 +33,10 @@ async function prepareDemo() {
       tx.onabort = () => reject(tx.error);
       for (const [name,row] of rows) {
         const store = tx.objectStore(name);
-        const lookup = store.getKey(row.id);
-        lookup.onsuccess = () => { if (lookup.result === undefined) store.add(row); };
+        const insert = store.add(row);
+        insert.onerror = event => {
+          if (insert.error?.name === 'ConstraintError') { event.preventDefault(); event.stopPropagation(); }
+        };
       }
     });
   } finally { db.close(); }
