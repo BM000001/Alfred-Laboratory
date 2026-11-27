@@ -8,3 +8,5 @@ visual-learning-poc/evidence/
 .env
 .env.*.local
 public/blockly-media/
+
+/dist-studies-demo/

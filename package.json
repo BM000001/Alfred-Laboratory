@@ -13,7 +13,8 @@
     "predev": "node scripts/copy-ocr-assets.mjs && node scripts/copy-blockly-media.mjs",
     "test:google-calendar": "node scripts/validate-apps-script.mjs",
     "prebuild": "node scripts/copy-blockly-media.mjs",
-    "prebuild:pages": "node scripts/copy-blockly-media.mjs"
+    "prebuild:pages": "node scripts/copy-blockly-media.mjs",
+    "build:studies-demo": "vite build demos/studies --config vite.config.ts --base ./ --outDir ../../dist-studies-demo --emptyOutDir"
   },
   "dependencies": {
     "@markmap/parse": "1.1.1",
