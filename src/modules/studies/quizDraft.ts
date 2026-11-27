@@ -31,7 +31,7 @@ export function readQuizDraft(key: string, disciplineId: string, unitId?: string
     const answers = [];
     for (const [index, answer] of draft.answers.entries()) {
       const question = draft.questions[index];
-      if (!answer || answer.questionId !== question.id || !options(index, answer.selectedOptionIndex)) return;
+      if (!answer || answer.questionId !== question.id || (answer.selectedOptionIndex !== null && !options(index, answer.selectedOptionIndex))) return;
       answers.push({ questionId: question.id, selectedOptionIndex: answer.selectedOptionIndex,
         isCorrect: gradeStudyAnswer(question, answer.selectedOptionIndex), questionSnapshot: question });
     }

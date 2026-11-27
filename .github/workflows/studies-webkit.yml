@@ -4,7 +4,10 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'src/app/**'
+      - 'src/styles/**'
       - 'src/modules/Studies.tsx'
+      - 'src/modules/studies/**'
       - 'src/storage/studyCleanup.ts'
       - 'scripts/studies-webkit-smoke.py'
       - '.github/workflows/studies-webkit.yml'
@@ -35,5 +38,7 @@ jobs:
         run: |
           python -m pip install playwright==1.62.0
           python -m playwright install --with-deps webkit
-      - name: Run discipline deletion at mobile and tablet sizes
+      - name: Build offline production shell
+        run: npm run build
+      - name: Verify learning tools, IndexedDB and offline reload in WebKit
         run: python scripts/studies-webkit-smoke.py

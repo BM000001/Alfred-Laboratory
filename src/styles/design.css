@@ -1,3 +1,15 @@
+@font-face {
+  font-family: 'Alfred Noto';
+  src: url('../assets/fonts/noto-regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Alfred Noto';
+  src: url('../assets/fonts/noto-bold.ttf') format('truetype');
+  font-weight: 650 900;
+  font-display: swap;
+}
 :root {
   color-scheme: light;
   --canvas: #f5f2eb;
@@ -9,8 +21,9 @@
   --control-edge: #8d7f6e;
   --accent: #785523;
   --accent-wash: #f1e3ca;
-  --action: #26231e;
+  --action: var(--accent);
   --on-action: #fff8eb;
+  --error-base: #BB4435;
   --danger: #9d372e;
   --danger-wash: #f6e5df;
   --success: #2e684a;
@@ -19,27 +32,28 @@
   --radius: 1rem;
   --small-radius: .625rem;
   --space: clamp(.85rem, 2vw, 1.5rem);
-  --body-font: system-ui, -apple-system, sans-serif;
+  --body-font: 'Alfred Noto', system-ui, -apple-system, sans-serif;
   --display-font: 'Iowan Old Style', Georgia, serif;
 }
 
 :root[data-theme=dark] {
   color-scheme: dark;
-  --canvas: #171614;
-  --surface: #201e1a;
-  --surface-raised: #2b2823;
-  --ink: #f5efe4;
-  --muted: #bfb3a0;
-  --edge: #473f34;
-  --control-edge: #9b8c76;
-  --accent: #edc582;
-  --accent-wash: #3e3222;
-  --action: #edc582;
-  --on-action: #221b11;
-  --danger: #ffb4a7;
-  --danger-wash: #3d2420;
-  --success: #ace1bb;
-  --success-wash: #24392b;
+  --canvas: #171B18;
+  --surface: #282E29;
+  --surface-raised: #303830;
+  --ink: #F3F1EA;
+  --muted: #B8ADB5;
+  --edge: #3B4431;
+  --control-edge: #828C7A;
+  --accent: #D8C293;
+  --accent-wash: #3B4431;
+  --action: var(--accent);
+  --on-action: var(--canvas);
+  --error-base: #BB4435;
+  --danger: #FFADA0;
+  --danger-wash: #402825;
+  --success: #8FAE83;
+  --success-wash: #303E2D;
 }
 * { box-sizing: border-box; }
 body { margin: 0; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--canvas); color: var(--ink); font: 1rem/1.55 var(--body-font); }
@@ -68,9 +82,9 @@ input[type=checkbox], input[type=radio] { inline-size: 1.15rem; block-size: 1.15
 .sr-only, .file-upload-button input { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .file-upload-button:focus-within { outline: 3px solid var(--accent); outline-offset: 3px; }
 .primary-action, .study-quiz-start:not(.secondary) { background: var(--action); color: var(--on-action); border-color: transparent; font-weight: 650; }
-.primary-action:hover:not(:disabled), .study-quiz-start:not(.secondary):hover:not(:disabled) { background: var(--accent); color: var(--canvas); }
+.primary-action:hover:not(:disabled), .study-quiz-start:not(.secondary):hover:not(:disabled) { background: var(--on-action); color: var(--action); border-color: var(--action); }
 .text-action { background: transparent; border-color: transparent; color: var(--accent); }
 .danger-action, .danger-action:hover:not(:disabled) { background: var(--danger-wash); color: var(--danger); }
-.module-error { color: var(--danger); background: var(--danger-wash); }
+.module-error { color: var(--danger); background: var(--danger-wash); border-inline-start: 3px solid var(--error-base); }
 .module-feedback, .module-error, .empty-state { padding: .8rem 1rem; border-radius: var(--small-radius); }
 .empty-state, .module-feedback { background: var(--surface-raised); }

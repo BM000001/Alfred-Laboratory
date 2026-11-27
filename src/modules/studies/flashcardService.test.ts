@@ -34,15 +34,15 @@ describe('flashcardService', () => {
     const service = createFlashcardService(repository, { createId: () => 'card-1', now: () => new Date('2026-11-04T12:00:00.000Z') });
     const card = await service.create({ disciplineId: 'math', front: 'Pergunta', back: 'Resposta' });
     const afterGood = await service.review(card.id, 'good');
-    expect(afterGood.intervalDays).toBe(3);
-    expect(afterGood.nextReviewAt).toBe('2026-11-07T12:00:00.000Z');
+    expect(afterGood.intervalDays).toBe(0);
+    expect(afterGood.nextReviewAt).toBe('2026-11-04T12:10:00.000Z');
     const afterAgain = await service.review(card.id, 'again');
     expect(afterAgain.intervalDays).toBe(0);
-    expect(afterAgain.nextReviewAt).toBe('2026-11-04T12:10:00.000Z');
+    expect(afterAgain.nextReviewAt).toBe('2026-11-04T12:01:00.000Z');
     expect(afterAgain.reviewCount).toBe(2);
     expect(afterAgain.reviewHistory).toEqual([
-      { ratedAt: '2026-11-04T12:00:00.000Z', rating: 'good', intervalDays: 3, nextReviewAt: '2026-11-07T12:00:00.000Z' },
-      { ratedAt: '2026-11-04T12:00:00.000Z', rating: 'again', intervalDays: 0, nextReviewAt: '2026-11-04T12:10:00.000Z' },
+      { ratedAt: '2026-11-04T12:00:00.000Z', rating: 'good', intervalDays: 0, nextReviewAt: '2026-11-04T12:10:00.000Z' },
+      { ratedAt: '2026-11-04T12:00:00.000Z', rating: 'again', intervalDays: 0, nextReviewAt: '2026-11-04T12:01:00.000Z' },
     ]);
   });
 
@@ -52,7 +52,7 @@ describe('flashcardService', () => {
     const card = await service.create({ disciplineId: 'math', front: 'Pergunta antiga', back: 'Resposta antiga' });
     await service.review(card.id, 'good');
     const edited = await service.update(card.id, { front: 'Pergunta nova', back: 'Resposta nova' });
-    expect(edited).toMatchObject({ front: 'Pergunta nova', back: 'Resposta nova', reviewCount: 1, intervalDays: 3 });
+    expect(edited).toMatchObject({ front: 'Pergunta nova', back: 'Resposta nova', reviewCount: 1, intervalDays: 0, fsrsState: { reps: 1 } });
   });
 
   it('identifies cards that are due', () => {

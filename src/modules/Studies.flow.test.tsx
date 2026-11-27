@@ -84,7 +84,7 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   fireEvent.click(screen.getByRole('button', { name: 'Corrigir resposta' }));
   expect(await screen.findByText(/Resposta incorreta/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Finalizar simulado' }));
-  expect(await screen.findByText('0 acerto(s) de 1 questão(ões) · 1 erro(s)')).toBeInTheDocument();
+  expect(await screen.findByText('0 acerto(s) de 1 questão(ões) · 1 erro(s) · 0 pulada(s)')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Desempenho' }));
   const performance = screen.getByRole('region', { name: 'Desempenho por tópico' });
   expect(await within(performance).findByText('1 erro(s) em 1 resposta(s)')).toBeInTheDocument();

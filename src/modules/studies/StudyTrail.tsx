@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   fileRepository,
+  studyLearningProgressRepository,
   studyFlashcardRepository,
   studyQuestionRepository,
   studyQuizAttemptRepository,
@@ -9,8 +10,10 @@ import { getAlfredLocalStorageKey } from '../../storage/namespace';
 import { StudyLearning } from './StudyLearning';
 import { StudyFlashcards } from './StudyFlashcards';
 import { StudyPerformance } from './StudyPerformance';
+import { SortingLab, sortingLabLessonId } from './SortingLab';
 import { QuestionBank } from './QuestionBank';
-import { buildTrailChapter, summarizeTrailCompletion, type TrailCompletion } from './trailModel';
+import { buildTrailChapter, passesTrailAttempt, summarizeTrailCompletion, TRAIL_DIFFICULTIES, unlockedTargetLevel, type TrailCompletion } from './trailModel';
+import type { StudyQuestionDifficulty, StudyQuizAttempt } from './questionTypes';
 import type { Discipline, StudyTopic } from './types';
 import './studyTrail.css';
 import { displayStudyTitle } from './displayStudyTitle';
@@ -20,6 +23,7 @@ const labels = {
   'preparation-needed': 'Preparação necessária',
   'insufficient-content': 'Conteúdo insuficiente',
   offline: 'Offline',
+  'progression-locked': 'Bloqueada pela progressão',
 };
 const silhouettes: Record<string, string> = {
   library:
@@ -29,7 +33,7 @@ const silhouettes: Record<string, string> = {
   laboratory: 'M11 4h10v3h-2v7l8 11v4H5v-4l8-11V7h-2z M15 8v8l-4 6h10l-4-6V8z',
   castle: 'M2 7h3v4h3V7h3v9h3V8h4v8h3V7h3v4h3V7h3v21H19v-7h-6v7H2z',
 };
-const initialCounts = { lessons: false, questions: 0, cards: 0, sourced: 0, attempts: 0 };
+const initialCounts = { lessons: false, questions: 0, cards: 0, attempts: 0 };
 type Props = {
   discipline: Discipline;
   topics: StudyTopic[];
@@ -45,6 +49,11 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
   const [active, select] = useState('');
   const [decision, setDecision] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [level, setLevel] = useState<StudyQuestionDifficulty>('easy');
+  const [targetCounts, setTargetCounts] = useState({ easy: 0, medium: 0, hard: 0 });
+  const [cardsReviewed, setCardsReviewed] = useState(false);
+  const [labPassed, setLabPassed] = useState(false);
+  const [trailAttempts, setTrailAttempts] = useState<StudyQuizAttempt[]>([]);
   const [counts, setCounts] = useState(initialCounts);
   const [load, setLoad] = useState('Carregando recursos…');
   const [online, setOnline] = useState(navigator.onLine);
@@ -82,18 +91,28 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
       studyFlashcardRepository.getAll(),
       studyQuizAttemptRepository.getAll(),
       fileRepository.getAll(),
+      studyLearningProgressRepository.getAll(),
     ])
-      .then(([allQuestions, allCards, attempts, allFiles]) => {
+      .then(([allQuestions, allCards, attempts, allFiles, progress]) => {
         if (!current) return;
         const questions = allQuestions.filter(matches),
           cards = allCards.filter(matches);
+        setCardsReviewed(cards.some(card => card.reviewCount > 0));
         const aiLessonCount = allFiles.filter(file => file.disciplineId === discipline.id &&
           (!topic || file.processing?.topicId === topic.id))
           .reduce((count, file) => count + (file.processing?.aiLessons?.length ?? 0), 0);
+        setTargetCounts({
+          easy: questions.filter(q => q.difficulty === 'easy').length,
+          medium: questions.filter(q => q.difficulty === 'medium').length,
+          hard: questions.filter(q => q.difficulty === 'hard').length,
+        });
+        setTrailAttempts(attempts.filter(a => a.disciplineId === discipline.id &&
+          a.trail && a.trail.topicId === topic?.id));
+        setLabPassed(progress.some(item => item.disciplineId === discipline.id &&
+          item.lessonId === sortingLabLessonId(topic?.id) && (item.practiceScore ?? 0) >= 80));
         setCounts({
           questions: questions.length,
           cards: cards.length,
-          sourced: questions.filter((q) => q.sourceExcerpt).length,
           lessons: aiLessonCount > 0,
           attempts: attempts.filter(
             (a) =>
@@ -114,11 +133,19 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     topic?.id ?? '',
     discipline.id,
     topic?.title ?? 'Toda a disciplina',
-    counts,
+    { ...counts, lessons: counts.lessons || Boolean(topic?.sourceFileId), targetQuestions: targetCounts[level], targetUnlocked: unlockedTargetLevel(level, trailAttempts) },
   );
   const hasLinkedMaterial = Boolean(topic?.sourceFileId);
   const hasActivities = counts.lessons || counts.questions > 0 || counts.cards > 0;
-  const nodes = chapter.nodes.map((node) => ({ ...node, completion: marks[node.id] ?? node.completion }));
+  const assessments = { targets: 'quiz', castle: 'final', 'flashcard-chest': 'verify' } as const;
+  const nodes = chapter.nodes.map((node) => {
+    const activity = assessments[node.id as keyof typeof assessments];
+    const mark = marks[node.id === 'targets' ? 'targets:' + level : node.id];
+    const passed = (node.id === 'laboratory' && labPassed) || (activity && trailAttempts.some(attempt => attempt.trail?.activity === activity &&
+      (activity !== 'quiz' || attempt.trail.difficulty === level) && passesTrailAttempt(attempt)));
+    const completion = passed ? 'completed' : mark === 'skipped' || (!activity && node.id !== 'laboratory') ? mark ?? node.completion : node.completion;
+    return { ...node, completion };
+  });
   const summary = summarizeTrailCompletion(nodes);
   const index = nodes.findIndex((n) => n.id === active),
     node = nodes[index];
@@ -140,7 +167,8 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
   function finish(completion: TrailCompletion) {
     try {
       const stored = JSON.parse(localStorage.getItem(key) ?? '{}') ?? {};
-      const updated = { ...stored, [active]: stored[active] === 'completed' ? 'completed' : completion };
+      const markId = active === 'targets' ? 'targets:' + level : active;
+      const updated = { ...stored, [markId]: stored[markId] === 'completed' ? 'completed' : completion };
       localStorage.setItem(key, JSON.stringify(updated));
       setMarks(updated);
     } catch {
@@ -153,24 +181,27 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
     <section className="learning-trail" aria-label="Trilha de aprendizagem">
       {warning && <p role="alert">{warning}</p>}
       {!online && <p role="status">Offline · recursos locais disponíveis</p>}
-      {load ? <p role="status">{load}</p> : !hasLinkedMaterial ? (
+      {load && <p role="status">{load}</p>}
+      {!load && !hasLinkedMaterial && (
         <div className="empty-state" role="status">
           <strong>Adicione um material para começar</strong>
           <p>A trilha será preparada depois que você enviar um material da disciplina. Não vamos mostrar aulas ou desafios sem uma fonte.</p>
           <button type="button" className="primary-action" onClick={() => onAddMaterial(topic?.id ?? '')}>Adicionar material</button>
         </div>
-      ) : !hasActivities ? (
+      )}
+      {!load && hasLinkedMaterial && !hasActivities && (
         <div className="empty-state" role="status">
           <strong>Material salvo. Preparação da trilha pendente</strong>
-          <p>O material já está vinculado, mas ainda não há atividades preparadas com segurança. A geração por IA precisa estar disponível antes de liberar o percurso.</p>
+          <p>O material está na Biblioteca. Importe mais fontes ou cadastre atividades em Praticar. A preparação por IA depende da prévia autenticada.</p>
           <button type="button" className="primary-action" onClick={() => onMaterials(topic?.id ?? '')}>Ver material e preparação</button>
         </div>
-      ) : !node ? (
+      )}
+      {!node && !load ? (
         <>
           <div className="trail-tools">
             <label>
               Capítulo{' '}
-              <select value={topic?.id ?? ''} onChange={(e) => selectChapter(e.target.value)}>
+              <select value={topic?.id ?? ''} onChange={(e) => { selectChapter(e.target.value); setLevel('easy'); }}>
                 {!topics.length && <option value="">Toda a disciplina</option>}
                 {topics.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -179,16 +210,23 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                 ))}
               </select>
             </label>
+            <label>Nível do Campo de Alvos{' '}
+              <select value={level} onChange={e => setLevel(e.target.value as StudyQuestionDifficulty)}>
+                {TRAIL_DIFFICULTIES.map((difficulty, index) => <option key={difficulty} value={difficulty}>
+                  {index + 1} · {['Fácil', 'Média', 'Difícil'][index]}
+                </option>)}
+              </select>
+            </label>
             <button type="button" className="text-action" onClick={onManage}>
               Unidades e materiais
             </button>
           </div>
-          <p>
+          {hasActivities && <p>
             {summary.completed} de {summary.total} etapas concluídas
             {summary.skipped ? ' · ' + summary.skipped + ' puladas' : ''}
-          </p>
+          </p>}
           <ol className="trail-course">
-            {nodes.map((n, i) => (
+            {(hasActivities ? nodes : nodes.filter(stop => stop.landmarkId)).map((n, i) => (
               <li
                 key={n.id}
                 style={{
@@ -229,7 +267,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
             ))}
           </ol>
         </>
-      ) : (
+      ) : node ? (
         <>
           <button className="text-action" onClick={() => select('')}>
             Voltar à trilha
@@ -243,8 +281,8 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
               )}
               {active === 'library' && (
                 <>
-                  <button className="text-action" onClick={() => onMaterials(topic?.id ?? '')}>
-                    Abrir materiais
+                  <button className="text-action" onClick={() => hasLinkedMaterial ? onMaterials(topic?.id ?? '') : onAddMaterial(topic?.id ?? '')}>
+                    {hasLinkedMaterial ? 'Abrir materiais' : 'Importar material'}
                   </button>
                   <StudyLearning
                     aiOnly
@@ -256,7 +294,8 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                 </>
               )}
               {(node.kind === 'flashcards' || active === 'flashcard-chest') && (
-                <StudyFlashcards disciplineId={discipline.id} topicId={topic?.id} refreshToken={refreshToken + revision} />
+                <StudyFlashcards disciplineId={discipline.id} topicId={topic?.id} refreshToken={refreshToken + revision}
+                  onReviewed={() => setCardsReviewed(true)} />
               )}
               {active === 'review' && (
                 <StudyPerformance
@@ -266,23 +305,26 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
                   unitId={topic?.id}
                 />
               )}
-              {['targets', 'castle', 'quick', 'laboratory'].includes(active) && (
+              {active === 'targets' && node.availability === 'progression-locked' && <p>Conclua o nível anterior com pelo menos 8 acertos.</p>}
+              {active === 'laboratory' && <SortingLab disciplineId={discipline.id} topicId={topic?.id}
+                onSaved={() => refresh(value => value + 1)} />}
+              {active === 'flashcard-chest' && !cardsReviewed && <p>Faça a autoavaliação de pelo menos um cartão para abrir a verificação.</p>}
+              {(active === 'quick' || active === 'castle' || (active === 'flashcard-chest' && cardsReviewed) ||
+                (active === 'targets' && node.availability !== 'progression-locked')) && (
                 <QuestionBank
                   key={active}
                   refreshToken={refreshToken + revision}
-                  onFinished={() => {
-                    setShowResult(true);
-                    finish('completed');
+                  onChanged={() => refresh(value => value + 1)}
+                  onFinished={(attempt) => {
+                    if (active === 'quick' || passesTrailAttempt(attempt)) {
+                      setShowResult(true);
+                      if (active === 'quick') finish('completed');
+                      else setDecision(true);
+                    }
                   }}
-                  trailMode={
-                    active === 'quick'
-                      ? 'quick'
-                      : active === 'laboratory'
-                        ? 'lab'
-                        : active === 'castle'
-                          ? 'final'
-                          : 'quiz'
-                  }
+                  trailMode={active === 'quick' ? 'quick' : active === 'castle' ? 'final' :
+                    active === 'flashcard-chest' ? 'verify' : 'quiz'}
+                  trailDifficulty={active === 'targets' ? level : undefined}
                   disciplineId={discipline.id}
                   topics={topics}
                   unitId={topic?.id}
@@ -290,7 +332,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
               )}
               {!decision && (
                 <div className="trail-actions">
-                  {!load && node.availability === 'available' && (
+                  {!load && node.availability === 'available' && active !== 'laboratory' && !assessments[active as keyof typeof assessments] && (
                     <button onClick={() => finish('completed')}>Marcar etapa como concluída</button>
                   )}
                   <button onClick={() => finish('skipped')}>Pular etapa</button>
@@ -298,6 +340,11 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
               )}
             </>
           )}
+          {decision && active === 'targets' && node.completion === 'completed' && level !== 'hard' &&
+            <button type="button" onClick={() => {
+              setLevel(TRAIL_DIFFICULTIES[TRAIL_DIFFICULTIES.indexOf(level) + 1]);
+              select('');
+            }}>Ir ao próximo nível</button>}
           {decision && (
             <div className="trail-actions">
               <button
@@ -315,7 +362,7 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
             </div>
           )}
         </>
-      )}
+      ) : null}
     </section>
   );
 }

@@ -47,4 +47,9 @@ export interface StudyQuizAttempt {
   totalQuestions: number;
   correctAnswers: number;
   answers: StudyQuizAnswer[];
+  trail?: {
+    activity: 'quiz' | 'verify' | 'final';
+    topicId?: string;
+    difficulty?: StudyQuestionDifficulty;
+  };
 }

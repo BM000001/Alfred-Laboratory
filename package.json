@@ -10,17 +10,24 @@
     "test": "vitest run && node scripts/validate-apps-script.mjs && node --test scripts/interface-build.test.mjs",
     "test:watch": "vitest",
     "build:pages": "node scripts/copy-ocr-assets.mjs && tsc -b && vite build --mode github-pages && node scripts/stamp-release.mjs",
-    "predev": "node scripts/copy-ocr-assets.mjs",
-    "test:google-calendar": "node scripts/validate-apps-script.mjs"
+    "predev": "node scripts/copy-ocr-assets.mjs && node scripts/copy-blockly-media.mjs",
+    "test:google-calendar": "node scripts/validate-apps-script.mjs",
+    "prebuild": "node scripts/copy-blockly-media.mjs",
+    "prebuild:pages": "node scripts/copy-blockly-media.mjs"
   },
   "dependencies": {
+    "@markmap/parse": "1.1.1",
+    "@markmap/view": "1.1.1",
     "@tesseract.js-data/por": "1.0.0",
+    "blockly": "13.3.0",
     "fflate": "0.8.3",
+    "inkjs": "2.4.0",
     "pdfjs-dist": "6.5.438",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tesseract.js": "7.0.0",
-    "tesseract.js-core": "7.0.0"
+    "tesseract.js-core": "7.0.0",
+    "ts-fsrs": "6.0.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.4",
@@ -30,7 +37,7 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.6.0",
     "fake-indexeddb": "^6.2.4",
-    "jsdom": "^26.1.0",
+    "jsdom": "^28.0.0",
     "typescript": "~5.8.3",
     "vite": "^6.4.5",
     "vitest": "^5.1.0"

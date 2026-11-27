@@ -94,7 +94,7 @@ it('abre projeto sem desmontar conversa, salva etapa e preserva as conversas ap�
   await screen.findByText('Alterações salvas.');
   fireEvent.click(button('Etapas'));
   expect(await screen.findByRole('checkbox', { name: 'Rever referências' })).toBeVisible();
-  fireEvent.click(button('Conversa'));
+  fireEvent.click(button('Alfred'));
   expect(screen.getByLabelText('Mensagem para Alfred')).toHaveValue('Rascunho da mensagem');
   create('Nova conversa');
   expect(await within(screen.getByRole('log')).findByText(/À sua disposição/)).toBeVisible();

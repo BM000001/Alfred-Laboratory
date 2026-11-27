@@ -40,6 +40,7 @@ describe('Integrated workspaces', () => {
   it('keeps theme in settings and guards unsaved notes', async () => {
     await projectRepository.save({ id: 'workspace-project', name: 'Projeto de teste do espaço', status: 'active', createdAt: new Date().toISOString() });
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
     fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
     fireEvent.click(screen.getByRole('button', { name: 'Escuro' }));
     expect(screen.getByRole('button', { name: 'Escuro' })).toHaveAttribute('aria-pressed', 'true');
@@ -57,6 +58,7 @@ describe('Integrated workspaces', () => {
     expect(screen.getByLabelText('Título da anotação')).toHaveValue('Rascunho');
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Descartar alterações' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
     fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
     expect(screen.getByRole('button', { name: 'Escuro' })).toHaveAttribute('aria-pressed', 'true');
   });

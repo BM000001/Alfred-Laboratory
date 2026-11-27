@@ -64,7 +64,8 @@ self.addEventListener('fetch', (event) => {
 
   const isOcrAsset = url.pathname.includes(scope.pathname + 'ocr/');
   const isFingerprintedEntrypoint = url.pathname.startsWith(scope.pathname + 'assets/') && /-[\w-]{8,}\.(?:m?js|css)$/.test(url.pathname);
-  const isAppAsset = request.mode === 'navigate' || url.pathname.includes('/assets/') ||
+  const isBlocklyMedia = url.pathname.startsWith(scope.pathname + 'blockly-media/');
+  const isAppAsset = isBlocklyMedia || request.mode === 'navigate' || url.pathname.includes('/assets/') ||
     url.pathname.endsWith('.webmanifest') || /\/(?:apple-touch-icon-180|icon-192|icon-512|icon-maskable-512)\.png$/.test(url.pathname);
   if (!isOcrAsset && !isAppAsset) return;
 

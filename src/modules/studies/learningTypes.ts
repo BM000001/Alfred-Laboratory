@@ -6,6 +6,7 @@ export interface StudyLearningProgress {
   lessonId: string;
   completedAt: string;
   context: StudyLearningContext;
+  practiceScore?: number;
 }
 
 export interface StudyLearningUnit {

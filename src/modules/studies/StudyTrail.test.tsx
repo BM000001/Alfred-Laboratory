@@ -40,9 +40,9 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
   fireEvent.click(await screen.findByRole('button', { name: /Castelo Conteúdo insuficiente/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Pular etapa' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Voltar à trilha' }));
-  expect(screen.getByText(/0 de 9 etapas concluídas · 1 puladas/)).toBeInTheDocument();
+  expect(await screen.findByText(/0 de 9 etapas concluídas · 1 puladas/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Capítulo'), { target: { value: 'b' } });
-  fireEvent.click(await screen.findByRole('button', { name: /Campo de Alvos Disponível/ }));
+  fireEvent.click(await screen.findByRole('button', { name: /Campo de Alvos Conteúdo insuficiente/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Pular etapa' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
   expect(screen.getByRole('heading', { name: 'Recordar conceitos' })).toBeInTheDocument();
@@ -55,11 +55,11 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
   vi.restoreAllMocks();
 });
 
-it('não exibe trilha sem material e abre a importação ao solicitar', async () => {
+it('exibe as cinco construções sem material e abre a importação ao solicitar', async () => {
   const addMaterial = vi.fn();
   render(<StudyTrail discipline={{ id: 'empty', name: 'Vazia', createdAt: '' }} topics={[]}
     refreshToken={0} onManage={vi.fn()} onMaterials={vi.fn()} onAddMaterial={addMaterial} />);
-  expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  expect(within(await screen.findByRole('list')).getAllByRole('button')).toHaveLength(5);
   fireEvent.click(await screen.findByRole('button', { name: 'Adicionar material' }));
   expect(addMaterial).toHaveBeenCalledWith('');
 });

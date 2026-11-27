@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - ia/studies-2-2-fase-1-1
+      - codex/studies-integration-*
     paths:
       - 'src/**'
       - 'public/**'

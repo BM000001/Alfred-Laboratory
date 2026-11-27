@@ -1,3 +1,4 @@
+import { createEmptyCard, fsrs, Rating } from 'ts-fsrs';
 import type { EntityRepository } from '../../storage/repositories';
 import { normalizeMaterial } from './materialReliability';
 import type { FlashcardRating, StudyFlashcard, CreateFlashcardInput } from './flashcardTypes';
@@ -6,6 +7,8 @@ type Options = { createId?: () => string; now?: () => Date };
 const DAY = 24 * 60 * 60 * 1000;
 const MAX_REVIEW_HISTORY = 200;
 const MAX_INTERVAL_DAYS = 365;
+const scheduler = fsrs({ maximum_interval: MAX_INTERVAL_DAYS, enable_fuzz: false });
+const fsrsGrades = { again: Rating.Again, hard: Rating.Hard, good: Rating.Good, easy: Rating.Easy } as const;
 
 export function createFlashcardService(repository: EntityRepository<StudyFlashcard>, options: Options = {}) {
   const createId = options.createId ?? (() => crypto.randomUUID());
@@ -41,8 +44,13 @@ export function createFlashcardService(repository: EntityRepository<StudyFlashca
         good: Math.min(MAX_INTERVAL_DAYS, previous ? Math.max(3, Math.round(previous * 2)) : 3),
         easy: Math.min(MAX_INTERVAL_DAYS, previous ? Math.max(7, Math.round(previous * 2.5)) : 7),
       };
-      const intervalDays = intervals[rating];
-      const nextReview = new Date(reviewedAt.getTime() + (rating === 'again' ? 10 * 60 * 1000 : intervalDays * DAY));
+      // Keep the schedule of previously reviewed cards without enough FSRS state.
+      const initial = card.fsrsState
+        ? { ...card.fsrsState, due: card.nextReviewAt, last_review: card.lastReviewedAt }
+        : card.reviewCount === 0 ? createEmptyCard(reviewedAt) : undefined;
+      const scheduled = initial ? scheduler.next(initial, reviewedAt, fsrsGrades[rating]).card : undefined;
+      const intervalDays = scheduled?.scheduled_days ?? intervals[rating];
+      const nextReview = scheduled?.due ?? new Date(reviewedAt.getTime() + (rating === 'again' ? 10 * 60 * 1000 : intervalDays * DAY));
       const ratedAt = reviewedAt.toISOString();
       const nextReviewAt = nextReview.toISOString();
       const reviewEvent = { ratedAt, rating, intervalDays, nextReviewAt };
@@ -54,6 +62,10 @@ export function createFlashcardService(repository: EntityRepository<StudyFlashca
         reviewCount: card.reviewCount + 1,
         reviewHistory: [...(card.reviewHistory ?? []), reviewEvent].slice(-MAX_REVIEW_HISTORY),
       };
+      if (scheduled) {
+        const { due: _due, last_review: _lastReview, ...state } = scheduled;
+        updated.fsrsState = state;
+      }
       await repository.save(updated);
       return updated;
     },

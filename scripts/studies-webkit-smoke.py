@@ -116,7 +116,7 @@ def wait_for_server(process: subprocess.Popen) -> None:
 
 def main() -> None:
     server = subprocess.Popen(
-        ["npm", "run", "dev", "--", "--host", "127.0.0.1", "--port", "4173", "--strictPort"],
+        ["npm", "run", "preview", "--", "--host", "127.0.0.1", "--port", "4173", "--strictPort"],
         cwd=ROOT,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
@@ -138,6 +138,18 @@ def main() -> None:
                     page.evaluate(SEED_DATABASE)
                     page.get_by_role("button", name="Aprender", exact=True).click()
                     page.get_by_role("button", name=re.compile("Programação")).click()
+                    page.get_by_role("button", name=re.compile("Laboratório Disponível")).click()
+                    page.get_by_role("button", name="Mapa conceitual").click()
+                    page.locator(".sorting-map svg").wait_for()
+                    page.get_by_role("button", name="História interativa").click()
+                    page.get_by_role("button", name="Trocar os cartões").click()
+                    assert page.get_by_text(re.compile("Como 4 é maior")).is_visible()
+                    page.get_by_role("button", name="Programar com blocos").click()
+                    page.locator(".blocklySvg").wait_for()
+                    page.get_by_role("button", name="Executar blocos").click()
+                    assert page.get_by_text(re.compile("1, 2, 3, 4 · 6 comparações · Ordenado")).is_visible()
+                    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), viewport
+                    page.get_by_role("button", name="Voltar à trilha").click()
                     page.locator('summary[aria-label="Gerenciar matéria"]').click()
                     page.once("dialog", lambda dialog: dialog.accept())
                     page.get_by_role("button", name="Excluir disciplina").click()
@@ -150,6 +162,12 @@ def main() -> None:
                         assert len(data[store]) == 1, (store, viewport)
                     assert data["files"][0]["id"] == "f1", viewport
                     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), viewport
+                    page.wait_for_function("Boolean(navigator.serviceWorker.controller)")
+                    context.set_offline(True)
+                    page.reload(wait_until="domcontentloaded")
+                    page.get_by_role("button", name="Aprender", exact=True).click()
+                    page.get_by_role("button", name=re.compile("Matemática")).wait_for()
+                    context.set_offline(False)
                     print(f"PASS WebKit {viewport['width']}x{viewport['height']}")
                     context.close()
             finally:

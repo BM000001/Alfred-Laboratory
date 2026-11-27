@@ -52,7 +52,8 @@ it('encaminha ao OAuth existente e só oculta o convite após autenticação rea
   fireEvent.click(screen.getByRole('button', { name: 'Hoje' }));
   expect(screen.queryByRole('complementary', { name: 'Convite do Google Calendar' })).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
   fireEvent.click(screen.getByRole('button', { name: 'Conexões de calendário' }));
   fireEvent.click(screen.getByRole('button', { name: 'Desconectar Google' }));
   await screen.findByText('Desconectado');

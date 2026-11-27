@@ -107,6 +107,7 @@ describe('App', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     expect(await screen.findByText('CALENDÁRIO CENTRAL')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
     fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
     fireEvent.click(screen.getByRole('button', { name: 'Conexões de calendário' }));
     expect(screen.getByRole('heading', { name: 'Google Calendar' })).toBeInTheDocument();
@@ -237,6 +238,7 @@ describe('App', () => {
   });
   it('abre as configurações de backup e restauração', async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
     fireEvent.click(screen.getByRole('button', { name: /^configurações$/i }));
     expect(await screen.findByRole('heading', { name: 'Backup local' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Exportar backup JSON' })).toBeInTheDocument();
