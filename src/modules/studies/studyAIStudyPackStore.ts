@@ -27,6 +27,12 @@ export async function saveValidatedAIStudyPack({
   fileId, fileName, disciplineId, topicId, sourceText, pack, signal, onSaved,
 }: SavePackArgs) {
   if (!fileId || !disciplineId || !topicId || !sourceText) throw new Error('Material original indisponível.');
+  signal.throwIfAborted();
+  const original = await fileRepository.getById(fileId);
+  if (!original?.processing || original.disciplineId !== disciplineId || original.processing.topicId !== topicId ||
+      (original.processing.raw && original.processing.raw.text !== sourceText)) {
+    throw new Error('O material ou vínculo da unidade mudou antes de salvar o pacote.');
+  }
   const questionsAdded = await saveValidatedAIStudyQuestions({
     fileId, fileName, disciplineId, topicId, sourceText, questions: pack.questions, signal,
   });

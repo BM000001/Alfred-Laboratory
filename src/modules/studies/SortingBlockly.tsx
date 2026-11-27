@@ -21,6 +21,8 @@ const comparisonBlock = {
 export default function SortingBlockly() {
   const container = useRef<HTMLDivElement>(null);
   const workspace = useRef<Blockly.WorkspaceSvg>(null);
+  const [textVector, setTextVector] = useState('4, 2, 3, 1');
+  const [textPasses, setTextPasses] = useState('4');
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
   const [code, setCode] = useState('');
@@ -53,6 +55,18 @@ export default function SortingBlockly() {
     return () => { observer.disconnect(); editor.dispose(); workspace.current = null; };
   }, []);
 
+  function applyTextFields() {
+    const vector = workspace.current?.getBlocksByType(vectorBlock.type, false)[0];
+    const passes = workspace.current?.getBlocksByType(passesBlock.type, false)[0];
+    if (!vector || !passes) { setError('Restaure os blocos do vetor e das passagens.'); return; }
+    if (!/^[1-8]$/.test(textPasses) || !/^\s*-?\d+\s*(,\s*-?\d+\s*){1,7}$/.test(textVector)) {
+      setError('Informe de 2 a 8 inteiros e de 1 a 8 passagens.'); return;
+    }
+    vector.setFieldValue(textVector, 'VECTOR');
+    passes.setFieldValue(textPasses, 'PASSES');
+    run();
+  }
+
   function run() {
     setResult('');
     setCode('');
@@ -84,6 +98,11 @@ export default function SortingBlockly() {
   return <section className="entry-panel" aria-label="Programação por blocos">
     <p>Edite o vetor e o número de passagens. O interpretador executa somente os três blocos da atividade.</p>
     <div className="sorting-blockly" ref={container} />
+    <details><summary>Editar por teclado</summary>
+      <label>Vetor <input value={textVector} maxLength={48} onChange={e => setTextVector(e.target.value)} /></label>
+      <label>Passagens <input type="number" min={1} max={8} value={textPasses} onChange={e => setTextPasses(e.target.value)} /></label>
+      <button type="button" onClick={applyTextFields}>Aplicar valores aos blocos e executar</button>
+    </details>
     <button type="button" className="primary-action" onClick={run}>Executar blocos</button>
     {error && <p role="alert">{error}</p>}
     {result && <p role="status">{result}</p>}

@@ -48,3 +48,18 @@ export function readVisualLearningDraft(value: unknown, kind: VisualLearningKind
   });
   return { version: 1, kind, frames };
 }
+
+/** Transport is supplied by a future authenticated adapter. No provider is enabled by default. */
+export async function prepareVisualLearningDraft(request: {
+  kind: VisualLearningKind; chunks: StudySourceChunk[]; consent: boolean; signal: AbortSignal;
+}, generate?: (kind: VisualLearningKind, chunks: StudySourceChunk[], signal: AbortSignal) => Promise<unknown>) {
+  const {kind, chunks, consent, signal} = request;
+  signal.throwIfAborted();
+  if (!consent) throw new Error('Autorize o envio dos trechos selecionados.');
+  if (!generate) throw new Error('Provedor indisponível para esta atividade.');
+  if (!chunks.length || chunks.length > 3 || chunks.some(c => !bounded(c.chunkId, 80) || !bounded(c.text, 1200) || c.text.trim().length < 40)
+      || new Set(chunks.map(c => c.chunkId)).size !== chunks.length) throw new Error('Trechos insuficientes ou inválidos.');
+  const result = await generate(kind, chunks, signal);
+  signal.throwIfAborted();
+  return readVisualLearningDraft(result, kind, chunks);
+}

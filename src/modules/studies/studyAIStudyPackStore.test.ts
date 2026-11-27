@@ -40,6 +40,13 @@ describe('study pack persistence', () => {
     expect(file?.processing?.aiLessons?.[0]).toMatchObject({ title: 'HTTP', sourceExcerpt: source });
   });
 
+  it('recusa o pacote inteiro quando a unidade mudou antes da retomada', async () => {
+    await expect(saveValidatedAIStudyPack({ fileId: 'f', fileName: 'aula.txt', disciplineId: 'd', topicId: 'outra',
+      sourceText: source, pack, signal: new AbortController().signal })).rejects.toThrow('vínculo');
+    expect(await studyQuestionRepository.getAll()).toHaveLength(0);
+    expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
+  });
+
   it('does not save lessons lacking literal support from the original source', async () => {
     const invalid = { ...pack, questions: [], flashcards: [], lessons: [{ ...pack.lessons[0], answer: 'Não existe' }] };
     const result = await saveValidatedAIStudyPack({ fileId: 'f', fileName: 'aula.txt', disciplineId: 'd', topicId: 't', sourceText: source, pack: invalid, signal: new AbortController().signal });
