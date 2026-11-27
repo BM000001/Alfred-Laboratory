@@ -59,3 +59,13 @@ describe('remote study pack', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });
+
+it('reports Access reauthentication and never follows a redirect with material', async () => {
+  const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 302 }));
+  await expect(requestAIStudyPack({
+    configuredOrigin: origin, currentOrigin: origin, sourceText: excerpt, consent: true,
+    signal: new AbortController().signal, fetcher: fetcher as unknown as typeof fetch,
+  })).rejects.toThrow('Cloudflare Access');
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0][1]).toMatchObject({ redirect: 'manual', credentials: 'same-origin' });
+});

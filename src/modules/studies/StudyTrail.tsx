@@ -150,13 +150,13 @@ export function StudyTrail({ discipline, topics, refreshToken, onManage, onMater
   const index = nodes.findIndex((n) => n.id === active),
     node = nodes[index];
   useLayoutEffect(() => {
-    if (!active && previous.current) {
+    if (!active && !load && previous.current) {
       const { id, y } = previous.current;
       buttons.current.get(id)?.focus({ preventScroll: true });
       window.scrollTo(0, y);
       previous.current = undefined;
     }
-  }, [active]);
+  }, [active, load]);
   function open(id: string) {
     previous.current = { id, y: window.scrollY };
     select(id);

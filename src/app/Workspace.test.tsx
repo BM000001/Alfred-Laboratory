@@ -10,7 +10,6 @@ describe('Integrated workspaces', () => {
     await projectRepository.save(project);
     await taskRepository.save({ id: 'outside-task', title: 'Tarefa de outro espaço', status: 'pending', priority: 'low', projectId: 'another-project', createdAt: new Date().toISOString() });
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Alfred' }));
     fireEvent.click(screen.getByRole('button', { name: 'Projetos' }));
     fireEvent.click(await screen.findByRole('button', { name: /Projeto de teste do espaço/ }));
     expect(await screen.findByRole('heading', { name: 'Tarefas' })).toBeInTheDocument();
@@ -36,7 +35,7 @@ describe('Integrated workspaces', () => {
     expect(screen.getByLabelText('Conteúdo')).toHaveValue('Documento inicial.');
     const note = (await fileRepository.getAll()).find(file => file.name === 'Decisões do projeto');
     expect(note?.projectId).toBe(project.id);
-  });
+  }, 20000);
   it('keeps theme in settings and guards unsaved notes', async () => {
     await projectRepository.save({ id: 'workspace-project', name: 'Projeto de teste do espaço', status: 'active', createdAt: new Date().toISOString() });
     render(<App />);
@@ -45,7 +44,6 @@ describe('Integrated workspaces', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Escuro' }));
     expect(screen.getByRole('button', { name: 'Escuro' })).toHaveAttribute('aria-pressed', 'true');
     expect(document.documentElement.dataset.theme).toBe('dark');
-    fireEvent.click(screen.getByRole('button', { name: 'Alfred' }));
     fireEvent.click(screen.getByRole('button', { name: 'Projetos' }));
     expect(screen.queryByRole('group', { name: 'Aparência' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: /Projeto de teste do espaço/ }));
@@ -61,5 +59,5 @@ describe('Integrated workspaces', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
     fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
     expect(screen.getByRole('button', { name: 'Escuro' })).toHaveAttribute('aria-pressed', 'true');
-  });
+  }, 20000);
 });

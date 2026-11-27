@@ -100,6 +100,38 @@ export function validateAIStudyQuestions(payload: unknown, chunks: StudySourceCh
   return accepted;
 }
 
+export async function postPrivateStudyRequest(
+  url: string, chunks: StudySourceChunk[], signal: AbortSignal, fetcher: typeof fetch,
+) {
+  let response: Response;
+  try {
+    response = await fetcher(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      redirect: 'manual',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        consent: true, chunks,
+        generation: { count: 3, difficulty: 'medium', goal: 'recordar', kind: 'conceitual' },
+      }),
+      signal,
+    });
+  } catch (cause) {
+    if (signal.aborted) throw cause;
+    throw new Error('Sem conexão com a prévia de IA. O material continua neste dispositivo.');
+  }
+  if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400) ||
+      response.status === 401 || response.status === 403) {
+    throw new Error('O Cloudflare Access requer uma sessão válida. Entre na prévia com a conta permitida.');
+  }
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After');
+    const wait = retryAfter && /^\d{1,6}$/.test(retryAfter) ? ' Aguarde ' + retryAfter + ' s.' : ' Tente mais tarde.';
+    throw new Error('Limite temporário da IA atingido.' + wait);
+  }
+  return response;
+}
+
 export async function requestAIStudyQuestions({
   configuredOrigin, currentOrigin, sourceText, consent, signal, fetcher = fetch,
 }: RequestAIQuestions): Promise<ValidatedAIStudyQuestion[]> {
@@ -109,21 +141,7 @@ export async function requestAIStudyQuestions({
   }
   const chunks = selectAIStudyChunks(sourceText);
   if (!chunks.length) throw new Error('O material não contém trechos suficientes para elaborar questões com segurança.');
-  const response = await fetcher(currentOrigin + '/api/studies/questions', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      consent: true,
-      chunks,
-      generation: { count: 3, difficulty: 'medium', goal: 'recordar', kind: 'conceitual' },
-    }),
-    signal,
-  });
-  if (response.status === 401 || response.status === 403) {
-    throw new Error('Acesso à IA não autorizado. Entre na prévia protegida com a conta permitida.');
-  }
-  if (response.status === 429) throw new Error('Limite temporário da IA atingido. Aguarde antes de tentar novamente.');
+  const response = await postPrivateStudyRequest(currentOrigin + '/api/studies/questions', chunks, signal, fetcher);
   if (!response.ok) throw new Error('A IA não conseguiu preparar as questões agora. O material foi preservado.');
   const payload: unknown = await response.json();
   return validateAIStudyQuestions(payload, chunks);

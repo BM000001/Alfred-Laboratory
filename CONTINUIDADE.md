@@ -108,3 +108,5 @@
 - Próximo passo: CI da PR e revisão visual dos seis espaços em desktop e Safari antes de integrar.
 - Validação local final: `npm test -- --maxWorkers=2` — 41 arquivos, 240 testes aprovados; `npm run build:pages` — aprovado. Uma execução concorrente ao build excedeu o prazo de consultas de dois testes de interface; a execução isolada e a suíte completa com dois workers passaram. A validação oficial da PR será feita pelo GitHub Actions.
 - Checkpoint local: `470f386055255e0b72463a010f4e3ea25ed30f43`. Push bloqueado pela revisão automática: exige autorização explícita para transmitir o código a BM000001/Alfred. Não há PR nem publicação desta implementação. Patch completo preservado em `/workspace/alfred-workspace-design.patch`; retomar pelo push da branch após autorização. Não apagar o checkout antes de confirmar o envio.
+
+- Candidata de Estudos e handoff: [checkpoint de integração](docs/STUDIES_INTEGRATION_CHECKPOINT.md).

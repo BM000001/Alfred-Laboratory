@@ -23,7 +23,7 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   fireEvent.change(screen.getByLabelText('Nome da unidade'), { target: { value: 'Orientação a objetos' } });
   fireEvent.click(screen.getByRole('button', { name: 'Salvar unidade' }));
   const [discipline] = await disciplineRepository.getAll();
-  await screen.findByRole('button', { name: 'Materiais de Orientação a objetos' });
+  await screen.findByRole('button', { name: 'Materiais de Orientação a objetos' }, { timeout: 5000 });
   const [unit] = await studyTopicRepository.getAll();
   await studyQuestionRepository.save({
     id: 'unassigned', disciplineId: discipline.id, prompt: 'Questão sem unidade',
@@ -116,4 +116,4 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   fireEvent.click(await screen.findByText('Revisar respostas e explicações'));
   expect(await screen.findByText(`1. ${prompt}`)).toBeInTheDocument();
   expect(await screen.findByText(`Correta: ${question.options[question.correctOptionIndex]}`)).toBeInTheDocument();
-});
+}, 20000);

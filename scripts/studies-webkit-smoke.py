@@ -1,4 +1,4 @@
-"""WebKit regression smoke test for deleting an Alfred Studies discipline."""
+"""WebKit smoke test for learning tools, local persistence and the offline shell."""
 
 from pathlib import Path
 import re
@@ -16,6 +16,7 @@ VIEWPORTS = [
     {"width": 320, "height": 568, "touch": True},
     {"width": 390, "height": 844, "touch": True},
     {"width": 768, "height": 1024, "touch": False},
+    {"width": 1280, "height": 800, "touch": False},
 ]
 
 
@@ -116,7 +117,7 @@ def wait_for_server(process: subprocess.Popen) -> None:
 
 def main() -> None:
     server = subprocess.Popen(
-        ["npm", "run", "preview", "--", "--host", "127.0.0.1", "--port", "4173", "--strictPort"],
+        ["node", "node_modules/vite/bin/vite.js", "preview", "--host", "127.0.0.1", "--port", "4173", "--strictPort"],
         cwd=ROOT,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
@@ -162,6 +163,8 @@ def main() -> None:
                         assert len(data[store]) == 1, (store, viewport)
                     assert data["files"][0]["id"] == "f1", viewport
                     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), viewport
+                    page.evaluate("async () => { await navigator.serviceWorker.ready; }")
+                    page.reload(wait_until="domcontentloaded")
                     page.wait_for_function("Boolean(navigator.serviceWorker.controller)")
                     context.set_offline(True)
                     page.reload(wait_until="domcontentloaded")

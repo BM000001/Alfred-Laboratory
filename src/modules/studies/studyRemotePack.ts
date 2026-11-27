@@ -1,5 +1,5 @@
 import {
-  isSameOriginAIAvailable, requestAIStudyQuestions, selectAIStudyChunks, validateAIStudyQuestions,
+  isSameOriginAIAvailable, postPrivateStudyRequest, requestAIStudyQuestions, selectAIStudyChunks, validateAIStudyQuestions,
   type StudySourceChunk, type ValidatedAIStudyQuestion,
 } from './studyRemoteQuestions';
 
@@ -87,23 +87,12 @@ export async function requestAIStudyPack(args: {
   }
   const chunks = selectAIStudyChunks(sourceText);
   if (!chunks.length) throw new Error('Material insuficiente para gerar conteúdos com IA.');
-  const response = await fetcher(currentOrigin + '/api/studies/prepare', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      consent: true, chunks,
-      generation: { count: 3, difficulty: 'medium', goal: 'recordar', kind: 'conceitual' },
-    }),
-    signal,
-  });
+  const response = await postPrivateStudyRequest(currentOrigin + '/api/studies/prepare', chunks, signal, fetcher);
   // Older private Worker versions only expose the questions endpoint.
   if (response.status === 404) {
     const questions = await requestAIStudyQuestions(args);
     return { questions, lessons: [], flashcards: [] };
   }
-  if (response.status === 401 || response.status === 403) throw new Error('Cloudflare Access não autorizou a geração.');
-  if (response.status === 429) throw new Error('Limite temporário da IA atingido. Tente mais tarde.');
   if (!response.ok) throw new Error('A IA não conseguiu preparar as atividades. O original continua salvo.');
   const data: unknown = await response.json();
   return validateAIStudyPack(data, chunks);
