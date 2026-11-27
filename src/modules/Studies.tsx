@@ -136,10 +136,18 @@ export function Studies({ initialUnit, onActions, onDisciplineOpenChange }: { in
     setSaving(true); setFormError('');
     try {
       const input = { title: topicTitle, notes: topicNotes };
-      if (editingTopicId) await studies.updateTopic(editingTopicId, input);
-      else await studies.createTopic({ disciplineId: selectedDiscipline, ...input });
-      setManage(true);setStudyView('conteudos');
-      setTopicTitle(''); setTopicNotes(''); setEditingTopicId(null); setShowTopicForm(false); await refresh();
+      const saved = editingTopicId
+        ? await studies.updateTopic(editingTopicId, input)
+        : await studies.createTopic({ disciplineId: selectedDiscipline, ...input });
+      setTopics(current => editingTopicId
+        ? current.map(topic => topic.id === saved.id ? saved : topic)
+        : [...current, saved]);
+      setManage(true);
+      setStudyView('conteudos');
+      setTopicTitle('');
+      setTopicNotes('');
+      setEditingTopicId(null);
+      setShowTopicForm(false);
     } catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Não foi possível salvar o conteúdo.'); }
     finally { setSaving(false); }
   }

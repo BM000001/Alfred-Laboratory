@@ -72,6 +72,11 @@ self.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cache = await caches.open(isOcrAsset ? OCR_CACHE : APP_CACHE);
     const cached = await cache.match(request);
+    // WebKit can abort an offline navigation before a rejected network fetch falls back.
+    if (request.mode === 'navigate' && self.navigator?.onLine === false) {
+      const shell = await cache.match(new URL('index.html', scope).href);
+      if (shell) return shell;
+    }
 
     if (isOcrAsset && cached) return cached;
 

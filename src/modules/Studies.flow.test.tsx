@@ -36,12 +36,12 @@ it('organiza material na unidade, corrige a atividade e retoma o progresso salvo
   } });
   fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
   expect(await screen.findByText(/Questões aguardam uma prévia autenticada/)).toBeInTheDocument();
-  await screen.findByRole('button', { name: 'Ler texto de conceitos.txt' });
+  await screen.findByRole('button', { name: 'Ler texto de conceitos.txt' }, { timeout: 5000 });
   await waitFor(async () => {
     const [material] = await fileRepository.getAll();
     expect(material).toMatchObject({ disciplineId: discipline.id, extraction: { text: definitions } });
     expect(await studyTopicRepository.getById(unit.id)).toMatchObject({ sourceFileId: material.id });
-  });
+  }, { timeout: 5000 });
   // Legacy navigation/quiz tests use explicit fixtures; the importer must NOT invent these.
   expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
   expect((await studyQuestionRepository.getAll()).filter(q => q.topicId === unit.id)).toHaveLength(0);

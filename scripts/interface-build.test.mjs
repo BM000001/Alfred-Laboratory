@@ -10,6 +10,7 @@ test('versions only the shell and validates its assets before activating', async
   const listeners = new Map();
   const writes = [];
   const deleted = [];
+  const connection = { onLine: true };
   const staticAsset = base + 'assets/app-AbCd1234.js';
   let network = true;
   let servedBuild = '0000000000000000';
@@ -29,7 +30,7 @@ test('versions only the shell and validates its assets before activating', async
   };
   vm.runInNewContext(worker, {
     URL, Request, Response,
-    self: { registration: { scope: base }, addEventListener: (type, handler) => listeners.set(type, handler),
+    self: { navigator: connection, registration: { scope: base }, addEventListener: (type, handler) => listeners.set(type, handler),
       clients: { claim: async () => {} } },
     caches: { open: async (name) => {
       assert.equal(name, 'laboratory-alfred-app-shell-v3-' + build);
@@ -62,6 +63,9 @@ test('versions only the shell and validates its assets before activating', async
   network = false;
   const offline = await run('fetch', { request: { method: 'GET', url: base + '?offline', mode: 'navigate' } });
   assert.match(await offline.text(), new RegExp(build));
+  connection.onLine = false;
+  const cachedNavigation = await run('fetch', { request: { method: 'GET', url: base, mode: 'navigate' } });
+  assert.match(await cachedNavigation.text(), new RegExp(build));
   const module = await run('fetch', { request: { method: 'GET', url: staticAsset, mode: 'cors' } });
   assert.equal(await module.text(), 'cached module');
 });
@@ -88,7 +92,13 @@ test('contraste de texto, botões e controles atende os limites nos dois temas',
       .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
     return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
   }
-  const tokens = (rules) => Object.fromEntries([...rules.matchAll(/--([\w-]+): #([0-9a-f]{6});/g)].map(([, name, rgb]) => [name, rgb]));
+  const tokens = (rules) => Object.fromEntries([...rules.matchAll(/--([\w-]+): (#(?:[0-9a-f]{6})|var\(--[\w-]+\));/gi)]
+    .map(([, name, value]) => [name, value]));
+  function color(theme, token) {
+    const value = theme[token];
+    assert.ok(value, 'Token ausente: ' + token);
+    return value.startsWith('#') ? value.slice(1) : color(theme, value.slice(6, -1));
+  }
   const [light, dark] = css.split('* { box-sizing')[0].split(':root[data-theme=dark]');
   for (const theme of [tokens(light), { ...tokens(light), ...tokens(dark) }]) {
     for (const [foreground, background, minimum] of [
@@ -98,7 +108,7 @@ test('contraste de texto, botões e controles atende os limites nos dois temas',
       ['accent', 'surface-raised', 4.5], ['danger', 'surface', 4.5], ['danger', 'danger-wash', 4.5],
       ['success', 'success-wash', 4.5], ['control-edge', 'surface', 3],
     ]) {
-      const values = [luminance(theme[foreground]), luminance(theme[background])].sort((a, b) => a - b);
+      const values = [luminance(color(theme, foreground)), luminance(color(theme, background))].sort((a, b) => a - b);
       const ratio = (values[1] + .05) / (values[0] + .05);
       assert.ok(ratio >= minimum, `${foreground}/${background}: ${ratio.toFixed(2)} < ${minimum}`);
     }
