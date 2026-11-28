@@ -1,3 +1,4 @@
+import brandImage from '../../public/brand/alfred-mascot.svg?inline';
 export type AlfredMood = 'idle' | 'thinking' | 'curious' | 'warning' | 'success';
 
 const moodLabels: Record<AlfredMood, string> = {
@@ -16,7 +17,7 @@ export function AlfredMascot({ mood = 'idle', compact = false }: { mood?: Alfred
       aria-label={`Alfred: ${moodLabels[mood]}`}
     >
       <span className="alfred-mascot-aura" aria-hidden="true" />
-      <img src={`${import.meta.env.BASE_URL}brand/alfred-mascot.svg`} alt="" />
+      <img src={brandImage} alt="" />
       <span className="alfred-mascot-status" aria-hidden="true" />
     </div>
   );

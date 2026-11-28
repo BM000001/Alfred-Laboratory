@@ -10,6 +10,10 @@ Dependências diretas de runtime incluídas no Alfred-Laboratory. Licenças cons
 | tesseract.js | OCR local opcional no navegador | 7.0.0 | Apache-2.0 |
 | tesseract.js-core | Núcleo WebAssembly do OCR | 7.0.0 | Apache-2.0 |
 | @tesseract.js-data/por | Modelo português para OCR offline | 1.0.0 | MIT |
+| blockly | Editor local de programação por blocos | 13.3.0 | Apache-2.0 |
+| @markmap/parse, @markmap/view | Mapa conceitual local | 1.1.1 | MIT |
+| inkjs | História interativa local | 2.4.0 | MIT |
+| ts-fsrs | Agendamento local de novas revisões | 6.0.1 | MIT |
 | fflate | Leitura local dos pacotes ZIP OOXML DOCX/PPTX | 0.8.3 | MIT |
 
 PDFs, DOCX, PPTX e texto são processados no navegador. A extração, a geração local de recursos e os materiais não são enviados a provedores externos. O OCR utiliza assets locais do próprio Alfred e só começa mediante ação explícita na área Arquivos.

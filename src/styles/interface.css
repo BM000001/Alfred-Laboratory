@@ -1,21 +1,26 @@
 .alfred-shell { min-block-size: 100dvh; }
 .masthead {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-  padding: max(.25rem, env(safe-area-inset-top)) max(var(--space), env(safe-area-inset-right)) .25rem max(var(--space), env(safe-area-inset-left));
+  display: grid; grid-template-columns: 1fr auto; align-items: center;
+  padding: max(.45rem, env(safe-area-inset-top)) max(var(--space), env(safe-area-inset-right)) .45rem max(var(--space), env(safe-area-inset-left));
   border-block-end: 1px solid var(--edge); background: var(--surface);
 }
 @media (min-width: 721px) {
-  .masthead { position: sticky; inset-block-start: 0; z-index: 4; }
-  html { scroll-padding-block-start: calc(4rem + env(safe-area-inset-top)); }
+  .alfred-shell { display: grid; grid-template-columns: clamp(10rem, 18vw, 15rem) minmax(0, 1fr); }
+  .masthead { position: sticky; inset-block-start: 0; align-self: start; min-block-size: 100dvh;
+    grid-template-columns: minmax(0, 1fr); align-content: start; gap: 1.5rem; padding-block: 1.5rem;
+    border-block-end: 0; border-inline-end: 1px solid var(--edge); }
+  .masthead .primary-navigation { flex-direction: column; align-items: stretch; }
+  .page { inline-size: 100%; }
 }
 .wordmark { justify-self: start; display: inline-flex; align-items: center; gap: .6rem; color: var(--ink); text-decoration: none; font: 1.7rem/1 var(--display-font); letter-spacing: -.055em; }
 .wordmark img { inline-size: 1.6rem; }
-.settings-launcher { justify-self: end; display: grid; place-items: center; aspect-ratio: 1; }
+.shell-actions { display: flex; gap: .4rem; }
+.shell-actions button { min-inline-size: 44px; }
 .nav-icon { width: 1.25rem; height: 1.25rem; flex: none; vertical-align: middle; }
 .primary-navigation { display: flex; align-items: center; gap: .3rem; }
 .primary-navigation button { display: flex; align-items: center; gap: .55rem; border-color: transparent; font-size: .875rem; }
-.primary-navigation .create-launcher { background: var(--action); color: var(--on-action); }
-.primary-navigation .create-launcher:hover { background: var(--accent); color: var(--canvas); }
+.shell-actions .create-launcher { background: var(--action); color: var(--on-action); }
+.shell-actions .create-launcher:hover { background: var(--on-action); color: var(--action); border-color: var(--action); }
 .page { max-inline-size: 78rem; margin-inline: auto; padding: clamp(1.25rem, 4vw, 3rem) max(var(--space), env(safe-area-inset-right)) 3rem max(var(--space), env(safe-area-inset-left)); overflow-wrap: anywhere; }
 .page:focus { outline: none; }
 .page-heading { padding-block-end: var(--space); border-block-end: 1px solid var(--edge); margin-block-end: var(--space); }
@@ -152,13 +157,13 @@
 fieldset { min-inline-size: 0; border: 1px solid var(--edge); border-radius: var(--small-radius); }
 @media (max-width: 720px) {
   .masthead { grid-template-columns: 1fr auto; }
-  .primary-navigation { z-index: 3; position: fixed; inset: auto 0 0; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,.85fr) minmax(0,1.3fr) minmax(0,1fr); gap: 0; border-block-start: 1px solid var(--edge); background: var(--surface); padding: .35rem env(safe-area-inset-right) calc(.35rem + env(safe-area-inset-bottom)) env(safe-area-inset-left); }
+  .primary-navigation { z-index: 3; position: fixed; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; border-block-start: 1px solid var(--edge); background: var(--surface); padding: .35rem env(safe-area-inset-right) calc(.35rem + env(safe-area-inset-bottom)) env(safe-area-inset-left); }
   .primary-navigation button { flex-direction: column; justify-content: center; gap: .18rem; border-radius: .5rem; padding: .3rem .1rem; min-block-size: 48px; font-size: clamp(.65rem, 2.6vw, .78rem); line-height: 1.2; }
   .primary-navigation button span { max-inline-size: 100%; overflow-wrap: anywhere; }
   .workspace-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); }
   .workspace-tabs button { min-inline-size: 0; padding-inline: .5rem; }
   .page-heading h1 { font-size: clamp(2.35rem, 10vw, 4.375rem); }
-  .primary-navigation .create-launcher { margin-inline: auto; inline-size: 44px; }
+  .shell-actions .create-launcher { margin-inline: auto; inline-size: 44px; }
   .page { padding-block-end: calc(5rem + env(safe-area-inset-bottom)); }
   html { scroll-padding-block-end: calc(4rem + env(safe-area-inset-bottom)); }
   :is(input,textarea,select) { font-size: 1rem; scroll-margin-bottom: 6rem; }
@@ -293,6 +298,16 @@ button.calendar-day { display: grid; align-content: start; text-align: start; mi
 .study-learning-body pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .study-learning-body blockquote { margin: .45rem 0; padding-inline-start: .65rem; border-inline-start: 2px solid var(--edge); }
 .study-learning-body summary, .study-material-result button { min-block-size: 44px; padding-block: .55rem; }
+.study-visual-lesson { display: grid; gap: .75rem; min-inline-size: 0; }
+.study-visual-lesson .study-quiz-progress { align-items: center; }
+.study-visual-lesson progress { inline-size: min(100%, 15rem); block-size: .5rem; }
+.study-visual-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: .4rem; }
+.study-visual-steps button { min-block-size: 44px; padding: .5rem; border: 1px solid var(--edge); border-radius: var(--small-radius); background: var(--surface); color: var(--ink); text-align: start; }
+.study-visual-steps button[aria-current="step"] { border-color: var(--accent); background: var(--accent-wash); }
+.study-visual-stage { min-inline-size: 0; padding: clamp(.8rem, 3vw, 1.1rem); border: 1px solid var(--edge); border-radius: var(--radius); background: var(--surface-raised); }
+.study-visual-stage h5 { margin-block: .5rem; }
+.study-visual-stage p, .study-visual-stage blockquote { overflow-wrap: anywhere; white-space: pre-wrap; }
+.study-visual-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; }
 .study-material-result > strong, .study-material-result > span { display: block; overflow-wrap: anywhere; }
 .study-material-result > span { margin-block-start: .25rem; color: var(--muted); }
 .study-material-result button { display: block; max-inline-size: 100%; text-align: start; overflow-wrap: anywhere; }

@@ -12,8 +12,8 @@ it('abre os formulários existentes pelo + e mantém a tarefa ao remontar', asyn
   });
   const view = render(<App />);
   const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
-  expect(within(nav).getAllByRole('button').map((button) => button.textContent)).toEqual(['Hoje', 'Aprender', '+', 'Organização', 'Alfred']);
-  fireEvent.click(within(nav).getByRole('button', { name: 'Criar' }));
+  expect(within(nav).getAllByRole('button').map((button) => button.textContent)).toEqual(['Hoje', 'Aprender', 'Organização', 'Alfred', 'Projetos']);
+  fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
   expect(show).toHaveBeenCalledOnce();
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Nova tarefa' }));
   const title = await screen.findByLabelText('Título');
@@ -21,7 +21,7 @@ it('abre os formulários existentes pelo + e mantém a tarefa ao remontar', asyn
   fireEvent.change(title, { target: { value: 'Tarefa do atalho' } });
   fireEvent.click(screen.getByRole('button', { name: 'Salvar tarefa' }));
   await screen.findByText('Alterações salvas.');
-  fireEvent.click(within(nav).getByRole('button', { name: 'Criar' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Criar' }));
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Novo compromisso' }));
   expect(screen.getByRole('button', { name: 'Salvar compromisso' })).toBeInTheDocument();
   view.unmount();
@@ -40,7 +40,8 @@ it('respeita a preferência automática do sistema e persiste a ocultação do m
   system.matches = false;
   change();
   expect(document.documentElement.dataset.theme).toBe('light');
-  fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
   fireEvent.click(screen.getByRole('checkbox', { name: 'Mostrar mascote Alfred' }));
   view.unmount();
   render(<App />);

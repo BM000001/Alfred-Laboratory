@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:alfred:learning-content:1.0.0",
+  "title": "Alfred Learning Content 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "id", "title", "language", "objectives", "explanations", "conceptMap", "interactions", "visuals", "completion", "references", "metadata"],
+  "properties": {
+    "format": { "const": "alfred.learning-content" },
+    "version": { "const": "1.0.0" },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "language": { "type": "string", "minLength": 2 },
+    "objectives": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/objective" } },
+    "explanations": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["id", "body"], "properties": { "id": { "type": "string", "minLength": 1 }, "body": { "type": "string", "minLength": 1 } }, "additionalProperties": false } },
+    "conceptMap": { "type": "object", "required": ["rootId", "nodes", "relations"], "properties": { "rootId": { "type": "string" }, "nodes": { "type": "array", "minItems": 2, "items": { "type": "object", "required": ["id", "label", "explanationId"], "properties": { "id": { "type": "string" }, "label": { "type": "string" }, "parentId": { "type": "string" }, "explanationId": { "type": "string" } }, "additionalProperties": false } }, "relations": { "type": "array", "items": { "type": "object", "required": ["from", "to", "label"], "properties": { "from": { "type": "string" }, "to": { "type": "string" }, "label": { "type": "string" } }, "additionalProperties": false } } }, "additionalProperties": false },
+    "interactions": { "type": "array", "items": { "$ref": "#/$defs/interaction" } },
+    "visuals": { "type": "array", "items": { "type": "object", "required": ["id", "kind", "alt"], "properties": { "id": { "type": "string", "minLength": 1 }, "kind": { "enum": ["svg", "local-image", "diagram"] }, "src": { "type": "string" }, "alt": { "type": "string", "minLength": 1 } }, "additionalProperties": false } },
+    "completion": { "type": "object", "required": ["id", "rules"], "properties": { "id": { "type": "string", "minLength": 1 }, "rules": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rule" } } }, "additionalProperties": false },
+    "references": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["kind", "label"], "properties": { "kind": { "type": "string", "minLength": 1 }, "label": { "type": "string", "minLength": 1 }, "author": { "type": "string" }, "title": { "type": "string" }, "url": { "type": "string" }, "pages": { "type": "string" }, "excerpt": { "type": "string" } }, "additionalProperties": true } },
+    "metadata": { "type": "object" }
+  },
+  "$defs": {
+    "objective": { "type": "object", "required": ["id", "description"], "properties": { "id": { "type": "string", "minLength": 1 }, "description": { "type": "string", "minLength": 1 } }, "additionalProperties": false },
+    "interaction": { "type": "object", "required": ["id", "type", "objectiveId"], "properties": { "id": { "type": "string", "minLength": 1 }, "type": { "enum": ["choice", "predict", "manipulate", "sequence"] }, "objectiveId": { "type": "string", "minLength": 1 }, "prompt": { "type": "string" }, "options": { "type": "array", "minItems": 2, "items": { "type": "object", "required": ["id", "label"], "properties": { "id": { "type": "string" }, "label": { "type": "string" } }, "additionalProperties": false } }, "answerId": { "type": "string" }, "feedbackCorrect": { "type": "string" }, "feedbackIncorrect": { "type": "string" } }, "additionalProperties": false, "allOf": [{ "if": { "properties": { "type": { "const": "choice" } } }, "then": { "required": ["prompt", "options", "answerId", "feedbackCorrect", "feedbackIncorrect"] } }] },
+    "rule": { "oneOf": [{ "type": "object", "required": ["type"], "properties": { "type": { "const": "all-questions-correct" } }, "additionalProperties": false }, { "type": "object", "required": ["type", "value"], "properties": { "type": { "const": "minimum-correct" }, "value": { "type": "integer", "minimum": 1 } }, "additionalProperties": false }, { "type": "object", "required": ["type"], "properties": { "type": { "const": "sorted-vector" } }, "additionalProperties": false }] }
+  }
+}

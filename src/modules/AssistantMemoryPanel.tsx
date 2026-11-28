@@ -8,7 +8,14 @@ export function AssistantMemoryPanel() {
  const [editingId,setEditingId]=useState<string|null>(null); const [title,setTitle]=useState(''); const [content,setContent]=useState('');
  const [category,setCategory]=useState<MemoryCategory>('preference'); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [feedback,setFeedback]=useState('');
  async function refresh(){ setMemories(await listMemories(memoryRepository)); }
- useEffect(()=>{ void refresh().catch(()=>setError('Não foi possível carregar as memórias locais.')); },[]);
+ useEffect(() => {
+   let active = true;
+   void listMemories(memoryRepository).then(
+     items => { if (active) setMemories(items); },
+     () => { if (active) setError('Não foi possível carregar as memórias locais.'); },
+   );
+   return () => { active = false; };
+ }, []);
  function reset(){setEditingId(null);setTitle('');setContent('');setCategory('preference');}
  async function save(event:FormEvent<HTMLFormElement>){event.preventDefault();if(busy)return;setBusy(true);setError('');setFeedback('');
   try{const input={title,content,category};if(editingId)await updateMemory(memoryRepository,editingId,input);else await createMemory(memoryRepository,input);await refresh();setFeedback(editingId?'Memória atualizada.':'Memória salva neste dispositivo.');reset();}

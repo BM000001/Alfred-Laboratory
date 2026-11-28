@@ -1,3 +1,5 @@
+import type { Card } from 'ts-fsrs';
+
 export type FlashcardRating = 'again' | 'hard' | 'good' | 'easy';
 
 export interface FlashcardReviewEvent {
@@ -17,6 +19,7 @@ export interface StudyFlashcard {
   nextReviewAt: string;
   intervalDays: number;
   reviewCount: number;
+  fsrsState?: Omit<Card, 'due' | 'last_review'>;
   /** Bounded event history. Optional so cards saved by older Alfred versions remain readable. */
   reviewHistory?: FlashcardReviewEvent[];
   topicId?: string;

@@ -110,3 +110,35 @@
 .trail-course::before {
   width: calc(100% - 1.15rem);
 }
+
+.sorting-vector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sorting-vector li {
+  min-inline-size: 2.75rem;
+  padding: .5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--control-edge);
+  border-radius: var(--small-radius);
+}
+.sorting-vector li.compared {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  font-weight: 700;
+}
+.sorting-map { margin: 0; }
+.sorting-map svg { display: block; inline-size: 100%; block-size: 16rem; }
+.sorting-map svg foreignObject { color: var(--ink); }
+.sorting-blockly { block-size: 21rem; min-inline-size: 0; position: relative; }
+.sorting-code { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.study-lesson-map ul { list-style: none; margin-inline-start: 1rem; border-inline-start: 2px solid var(--edge); padding-inline-start: 1rem; }
+.study-lesson-map li { margin-block: .35rem; }
+.study-lesson-map button { min-height: 44px; }
+.study-visual-stage textarea { display: block; width: 100%; min-height: 5rem; }

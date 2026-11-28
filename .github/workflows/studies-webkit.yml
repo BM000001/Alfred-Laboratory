@@ -1,0 +1,44 @@
+name: Studies WebKit mobile regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/**'
+      - 'src/styles/**'
+      - 'src/modules/Studies.tsx'
+      - 'src/modules/studies/**'
+      - 'src/storage/studyCleanup.ts'
+      - 'scripts/studies-webkit-smoke.py'
+      - '.github/workflows/studies-webkit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studies-webkit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  webkit-mobile-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install application dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Playwright WebKit and system dependencies
+        run: |
+          python -m pip install playwright==1.65.1
+          python -m playwright install --with-deps webkit
+      - name: Build offline production shell
+        run: npm run build
+      - name: Verify learning tools, IndexedDB and offline reload in WebKit
+        run: python scripts/studies-webkit-smoke.py

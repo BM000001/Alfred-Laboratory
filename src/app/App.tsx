@@ -1,3 +1,5 @@
+import { PrivateStudiesSession } from '../modules/studies/PrivateStudiesSession';
+import brandImage from '../../public/brand/alfred-mark.svg?inline';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Agenda } from '../modules/Agenda';
 import { AgendaEditor } from '../modules/AgendaEditor';
@@ -14,9 +16,10 @@ import { AssistantMemoryPanel } from '../modules/AssistantMemoryPanel';
 import { ManualExportPanel } from '../modules/ManualExportPanel';
 import { EditDialog } from '../components/EditDialog';
 import { ProjectEditor, TaskEditor } from '../modules/RecordEditors';
+import { isSameOriginAIAvailable } from '../modules/studies/studyRemoteQuestions';
 import { getAlfredLocalStorageKey } from '../storage/namespace';
 
-type Page = 'inicio' | 'estudos' | 'organizacao' | 'assistente' | 'configuracoes';
+type Page = 'inicio' | 'estudos' | 'organizacao' | 'assistente' | 'projetos' | 'notas' | 'arquivos' | 'ia' | 'configuracoes';
 type Editor = { kind: ProjectCreation | 'appointment' | 'account'; projectId?: string };
 type IconName = 'home' | 'sparkles' | 'check' | 'book' | 'calendar' | 'layers' | 'folder' | 'chart' | 'settings' | 'plus';
 type Theme = 'system' | 'light' | 'dark';
@@ -28,13 +31,16 @@ const nameKey = getAlfredLocalStorageKey('account-name');
 const navigation = [
   { id: 'inicio', label: 'Hoje', icon: 'home' },
   { id: 'estudos', label: 'Aprender', icon: 'book' },
-  { id: 'create', label: '+', icon: 'plus' },
   { id: 'organizacao', label: 'Organização', icon: 'layers' },
   { id: 'assistente', label: 'Alfred', icon: 'sparkles' },
+  { id: 'projetos', label: 'Projetos', icon: 'folder' },
 ] as const;
-const pages: Record<Exclude<Page, 'inicio' | 'assistente'>, [string, string]> = {
+const pages: Record<Exclude<Page, 'inicio' | 'assistente' | 'projetos'>, [string, string]> = {
   estudos: ['Aprender', 'Disciplinas, materiais e prática por unidade.'],
   organizacao: ['Organização', ''],
+  notas: ['Notas', ''],
+  arquivos: ['Arquivos', ''],
+  ia: ['Central de IA', ''],
   configuracoes: ['Configurações', 'Aparência, privacidade e seus dados.'],
 };
 
@@ -63,7 +69,9 @@ function Icon({ name }: { name: IconName }) {
 function App() {
   const [page, setPage] = useState<Page>('inicio');
   const [studyStart, setStudyStart] = useState<StudyStart>();
+  const [studyDisciplineOpen, setStudyDisciplineOpen] = useState(false);
   const [editor, setEditor] = useState<Editor>();
+  const [more, setMore] = useState(false);
   const [menu, setMenu] = useState<StudyAction[]>();
   const [revision, setRevision] = useState(0);
   const [status, setStatus] = useState('');
@@ -106,12 +114,14 @@ function App() {
 
   function navigate(target: Page, context?: { study?: StudyStart; calendarDate?: string; settings?: 'google' | 'weather' }) {
     setPage(target);
+    if (target !== 'estudos') setStudyDisciplineOpen(false);
     setStudyStart(context?.study);
     setCalendarStart(context?.calendarDate);
     setSettingsTarget(context?.settings);
     setCalendarSetup(context?.settings === 'google');
     setStatus('');
     setMenu(undefined);
+    setMore(false);
     content.current?.focus({ preventScroll: true });
     document.documentElement.scrollTop = 0;
   }
@@ -119,7 +129,9 @@ function App() {
   function createMenu() {
     setStatus('');
     if (page === 'estudos') setMenu(studyActions.current);
-    else if (page === 'assistente') setMenu(assistantActions.current);
+    else if (page === 'assistente' || page === 'projetos') setMenu(assistantActions.current);
+    else if (page === 'notas') setEditor({ kind: 'note' });
+    else if (page === 'arquivos') setEditor({ kind: 'file' });
     else if (page === 'inicio' || page === 'organizacao') {
       const task = { label: 'Nova tarefa', run: () => setEditor({ kind: 'task' }) };
       const appointment = { label: 'Novo compromisso', run: () => setEditor({ kind: 'appointment' }) };
@@ -145,17 +157,17 @@ function App() {
     <header className="masthead">
       <a className="wordmark" href={import.meta.env.BASE_URL} aria-label="Alfred, início"
         onClick={(event) => { event.preventDefault(); navigate('inicio'); }}>
-        <img src={`${import.meta.env.BASE_URL}brand/alfred-mark.svg`} alt="" /><span>alfred</span>
+        <img src={`${import.meta.env.BASE_URL}brand/alfred-mark.svg`} onError={event => { event.currentTarget.onerror = null; if (event.currentTarget.src !== brandImage) event.currentTarget.src = brandImage; }} alt="" /><span>alfred</span>
       </a>
       <nav className="primary-navigation" aria-label="Navegação principal">
-        {navigation.map(({ id, label, icon }) => id === 'create'
-          ? <button key={id} type="button" className="create-launcher" aria-label="Criar"
-              aria-haspopup="dialog" disabled={page === 'configuracoes'} onClick={createMenu}><Icon name={icon} /><span className="sr-only">{label}</span></button>
-          : <button key={id} type="button" aria-current={page === id ? 'page' : undefined}
-              onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span></button>)}
+        {navigation.map(({ id, label, icon }) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined}
+          onClick={() => navigate(id)}><Icon name={icon} /><span>{label}</span></button>)}
       </nav>
-      <button type="button" className="settings-launcher" aria-label="Configurações"
-        aria-current={page === 'configuracoes' ? 'page' : undefined} onClick={() => navigate('configuracoes')}><Icon name="settings" /></button>
+      <div className="shell-actions">
+        <button type="button" className="create-launcher" aria-label="Criar" aria-haspopup="dialog"
+          disabled={page === 'configuracoes' || page === 'ia'} onClick={createMenu}><Icon name="plus" /></button>
+        <button type="button" aria-haspopup="dialog" onClick={() => setMore(true)}>Mais</button>
+      </div>
     </header>
     <main id="main-content" className={`page page-${page}`} tabIndex={-1} ref={content}>
       {status && <p className="save-notice" role="status">{status}</p>}
@@ -167,11 +179,22 @@ function App() {
           connect: () => navigate('configuracoes', { settings: 'google' }),
           dismiss: () => { setInviteDismissed(true); remember(googleInviteKey, 'true'); },
         }} revision={revision} />}
-      {page !== 'inicio' && page !== 'assistente' && <header className="page-heading">
+      {page !== 'inicio' && page !== 'assistente' && page !== 'projetos' && !(page === 'estudos' && studyDisciplineOpen) && <header className="page-heading">
         <h1>{pages[page][0]}</h1>{pages[page][1] && <p>{pages[page][1]}</p>}
       </header>}
-      {page === 'estudos' && <Studies initialUnit={studyStart} onActions={(list) => { studyActions.current = list; }} />}
-      {page === 'assistente' && <AlfredWorkspace showMascot={!mascotHidden} revision={revision}
+      {page === 'estudos' && <PrivateStudiesSession build={build} />}
+      {page === 'estudos' && <Studies initialUnit={studyStart} onActions={(list) => { studyActions.current = list; }} onDisciplineOpenChange={setStudyDisciplineOpen} />}
+      {page === 'notas' && <Notes revision={revision} />}
+      {page === 'ia' && <section className="entry-panel" aria-labelledby="studies-ai-title">
+        <h2 id="studies-ai-title">Preparação de Estudos</h2>
+        <p>{isSameOriginAIAvailable(import.meta.env.VITE_STUDIES_AI_ORIGIN, window.location.origin)
+          ? 'Origem configurada. A preparação depende da sessão de acesso e do serviço de IA.'
+          : 'A geração remota requer a prévia HTTPS autenticada de Estudos.'}</p>
+        <p>Após sua autorização, o Alfred envia apenas os trechos selecionados no importador.</p>
+        <button type="button" onClick={() => navigate('estudos')}>Abrir Estudos</button>
+      </section>}
+      {page === 'arquivos' && <Files key={revision} />}
+      {(page === 'assistente' || page === 'projetos') && <AlfredWorkspace mode={page === 'assistente' ? 'chat' : 'projects'} showMascot={!mascotHidden} revision={revision}
         onActions={(list) => { assistantActions.current = list; }}
         onCreate={(kind, projectId) => setEditor({ kind, projectId })} />}
       {page === 'organizacao' && <div className="calendar-workbench">
@@ -205,7 +228,6 @@ function App() {
             <button type="button" aria-expanded={calendarSetup} onClick={() => setCalendarSetup(!calendarSetup)}>Conexões de calendário</button>
             {calendarSetup && <Agenda integrationsOnly focusGoogle={settingsTarget === 'google'} />}
           </section>
-          <details className="interface-disclosure"><summary>Arquivos gerais</summary><Files /></details>
           <details className="interface-disclosure"><summary>Memória e exportação do Alfred</summary>
             <AssistantMemoryPanel /><ManualExportPanel />
           </details>
@@ -213,6 +235,12 @@ function App() {
           {build && <p className="build-details">Versão <code>{build}</code></p>}
         </div>}
     </main>
+    {more && <EditDialog title="Mais" protect={false} onClose={() => setMore(false)}>
+      <div className="quick-actions">
+        {(['notas', 'arquivos', 'ia', 'configuracoes'] as const).map(id =>
+          <button key={id} type="button" onClick={() => navigate(id)}>{pages[id][0]}</button>)}
+      </div>
+    </EditDialog>}
     {menu && <EditDialog title="Criar" protect={false} onClose={() => setMenu(undefined)}>
       <div className="quick-actions">
         {menu.map(({ label, run }) => <button key={label} type="button" onClick={() => { setMenu(undefined); run(); }}>{label}</button>)}
@@ -223,7 +251,7 @@ function App() {
     {editor?.kind === 'project' && <ProjectEditor onClose={close} onSaved={saved} />}
     {editor?.kind === 'note' && <NoteEditor scope={{ projectId: editor.projectId }} chooseDiscipline={page === 'inicio'} onClose={close} onSaved={saved} />}
     {editor?.kind === 'stage' && editor.projectId && <StageEditor projectId={editor.projectId} onClose={close} onSaved={saved} />}
-    {editor?.kind === 'file' && editor.projectId && <EditDialog title="Adicionar arquivo" onClose={close}>
+    {editor?.kind === 'file' && <EditDialog title="Adicionar arquivo" onClose={close}>
       <Files projectId={editor.projectId} uploadOnly onUploaded={saved} />
     </EditDialog>}
     {editor?.kind === 'account' && <EditDialog title="Editar nome" onClose={close}>

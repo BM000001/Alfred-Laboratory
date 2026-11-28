@@ -15,13 +15,13 @@ function readThread() {
   catch { return undefined; }
 }
 
-export function AlfredWorkspace({ showMascot, revision, onActions, onCreate }: {
+export function AlfredWorkspace({ mode, showMascot, revision, onActions, onCreate }: {
+  mode: 'chat' | 'projects';
   showMascot: boolean;
   revision: number;
   onActions: (actions: Action[]) => void;
   onCreate: (kind: ProjectCreation, projectId?: string) => void;
 }) {
-  const [mode, setMode] = useState<'chat' | 'projects'>('chat');
   const [project, setProject] = useState<Project>();
   const [thread, setThread] = useState(readThread);
   const [threads, setThreads] = useState<{ id?: string; title: string }[]>([]);
@@ -49,7 +49,6 @@ export function AlfredWorkspace({ showMascot, revision, onActions, onCreate }: {
 
   function selectThread(id?: string) {
     setThread(id);
-    setMode('chat');
     try {
       if (id) localStorage.setItem(threadKey, id);
       else localStorage.removeItem(threadKey);
@@ -68,10 +67,6 @@ export function AlfredWorkspace({ showMascot, revision, onActions, onCreate }: {
   });
 
   return <section className="alfred-workbench" aria-label="Área Alfred">
-    <nav aria-label="Conversas e projetos" className="view-switcher">
-      <button type="button" aria-current={mode === 'chat' ? 'page' : undefined} onClick={() => setMode('chat')}>Conversa</button>
-      <button type="button" aria-current={mode === 'projects' ? 'page' : undefined} onClick={() => setMode('projects')}>Projetos</button>
-    </nav>
     <details className="interface-disclosure conversation-index" hidden={mode !== 'chat'}>
       <summary>Histórico de conversas</summary>
       {historyError && <p role="alert">{historyError}</p>}

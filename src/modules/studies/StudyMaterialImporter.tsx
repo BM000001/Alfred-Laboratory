@@ -8,13 +8,19 @@ import { attachStudyMaterial } from './attachStudyMaterial';
 import type { StudyTopic } from './types';
 import { confirmMaterialDefinition, processStoredMaterial } from './materialProcessor';
 import { PROCESSING_PROFILES, definitionDifferences, relevantAmbiguities, type ProcessingProfile } from './materialReliability';
+import { STUDY_PREPARATION_STAGES, createStudyPreparationState, updateStudyPreparationStage, type StudyPreparationState, type StudyPreparationStageId, type StudyPreparationStatus } from './studyPreparationProgress';
+import './studyPreparationProgress.css';
+import { isSameOriginAIAvailable } from './studyRemoteQuestions';
+import { prepareMaterialPack } from './materialPackCheckpoint';
+import { saveValidatedAIStudyPack } from './studyAIStudyPackStore';
+import { displayStudyTitle } from './displayStudyTitle';
 
 const files = createFileService(fileRepository);
 const study = createStudyService(disciplineRepository, studyTopicRepository);
 
 type PendingMaterial = { file: StoredFile; topic?: StudyTopic };
 
-interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'insufficient' | 'error'; detail: string; contextSources?: string[]; }
+interface ProcessingStatus { name: string; status: 'processing' | 'success' | 'review' | 'insufficient' | 'awaiting-ai' | 'error'; detail: string; contextSources?: string[]; preparation?: StudyPreparationState; }
 
 function readBlob(blob: Blob): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -47,6 +53,10 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
   const [profile, setProfile] = useState<ProcessingProfile>('printed');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [aiConsent, setAIConsent] = useState(false);
+  const [aiNotice, setAINotice] = useState('');
+  const aiOrigin = import.meta.env.VITE_STUDIES_AI_ORIGIN;
+  const aiAvailable = isSameOriginAIAvailable(aiOrigin, window.location.origin);
   const fileInput = useRef<HTMLInputElement>(null);
   const cancelRef = useRef(false);
   const processingController = useRef<AbortController | null>(null);
@@ -73,7 +83,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         ?? await study.createTopic({ disciplineId, title: file.name.slice(0, 120), sourceFileId: file.id, sourceFileName: file.name });
       const controller = new AbortController();
       processingController.current = controller;
-      await processStoredMaterial(file.id, 'printed', controller.signal, () => {}, undefined, target);
+      await processStoredMaterial(file.id, 'printed', controller.signal, () => {}, undefined, target, { requireAI: true });
       await onProcessed?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível retomar este material.');
@@ -82,6 +92,43 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
       try { setPending(await loadPending(disciplineId, unit?.id)); }
       catch { setError('Não foi possível atualizar o processamento salvo.'); }
       setSaving(false);
+    }
+  }
+
+  async function retryAIPack(file: StoredFile, topic?: StudyTopic) {
+    if (saving || !aiConsent || !aiAvailable) return;
+    setSaving(true);
+    setError('');
+    setAINotice('Conectando à IA para preparar aulas, questões e flashcards…');
+    const controller = new AbortController();
+    processingController.current = controller;
+    try {
+      const target = topic ?? (await study.listTopics()).find(item =>
+        item.disciplineId === disciplineId && item.sourceFileId === file.id);
+      const source = file.processing?.raw?.text;
+      if (!target || !source) throw new Error('Não foi possível recuperar o texto e a unidade de origem.');
+      const { pack, finish } = await prepareMaterialPack({ fileId: file.id, disciplineId, topicId: target.id, sourceText: source }, {
+        configuredOrigin: aiOrigin, currentOrigin: window.location.origin,
+        sourceText: source, consent: aiConsent, signal: controller.signal,
+      });
+      const saved = await saveValidatedAIStudyPack({
+        fileId: file.id, fileName: file.name, disciplineId, topicId: target.id,
+        sourceText: source, pack, signal: controller.signal,
+        onSaved: (kind, count) => setAINotice('Salvando ' + count + ' novo(s) item(ns) de ' + kind + '…'),
+      });
+      await finish();
+      setAINotice('IA: ' + saved.lessonsAdded + ' aula(s), ' +
+        saved.questionsAdded + ' questão(ões) e ' + saved.flashcardsAdded +
+        ' flashcard(s) novos salvos com origem identificada.');
+      await onProcessed?.();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Falha ao criar questões por IA.');
+      setAINotice('');
+    } finally {
+      processingController.current = null;
+      setSaving(false);
+      try { setPending(await loadPending(disciplineId, unit?.id)); }
+      catch { setError('Não foi possível atualizar a lista de materiais pendentes.'); }
     }
   }
 
@@ -107,9 +154,14 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
     function updateStatus(index: number, status: ProcessingStatus['status'], detail: string, contextSources?: string[]) {
       setStatuses(current => current.map((item, position) => position === index ? { ...item, status, detail, contextSources } : item));
     }
+    function updatePreparation(index: number, stage: StudyPreparationStageId, status: StudyPreparationStatus, error?: string, completedItems?: number, totalItems?: number) {
+      setStatuses(current => current.map((item, position) => position === index && item.preparation
+        ? { ...item, preparation: updateStudyPreparationStage(item.preparation, stage, { status, ...(error ? { error } : {}), ...(completedItems === undefined ? {} : { completedItems }), ...(totalItems === undefined ? {} : { totalItems }) }) }
+        : item));
+    }
     let storedChanges = false;
     const storedOriginals = new Set<File>();
-    setStatuses(queue.map((file) => ({ name: file.name, status: 'processing', detail: 'Aguardando processamento local.' })));
+    setStatuses(queue.map((file, index) => ({ name: file.name, status: 'processing', detail: 'Aguardando processamento do original.', preparation: createStudyPreparationState(file.name || `material-${index + 1}`) })));
     try {
       const [existingTopics, savedFiles] = await Promise.all([study.listTopics(), fileRepository.getAll()]);
       for (const [index, file] of queue.entries()) {
@@ -155,19 +207,68 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         }
         const controller = new AbortController();
         processingController.current = controller;
+        updatePreparation(index, 'analysis', 'running');
         try {
-          const { state, cardsAdded, questionsAdded } = await processStoredMaterial(
+          const result = await processStoredMaterial(
             sourceId, profile, controller.signal, detail => updateStatus(index, 'processing', detail), file, topic,
+            { requireAI: true },
           );
-          const resourceMessage = state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
+          const { state, cardsAdded, questionsAdded } = result;
+          const awaitingAI = 'awaitingAI' in result && result.awaitingAI === true;
+          updatePreparation(index, 'analysis', 'completed');
+          let aiResult = '';
+          let aiPrepared = false;
+          if (awaitingAI && aiAvailable && aiConsent && state.raw?.text) {
+            for (const stage of ['lessons', 'questions', 'flashcards'] as const) {
+              updatePreparation(index, stage, 'running');
+            }
+            try {
+              const { pack, finish } = await prepareMaterialPack({ fileId: sourceId, disciplineId, topicId: topic.id, sourceText: state.raw.text }, {
+                configuredOrigin: aiOrigin, currentOrigin: window.location.origin,
+                sourceText: state.raw.text, consent: aiConsent, signal: controller.signal,
+              });
+              const saved = await saveValidatedAIStudyPack({
+                fileId: sourceId, fileName: file.name, disciplineId, topicId: topic.id,
+                sourceText: state.raw.text, pack, signal: controller.signal,
+                onSaved: (kind, count) => updatePreparation(index, kind, 'running', undefined, count, pack[kind].length),
+              });
+              await finish();
+              for (const kind of ['lessons', 'questions', 'flashcards'] as const) {
+                const count = kind === 'lessons' ? saved.lessonsAdded : kind === 'questions'
+                  ? saved.questionsAdded : saved.flashcardsAdded;
+                updatePreparation(index, kind, count > 0 ? 'completed' : 'unavailable',
+                  undefined, count, pack[kind].length);
+              }
+              aiPrepared = (await fileRepository.getById(sourceId))?.processing?.status === 'completed';
+              updatePreparation(index, 'trail', aiPrepared ? 'completed' : 'unavailable');
+              aiResult = 'IA: ' + saved.lessonsAdded + ' aula(s), ' + saved.questionsAdded +
+                ' questão(ões) e ' + saved.flashcardsAdded + ' flashcard(s) novos, todos vinculados à fonte.';
+              if (!aiPrepared) aiResult += ' Parte do conteúdo ainda precisa de material mais completo ou novas solicitações à IA.';
+            } catch (cause) {
+              const message = cause instanceof Error ? cause.message : 'A IA não pôde preparar o conteúdo.';
+              for (const kind of ['lessons', 'questions', 'flashcards'] as const) {
+                updatePreparation(index, kind, 'failed', message);
+              }
+              updatePreparation(index, 'trail', 'unavailable');
+              aiResult = ' A geração por IA falhou: ' + message;
+            }
+          } else if (awaitingAI) {
+            for (const stage of ['lessons', 'questions', 'flashcards', 'trail'] as const) {
+              updatePreparation(index, stage, 'unavailable');
+            }
+          }
+          const resourceMessage = awaitingAI ? 'Material analisado e preservado. ' + (aiPrepared ? 'Pacote preparado por IA. ' : 'Aulas e flashcards aguardam IA. ') +
+            (aiResult || 'Questões aguardam uma prévia autenticada e autorização para envio de trechos.')
+            : state.status === 'review' ? 'Há definições com sentidos opostos. Compare as fontes ou prossiga sem criar atividades sobre esse conceito.'
             : cardsAdded || questionsAdded ? `${cardsAdded} flashcard(s) e ${questionsAdded} questão(ões) gerados.`
             : `Texto salvo (${state.raw?.wordCount ?? 0} palavras), mas não encontrei novas definições explícitas ou outros trechos adequados para gerar cartões ou questões com segurança. O enriquecimento semântico depende de IA.`;
           const differences = state.corrected && state.status !== 'review' ? definitionDifferences(state.corrected) : [];
           const contextSources = differences.flat().map(entry => entry.sourceExcerpt).slice(0, 8);
           const contextNote = differences && differences.length ? ' Há definições diferentes para um mesmo termo. Podem ser complementares ou pertencer a contextos diferentes. Confira os trechos na fonte; esse termo ficou fora da geração automática.' : '';
-          updateStatus(index, state.status === 'review' ? 'review' : state.generated && !state.generated.flashcards.length && !state.generated.questions.length ? 'insufficient' : 'success', `${resourceMessage}${contextNote} Original e texto extraído estão associados à disciplina.`, contextSources);
+          updateStatus(index, state.status === 'review' ? 'review' : aiPrepared ? 'success' : awaitingAI ? 'awaiting-ai' : state.generated && !state.generated.flashcards.length && !state.generated.questions.length ? 'insufficient' : 'success', `${resourceMessage}${contextNote} Original e texto extraído estão associados à disciplina.`, contextSources);
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : 'Falha inesperada ao processar este arquivo.';
+          updatePreparation(index, 'analysis', 'failed', message);
           updateStatus(index, 'error', `${message} O original foi preservado na biblioteca.`);
         } finally { processingController.current = null; }
       }
@@ -194,8 +295,8 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
   const uploadFields = <div className="dialog-form">
     <div>
       <span className="card-label">MATERIAL DA DISCIPLINA</span>
-      <h3>{unit ? `Material de ${unit.title}` : 'Adicionar arquivos de estudo'}</h3>
-      <p>{unit ? 'Selecione um arquivo para vincular a esta unidade.' : 'Selecione um ou vários materiais.'} Ao salvar, Alfred guarda os originais e cria atividades localmente quando encontra definições explícitas.</p>
+      <h3>{unit ? `Material de ${displayStudyTitle(unit.title)}` : 'Adicionar arquivos de estudo'}</h3>
+      <p>{unit ? 'Selecione um arquivo para vincular a esta unidade.' : 'Selecione um ou vários materiais.'} Ao salvar, Alfred analisa e preserva o material. As novas atividades só serão geradas quando a IA real estiver disponível.</p>
     </div>
     <div className="study-filter">
       <label className="field-label" htmlFor="study-processing-profile">Perfil do material</label>
@@ -214,6 +315,10 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         <span>{file.name} · {(file.size / 1024).toFixed(0)} KB</span>
         <button className="text-action" type="button" disabled={saving} aria-label={`Remover ${file.name}`} onClick={() => setStaged((current) => current.filter((item) => item !== file))}>Remover</button>
       </div>)}
+      {aiAvailable && <label className="study-ai-consent">
+        <input type="checkbox" checked={aiConsent} disabled={saving} onChange={event => setAIConsent(event.target.checked)} />
+        Autorizo enviar até 3 trechos curtos deste material à IA protegida para preparar aulas, questões e flashcards.
+      </label>}
       <button className="primary-action" type="button" onClick={() => { onCloseUpload?.(); void saveAndProcess(); }} disabled={saving || !disciplineId}>{saving ? 'Salvando e processando…' : 'Salvar'}</button>
     </div>}
   </div>;
@@ -224,14 +329,31 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
       setStaged([]); onCloseUpload?.();
     }}>{uploadFields}</EditDialog>}
     {error && <p className="module-error" role="alert">{error}</p>}
+    {aiNotice && <p role="status" className="module-feedback">{aiNotice}</p>}
+    {uploadOpen === false && aiAvailable && pending.length > 0 && <label className="study-ai-consent">
+      <input type="checkbox" checked={aiConsent} disabled={saving} onChange={event => setAIConsent(event.target.checked)} />
+      Autorizo enviar trechos curtos deste material à IA protegida para preparar aulas, questões e flashcards.
+    </label>}
     {saving && <div className="study-material-progress" aria-live="polite">
-      <strong>Processamento local · {finishedCount} de {statuses.length} concluído(s)</strong>
+      <strong>Análise dos materiais · {finishedCount} de {statuses.length} arquivo(s) processado(s)</strong>
       <progress value={finishedCount} max={statuses.length || 1} aria-label="Progresso real do processamento dos materiais" />
       <button className="text-action" type="button" onClick={() => { cancelRef.current = true; processingController.current?.abort(); }}>Interromper processamento</button>
     </div>}
     {statuses.length > 0 && <div className="study-material-results" aria-live="polite">
       {statuses.map((item, index) => <article key={`${item.name}:${index}`} className={`study-material-result ${item.status}`}>
-        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : item.status === 'review' ? 'Revisão recomendada' : item.status === 'insufficient' ? 'Evidência insuficiente' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
+        <strong>{item.name}</strong><span>{item.status === 'processing' ? 'Processando' : item.status === 'success' ? 'Pronto' : item.status === 'review' ? 'Revisão recomendada' : item.status === 'insufficient' ? 'Evidência insuficiente' : item.status === 'awaiting-ai' ? 'Aguardando IA' : 'Falha neste arquivo'}</span><p>{item.detail}</p>
+        {item.preparation && <ol className="study-preparation-steps" aria-label={`Etapas de preparação de ${item.name}`}>
+          {STUDY_PREPARATION_STAGES.map(({ id, label }) => {
+            const stage = item.preparation?.stages.find((entry) => entry.id === id);
+            return <li key={id} data-status={stage?.status}><strong>{label}</strong><span>{
+              stage?.status === 'completed' ? 'Concluído'
+                : stage?.status === 'running' ? 'Em andamento'
+                : stage?.status === 'failed' ? 'Falhou'
+                : stage?.status === 'unavailable' ? 'Aguardando conexão com IA'
+                : 'Aguardando'
+            }{stage?.completedItems !== undefined && stage?.totalItems !== undefined ? ` · ${stage.completedItems}/${stage.totalItems} salvo(s)` : ''}</span></li>;
+          })}
+        </ol>}
         {!!item.contextSources?.length && <details><summary>Comparar trechos da fonte</summary><ul>
           {item.contextSources.map(excerpt => <li key={excerpt}>{excerpt}</li>)}
         </ul></details>}
@@ -245,10 +367,16 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
         {choices?.length ? <><p>Os trechos usam o mesmo termo com predicados opostos. Confira o contexto antes de escolher.</p>{choices.map(({ sourceExcerpt }) =>
           <button className="text-action" type="button" key={sourceExcerpt} disabled={saving}
             onClick={() => void resume(file, topic, sourceExcerpt)}>Manter: {sourceExcerpt}</button>)}<button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic, null)}>Continuar sem usar as definições em disputa</button></>
+          : file.processing?.status === 'awaiting-ai' ? <>
+            <p role="status">Fonte analisada. Aulas e flashcards aguardam geração por IA.</p>
+            {aiAvailable ? <button className="primary-action" type="button" disabled={saving || !aiConsent}
+              onClick={() => void retryAIPack(file, topic)}>Preparar conteúdo com IA</button>
+              : <p role="status">Geração remota indisponível nesta versão. Abra a prévia autenticada quando estiver publicada.</p>}
+          </>
           : <button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic)}>Retomar processamento</button>}
       </article>;
     })}
-    <p className="study-material-privacy">Privacidade: extração e geração são locais. PDFs digitalizados continuam exigindo OCR local acionado na área Arquivos antes de serem usados aqui. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
+    <p className="study-material-privacy">Privacidade: o material é extraído e preservado localmente. A geração remota exige uma sessão autorizada e seu consentimento para enviar os trechos selecionados. PDFs digitalizados continuam exigindo OCR local acionado na área Arquivos antes de serem usados aqui. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
   </section>;
 }
 

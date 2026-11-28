@@ -1,7 +1,8 @@
+import type { StudyQuestionDifficulty, StudyQuizAttempt } from './questionTypes';
+
 /**
- * Alfred Studies 2.2 — modelo inicial da trilha.
+ * Alfred Studies 2.2 — modelo da trilha.
  * Camada pura e independente de tema, persistência e geração por IA.
- * Não altera o fluxo legado de Studies até integração e validação no iPhone.
  */
 export const TRAIL_LANDMARKS = [
   { id: 'library', label: 'Biblioteca', purpose: 'Aulas e ensino' },
@@ -13,7 +14,7 @@ export const TRAIL_LANDMARKS = [
 
 export type TrailLandmarkId = (typeof TRAIL_LANDMARKS)[number]['id'];
 export type TrailActivityKind = 'landmark' | 'quick-challenge' | 'flashcards' | 'review';
-export type TrailAvailability = 'available' | 'preparation-needed' | 'insufficient-content' | 'offline';
+export type TrailAvailability = 'available' | 'preparation-needed' | 'insufficient-content' | 'progression-locked' | 'offline';
 export type TrailCompletion = 'not-started' | 'completed' | 'skipped';
 
 export interface TrailNode {
@@ -33,7 +34,7 @@ export interface TrailChapter {
   nodes: TrailNode[];
 }
 
-/** Não há bloqueio de nível ou de nota: todas as atividades podem ser abertas ou puladas. */
+/** Pular uma etapa registra a passagem sem conceder aprovação. */
 export function canSkipTrailNode(_node: TrailNode): boolean {
   return true;
 }
@@ -58,22 +59,45 @@ export function getVisibleLandmarks(nodes: readonly TrailNode[]) {
   }));
 }
 
-type Resources = { lessons: boolean; questions: number; cards: number; sourced: number; attempts: number };
+export const TRAIL_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+
+export function requiredTrailQuestions(activity: NonNullable<StudyQuizAttempt['trail']>['activity']) {
+  return activity === 'quiz' ? 10 : activity === 'verify' ? 3 : undefined;
+}
+
+export function minimumTrailCorrect(activity: NonNullable<StudyQuizAttempt['trail']>['activity'], total: number) {
+  return activity === 'verify' ? 2 : Math.ceil(total * 0.8);
+}
+
+export function passesTrailAttempt(attempt: StudyQuizAttempt) {
+  if (!attempt.trail || !attempt.totalQuestions || attempt.answers.length !== attempt.totalQuestions) return false;
+  const required = requiredTrailQuestions(attempt.trail.activity);
+  return (!required || attempt.totalQuestions === required) &&
+    attempt.correctAnswers >= minimumTrailCorrect(attempt.trail.activity, attempt.totalQuestions);
+}
+
+export function unlockedTargetLevel(level: StudyQuestionDifficulty, attempts: StudyQuizAttempt[]) {
+  return TRAIL_DIFFICULTIES.slice(0, TRAIL_DIFFICULTIES.indexOf(level)).every(difficulty =>
+    attempts.some(attempt => attempt.trail?.activity === 'quiz' &&
+      attempt.trail.difficulty === difficulty && passesTrailAttempt(attempt)));
+}
+
+type Resources = { lessons: boolean; questions: number; cards: number; targetQuestions: number; targetUnlocked: boolean; attempts: number };
 export function buildTrailChapter(
   id: string,
   disciplineId: string,
   title: string,
   resources: Resources,
 ): TrailChapter {
-  const { lessons, questions, cards, sourced, attempts } = resources;
+  const { lessons, questions, cards, targetQuestions, targetUnlocked, attempts } = resources;
   const stops: [string, TrailActivityKind, string, boolean][] = [
     ['library', 'landmark', '', lessons],
     ['quick', 'quick-challenge', 'Desafio rápido', questions > 0],
-    ['targets', 'landmark', '', questions > 0],
+    ['targets', 'landmark', '', targetQuestions >= 10],
     ['recall', 'flashcards', 'Recordar conceitos', cards > 0],
-    ['flashcard-chest', 'landmark', '', cards > 0],
+    ['flashcard-chest', 'landmark', '', cards > 0 && questions >= 3],
     ['review', 'review', 'Revisar tentativas', attempts > 0],
-    ['laboratory', 'landmark', '', sourced > 0],
+    ['laboratory', 'landmark', '', true],
     ['warmup', 'flashcards', 'Revisão antes do simulado', cards > 0],
     ['castle', 'landmark', '', questions > 0],
   ];
@@ -89,7 +113,7 @@ export function buildTrailChapter(
         kind,
         landmarkId: landmark?.id,
         title: landmark?.label ?? label,
-        availability: available
+        availability: key === 'targets' && !targetUnlocked ? 'progression-locked' : available
           ? 'available'
           : key === 'library' || key === 'review'
             ? 'preparation-needed'

@@ -111,3 +111,17 @@ it('retoma um checkpoint legado marcado por estados de execução sem pedir esco
   expect(state.generated?.flashcards).toHaveLength(0);
   expect(extractTextDocument).not.toHaveBeenCalled();
 });
+
+it('não cria questões ou flashcards locais no modo que exige IA real', async () => {
+  await save('awaiting');
+  const result = await processStoredMaterial(
+    'awaiting', 'prose', new AbortController().signal, () => {},
+    undefined, undefined, { requireAI: true },
+  );
+  expect(result.state.status).toBe('awaiting-ai');
+  expect(result.state.raw?.text).toBe(extraction.text);
+  expect(result.state.structured?.definitions).toHaveLength(1);
+  expect(await studyFlashcardRepository.getAll()).toHaveLength(0);
+  expect(await studyQuestionRepository.getAll()).toHaveLength(0);
+  expect((await fileRepository.getById('awaiting'))?.processing?.status).toBe('awaiting-ai');
+});

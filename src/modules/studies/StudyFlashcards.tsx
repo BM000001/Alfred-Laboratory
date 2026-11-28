@@ -8,7 +8,7 @@ const ratingLabels: Array<{ value: FlashcardRating; label: string }> = [
   { value: 'again', label: 'Errei' }, { value: 'hard', label: 'Difícil' }, { value: 'good', label: 'Bom' }, { value: 'easy', label: 'Fácil' },
 ];
 
-export function StudyFlashcards({ disciplineId, topicId, refreshToken = 0 }: { disciplineId: string; topicId?: string; refreshToken?: number }) {
+export function StudyFlashcards({ disciplineId, topicId, refreshToken = 0, onReviewed }: { disciplineId: string; topicId?: string; refreshToken?: number; onReviewed?: () => void }) {
   const [cards, setCards] = useState<StudyFlashcard[]>([]);
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
@@ -46,7 +46,7 @@ export function StudyFlashcards({ disciplineId, topicId, refreshToken = 0 }: { d
   async function rate(rating: FlashcardRating) {
     if (!current) return;
     setError('');
-    try { await service.review(current.id, rating); setShowAnswer(false); setCurrentId(''); await refresh(); }
+    try { await service.review(current.id, rating); setShowAnswer(false); setCurrentId(''); await refresh(); onReviewed?.(); }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível registrar a revisão.'); }
   }
 

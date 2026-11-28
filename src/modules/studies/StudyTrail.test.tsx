@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { StudyTrail } from './StudyTrail';
-import { studyQuestionRepository } from '../../storage/repositories';
+import { studyFlashcardRepository, studyQuestionRepository } from '../../storage/repositories';
 
 it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar domínio', async () => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
@@ -13,11 +13,18 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
       disciplineId: 's',
       createdAt: '',
       status: 'pending' as const,
+      sourceFileId: `material-${id}`,
     })),
     refreshToken: 0,
     onManage: vi.fn(),
     onMaterials: vi.fn(),
+    onAddMaterial: vi.fn(),
   };
+  await studyFlashcardRepository.save({
+    id: 'card-a', disciplineId: 's', topicId: 'a', front: 'O que é o conceito?',
+    back: 'Explicação de referência.', createdAt: '', nextReviewAt: '2099-01-01T00:00:00.000Z',
+    intervalDays: 0, reviewCount: 0,
+  });
   await studyQuestionRepository.save({
     id: 'q',
     disciplineId: 's',
@@ -29,15 +36,15 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
     createdAt: '',
   });
   const view = render(<StudyTrail {...data} />);
-  expect(within(screen.getByRole('list')).getAllByRole('button')).toHaveLength(9);
+  expect(within(await screen.findByRole('list')).getAllByRole('button')).toHaveLength(9);
   fireEvent.click(await screen.findByRole('button', { name: /Castelo Conteúdo insuficiente/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Pular etapa' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Voltar à trilha' }));
-  expect(screen.getByText(/0 de 9 etapas concluídas · 1 puladas/)).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Voltar à trilha' }));
+  expect(await screen.findByText(/0 de 9 etapas concluídas · 1 puladas/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Capítulo'), { target: { value: 'b' } });
-  fireEvent.click(await screen.findByRole('button', { name: /Campo de Alvos Disponível/ }));
+  fireEvent.click(await screen.findByRole('button', { name: /Campo de Alvos Conteúdo insuficiente/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Pular etapa' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Continuar' }));
   expect(screen.getByRole('heading', { name: 'Recordar conceitos' })).toBeInTheDocument();
   view.unmount();
   render(<StudyTrail {...data} />);
@@ -46,4 +53,27 @@ it('mantém nove paradas acessíveis e separa pulos por capítulo sem contar dom
   ).toBeInTheDocument();
   window.dispatchEvent(new Event('offline'));
   vi.restoreAllMocks();
+});
+
+it('exibe as cinco construções sem material e abre a importação ao solicitar', async () => {
+  const addMaterial = vi.fn();
+  render(<StudyTrail discipline={{ id: 'empty', name: 'Vazia', createdAt: '' }} topics={[]}
+    refreshToken={0} onManage={vi.fn()} onMaterials={vi.fn()} onAddMaterial={addMaterial} />);
+  expect(within(await screen.findByRole('list')).getAllByRole('button')).toHaveLength(5);
+  fireEvent.click(await screen.findByRole('button', { name: 'Adicionar material' }));
+  expect(addMaterial).toHaveBeenCalledWith('');
+});
+
+it('abre a disciplina no primeiro capítulo com material, ignorando unidade manual vazia', async () => {
+  await studyQuestionRepository.save({
+    id: 'q-pref', disciplineId: 'prefer', topicId: 'sourced', prompt: 'Questão de teste?',
+    options: ['A', 'B'], correctOptionIndex: 0, difficulty: 'easy', createdAt: '',
+  });
+  render(<StudyTrail discipline={{ id: 'prefer', name: 'Matéria', createdAt: '' }}
+    topics={[
+      { id: 'empty', title: 'Unidade sem material', disciplineId: 'prefer', status: 'pending', createdAt: '' },
+      { id: 'sourced', title: 'Unidade com material', sourceFileId: 'file-1', disciplineId: 'prefer', status: 'pending', createdAt: '' },
+    ]} refreshToken={0} onManage={vi.fn()} onMaterials={vi.fn()} onAddMaterial={vi.fn()} />);
+  expect(await screen.findByRole('list')).toBeInTheDocument();
+  expect(screen.getByLabelText('Capítulo')).toHaveValue('sourced');
 });

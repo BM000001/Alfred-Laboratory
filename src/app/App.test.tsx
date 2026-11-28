@@ -107,6 +107,7 @@ describe('App', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^organização$/i }));
     expect(await screen.findByText('CALENDÁRIO CENTRAL')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
     fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
     fireEvent.click(screen.getByRole('button', { name: 'Conexões de calendário' }));
     expect(screen.getByRole('heading', { name: 'Google Calendar' })).toBeInTheDocument();
@@ -156,7 +157,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText(/Descrição/), { target: { value: 'Estudo inicial' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
     await screen.findByRole('heading', { name: 'Matemática para edição' });
-    fireEvent.click(screen.getByText('Gerenciar disciplina'));
+    fireEvent.click(screen.getByLabelText('Gerenciar matéria'));
     fireEvent.click(screen.getByRole('button', { name: 'Editar disciplina' }));
 
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Matemática Discreta' } });
@@ -228,13 +229,16 @@ describe('App', () => {
     create('Nova disciplina');
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Disciplina da biblioteca' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar disciplina' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Unidades e materiais' }));
+    await screen.findByRole('heading', { name: 'Disciplina da biblioteca' });
+    fireEvent.click(screen.getByLabelText('Gerenciar matéria'));
+  fireEvent.click(await screen.findByRole('button', { name: 'Unidades e materiais' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Materiais' }));
     expect(await screen.findByText('Sua biblioteca está vazia.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Materiais' })).toHaveAttribute('aria-current', 'page');
   });
   it('abre as configurações de backup e restauração', async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mais' }));
     fireEvent.click(screen.getByRole('button', { name: /^configurações$/i }));
     expect(await screen.findByRole('heading', { name: 'Backup local' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Exportar backup JSON' })).toBeInTheDocument();

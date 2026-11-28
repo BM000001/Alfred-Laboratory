@@ -7,16 +7,21 @@ import { createQuestionService, gradeStudyAnswer, getQuestionSnapshot, summarize
 import { LocalQuestionPilot } from './LocalQuestionPilot';
 import { clearQuizDraft, readQuizDraft, writeQuizDraft } from './quizDraft';
 
+import { minimumTrailCorrect, passesTrailAttempt, requiredTrailQuestions } from './trailModel';
+
 const service = createQuestionService(studyQuestionRepository, studyQuizAttemptRepository);
 const emptyOptions = ['', '', '', ''];
 const difficultyLabels: Record<StudyQuestionDifficulty, string> = { easy: 'Fácil', medium: 'Média', hard: 'Difícil' };
 
-export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, trailMode, onFinished, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; trailMode?: 'quick' | 'quiz' | 'lab' | 'final'; onFinished?: () => void; onChanged?: () => void }) {
+export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, trailMode, trailDifficulty, onFinished, onChanged }: { disciplineId: string; topics: StudyTopic[]; unitId?: string; refreshToken?: number; trailMode?: 'quick' | 'quiz' | 'verify' | 'final'; trailDifficulty?: StudyQuestionDifficulty; onFinished?: (attempt: StudyQuizAttempt) => void; onChanged?: () => void }) {
   const pilotTopic = import.meta.env.DEV && import.meta.env.VITE_ALFRED_LOCAL_OLLAMA === '1' &&
     window.location.origin === 'http://127.0.0.1:5173'
     ? topics.find(topic => topic.id === unitId && topic.sourceFileId)
     : undefined;
-  const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]) + (trailMode ? ':' + trailMode : '');
+  const trail = trailMode && trailMode !== 'quick'
+    ? { activity: trailMode, topicId: unitId, difficulty: trailDifficulty } : undefined;
+  const requiredCount = trail && requiredTrailQuestions(trail.activity);
+  const draftKey = 'alfred:quiz-draft:v1:' + JSON.stringify([disciplineId, unitId ?? null]) + (trail ? ':graded:' + trail.activity + ':' + (trailDifficulty ?? 'all') : trailMode ? ':' + trailMode : '');
   const [draftWarning, setDraftWarning] = useState(false);
   const [questions, setQuestions] = useState<StudyQuestion[]>([]);
   const [history, setHistory] = useState<StudyQuizAttempt[]>([]);
@@ -28,7 +33,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
   const [difficulty, setDifficulty] = useState<StudyQuestionDifficulty>('medium');
   const [quizTopicFilter, setQuizTopicFilter] = useState('all');
   const [quizDifficultyFilter, setQuizDifficultyFilter] = useState<StudyQuestionDifficulty | 'all'>('all');
-  const [quizQuestionCount, setQuizQuestionCount] = useState(trailMode === 'quick' ? 3 : trailMode === 'final' ? 50 : 10);
+  const [quizQuestionCount, setQuizQuestionCount] = useState(trailMode === 'quick' || trailMode === 'verify' ? 3 : trailMode === 'final' ? 50 : 10);
   const [phase, setPhase] = useState<'idle' | 'quiz' | 'result'>('idle');
   const [quizQuestions, setQuizQuestions] = useState<StudyQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -87,7 +92,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
     }));
   }, [phase, draftKey, quizStartedAt, quizQuestions, quizAnswers, selectedOptionIndex, revealed]);
 
-  const unitQuestions = useMemo(() => questions.filter(q => (!unitId || q.topicId === unitId) && (trailMode !== 'lab' || q.sourceExcerpt)), [questions, unitId, trailMode]);
+  const unitQuestions = useMemo(() => questions.filter(q => (!unitId || q.topicId === unitId) && (!trailDifficulty || q.difficulty === trailDifficulty)), [questions, unitId, trailDifficulty]);
   const unitHistory = useMemo(() => {
     if (!unitId) return history;
     const questionIds = new Set(unitQuestions.map((question) => question.id));
@@ -143,10 +148,10 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
     const session = selectQuizQuestions(unitQuestions, {
       topicId: quizTopicFilter === 'all' ? undefined : quizTopicFilter,
       difficulty: quizDifficultyFilter,
-      limit: quizQuestionCount,
+      limit: requiredCount ?? quizQuestionCount,
       recentQuestionIds: history.slice(0, 5).flatMap(attempt => attempt.answers.map(answer => answer.questionId)),
     });
-    if (!session.length) return;
+    if (!session.length || (requiredCount && session.length !== requiredCount)) return;
     attemptId.current = crypto.randomUUID();
     setError('');
     setQuizQuestions(session);
@@ -168,12 +173,12 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
     setRevealed(true);
   }
 
-  async function advanceQuiz() {
-    if (!currentQuestion || selectedOptionIndex === null || !revealed || saveInFlight.current) return;
+  async function advanceQuiz(skipped = false) {
+    if (!currentQuestion || (!skipped && (selectedOptionIndex === null || !revealed)) || saveInFlight.current) return;
     const answer: StudyQuizAnswer = {
       questionId: currentQuestion.id,
-      selectedOptionIndex,
-      isCorrect: gradeStudyAnswer(currentQuestion, selectedOptionIndex),
+      selectedOptionIndex: skipped ? null : selectedOptionIndex,
+      isCorrect: !skipped && gradeStudyAnswer(currentQuestion, selectedOptionIndex),
       questionSnapshot: currentQuestion,
     };
     const updatedAnswers = [...quizAnswers, answer];
@@ -194,6 +199,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
       totalQuestions: updatedAnswers.length,
       correctAnswers: summary.correct,
       answers: updatedAnswers,
+      ...(trail && { trail }),
     };
     saveInFlight.current = true;
     setSaving(true);
@@ -212,7 +218,7 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
       setQuizAnswers(updatedAnswers);
       setLastAttempt(saved);
       setPhase('result');
-      onFinished?.();
+      onFinished?.(saved);
       setHistory((previous) => [saved, ...previous.filter((item) => item.id !== saved.id)]);
       onChanged?.();
     } catch (cause) {
@@ -242,19 +248,19 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
   return <section className="study-question-bank" aria-label="Banco de questões e simulados">
     <div className="study-question-header">
       <div><span className="card-label">PRÁTICA E AUTOAVALIAÇÃO</span><h3>Questões e simulados</h3><p>{unitQuestions.length} questão(ões) cadastrada(s) · simulados com até 50 questões</p></div>
-      {phase === 'idle' && <button className="study-quiz-start" type="button" disabled={loading || !availableQuizQuestions.length} onClick={startQuiz}>Iniciar simulado</button>}
+      {phase === 'idle' && <button className="study-quiz-start" type="button" disabled={loading || availableQuizQuestions.length < (requiredCount ?? 1)} onClick={startQuiz}>Iniciar simulado</button>}
       {phase !== 'idle' && <button className="study-quiz-start secondary" type="button" onClick={exitQuiz} disabled={saving}>Sair do simulado</button>}
     </div>
     {phase === 'idle' && <div className="study-quiz-filters">
-      {!unitId && <label htmlFor="study-quiz-topic-filter">Tópico do simulado
+      {!unitId && !requiredCount && <label htmlFor="study-quiz-topic-filter">Tópico do simulado
         <select id="study-quiz-topic-filter" value={quizTopicFilter} onChange={event => setQuizTopicFilter(event.target.value)}><option value="all">Todos os tópicos</option>{topics.map(topic => <option key={topic.id} value={topic.id}>{topic.title}</option>)}</select>
       </label>}
-      <label htmlFor="study-quiz-difficulty-filter">Dificuldade
+      {!requiredCount && <label htmlFor="study-quiz-difficulty-filter">Dificuldade
         <select id="study-quiz-difficulty-filter" value={quizDifficultyFilter} onChange={event => setQuizDifficultyFilter(event.target.value as StudyQuestionDifficulty | 'all')}><option value="all">Todas</option><option value="easy">Fácil</option><option value="medium">Média</option><option value="hard">Difícil</option></select>
-      </label>
-      <label htmlFor="study-quiz-question-count">Quantidade de questões
+      </label>}
+      {requiredCount ? <p>{requiredCount} questões · mínimo de {minimumTrailCorrect(trail!.activity, requiredCount)} acertos</p> : <label htmlFor="study-quiz-question-count">Quantidade de questões
         <input id="study-quiz-question-count" type="number" min="1" max={Math.min(50, availableQuizQuestions.length)} value={Math.min(quizQuestionCount, Math.max(1, availableQuizQuestions.length))} onChange={(event) => setQuizQuestionCount(Math.max(1, Math.min(50, Number(event.target.value) || 1)))} disabled={!availableQuizQuestions.length} />
-      </label>
+      </label>}
       <span>{availableQuizQuestions.length} questão(ões) disponíveis</span>
     </div>}
     {error && <p className="module-error" role="alert">{error}</p>}
@@ -263,7 +269,6 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
     {phase === 'quiz' && currentQuestion && <article className="study-quiz-card">
       <div className="study-quiz-progress"><span>Questão {questionIndex + 1} de {quizQuestions.length}</span><span>{difficultyLabels[currentQuestion.difficulty]}</span></div>
       <div className="progress-track"><span style={{ width: `${((questionIndex + 1) / quizQuestions.length) * 100}%` }} /></div>
-      {trailMode === 'lab' && <blockquote>{currentQuestion.sourceExcerpt}</blockquote>}
       <h4>{currentQuestion.prompt}</h4>
       <div className="study-quiz-options">
         {currentQuestion.options.map((option, index) => <label key={index} className={revealed && index === currentQuestion.correctOptionIndex ? 'correct' : revealed && index === selectedOptionIndex ? 'incorrect' : ''}>
@@ -277,12 +282,14 @@ export function QuestionBank({ disciplineId, topics, unitId, refreshToken = 0, t
         {currentQuestion.sourceExcerpt && <p>Fonte: {currentQuestion.sourceFileName} · “{currentQuestion.sourceExcerpt}”</p>}
       </div>}
       {!revealed ? <button className="primary-action" type="button" onClick={revealAnswer}>Corrigir resposta</button> : <button className="primary-action" type="button" onClick={() => void advanceQuiz()} disabled={saving}>{questionIndex + 1 === quizQuestions.length ? 'Finalizar simulado' : 'Próxima questão'}</button>}
+      {!revealed && <button className="text-action" type="button" disabled={saving} onClick={() => void advanceQuiz(true)}>Pular questão</button>}
     </article>}
 
     {phase === 'result' && lastAttempt && resultSummary && <article className="study-quiz-result">
       <span className="card-label">RESULTADO DO SIMULADO</span>
       <strong className="study-quiz-score">{resultSummary.percentage}%</strong>
-      <p>{resultSummary.correct} acerto(s) de {resultSummary.total} questão(ões) · {resultSummary.incorrect} erro(s)</p>
+      <p>{resultSummary.correct} acerto(s) de {resultSummary.total} questão(ões) · {lastAttempt.answers.filter(answer => !answer.isCorrect && answer.selectedOptionIndex !== null).length} erro(s) · {lastAttempt.answers.filter(answer => answer.selectedOptionIndex === null).length} pulada(s)</p>
+      {lastAttempt.trail && <p role="status">{passesTrailAttempt(lastAttempt) ? 'Aprovado' : 'Nota insuficiente'} · mínimo de {minimumTrailCorrect(lastAttempt.trail.activity, resultSummary.total)} acertos</p>}
       <div className="progress-track"><span style={{ width: `${resultSummary.percentage}%` }} /></div>
       <div className="study-quiz-result-actions"><button className="primary-action" type="button" onClick={startQuiz}>Refazer simulado</button><button className="text-action" type="button" onClick={exitQuiz}>Voltar ao banco</button></div>
       <details className="study-quiz-review"><summary>Revisar respostas e explicações</summary>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171b18">
+  <title>Protótipo visual · Alfred Estudos</title>
+  <style>
+    :root{color-scheme:dark;--bg:#171b18;--surface:#202621;--raised:#282e29;--text:#f3f1ea;--muted:#c3c8bf;--gold:#d8c293;--green:#8fae83;--line:#424b43;--radius:18px;font:16px/1.5 system-ui,-apple-system,sans-serif}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);min-height:100vh}button{font:inherit;color:inherit;background:transparent;border:1px solid var(--line);border-radius:12px;min-height:44px;padding:9px 13px;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}button:hover{border-color:var(--gold)}a{color:inherit;text-decoration:none}.shell{min-height:100vh;display:grid;grid-template-columns:240px minmax(0,1fr)}.sidebar{position:sticky;top:0;height:100vh;padding:24px 16px;border-right:1px solid var(--line);background:#1b201c;display:flex;flex-direction:column;gap:26px}.brand{display:flex;align-items:center;gap:11px;padding:4px 8px}.brand-mark{width:38px;height:38px;border-radius:13px;background:var(--gold);color:#20251f;display:grid;place-items:center;font-weight:800}.brand span:last-child{display:grid}.brand small,.muted{color:var(--muted)}.nav{display:grid;gap:6px}.nav a{padding:11px 12px;border-radius:12px;color:var(--muted)}.nav a[aria-current=page]{background:#303a31;color:var(--text);box-shadow:inset 3px 0 var(--green)}.sidebar-note{margin-top:auto;padding:14px;border:1px solid var(--line);border-radius:14px;color:var(--muted);font-size:.85rem}.main{min-width:0;padding:30px clamp(18px,4vw,56px) 48px}.mobile-header{display:none}.page-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:24px}.eyebrow{color:var(--green);font-size:.75rem;font-weight:750;letter-spacing:.13em;text-transform:uppercase}.page-heading h1{font-size:clamp(1.8rem,3vw,2.6rem);line-height:1.15;margin:5px 0 8px}.page-heading p{margin:0;color:var(--muted)}.local-pill{white-space:nowrap;padding:8px 11px;border:1px solid var(--line);border-radius:999px;color:var(--green);font-size:.82rem}.layout{display:grid;grid-template-columns:minmax(220px,.75fr) minmax(0,1.45fr);gap:18px;align-items:start}.panel{min-width:0;padding:clamp(16px,2vw,24px);border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}.panel h2,.panel h3{margin:0}.panel h2{font-size:1.2rem}.panel p{color:var(--muted)}.unit-card{margin-top:14px;padding:15px;border:1px solid var(--line);border-radius:14px;background:var(--raised)}.unit-card strong{display:block}.unit-card p{margin:5px 0 12px;font-size:.9rem}.tag{display:inline-block;color:var(--gold);font-size:.72rem;font-weight:750;letter-spacing:.1em;text-transform:uppercase}.demo-notice{margin:0 0 18px;padding:11px 13px;border-left:3px solid var(--gold);background:#29271f;color:var(--text);border-radius:0 10px 10px 0;font-size:.88rem}.lesson-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:18px}.lesson-head h2{margin-top:4px}.lesson-count{white-space:nowrap;color:var(--muted);font-size:.84rem}.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:17px}.steps button{text-align:left;font-size:.82rem;padding:8px 10px;background:var(--bg)}.steps button[aria-current=step]{border-color:var(--green);background:#303a31}.steps button span{display:block;color:var(--green);font-size:.72rem}.progress{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.82rem;margin-bottom:12px}.progress progress{width:min(38%,190px);height:8px;accent-color:var(--green)}.stage{min-height:220px;padding:clamp(16px,3vw,26px);border:1px solid var(--line);border-radius:15px;background:var(--raised)}.stage h3{margin:6px 0 12px;font-size:1.25rem}.stage p{margin:0;max-width:68ch;white-space:pre-wrap}.source{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem}.controls{display:flex;justify-content:space-between;gap:10px;margin-top:16px}.primary{background:var(--gold);border-color:var(--gold);color:#20251f;font-weight:750}.footnote{margin-top:18px;color:var(--muted);font-size:.8rem}.bottom-nav{display:none}
+    @media(max-width:850px){.shell{grid-template-columns:1fr}.sidebar{display:none}.mobile-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);background:#1b201c}.mobile-header .brand{padding:0}.main{padding:22px 18px 100px}.layout{grid-template-columns:1fr}.unit-panel{order:2}.lesson-panel{order:1}.bottom-nav{position:fixed;z-index:2;inset:auto 0 0;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:8px max(8px,env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#1b201cf2;backdrop-filter:blur(12px)}.bottom-nav a{min-width:0;min-height:48px;padding:5px 2px;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:.7rem;border-radius:10px}.bottom-nav a[aria-current=page]{color:var(--text);background:#303a31}.bottom-nav span{font-size:1rem;line-height:1.1}.page-heading{align-items:flex-start}.local-pill{font-size:.72rem}}
+    @media(max-width:420px){.main{padding-inline:12px}.page-heading{display:block}.local-pill{display:inline-block;margin-top:12px}.steps{grid-template-columns:repeat(2,minmax(0,1fr))}.steps button{min-height:48px}.lesson-head{display:block}.lesson-count{display:block;margin-top:6px}.stage{min-height:190px}.controls button{flex:1}.bottom-nav a{font-size:.65rem}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Navegação principal">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><span><strong>ALFRED</strong><small>Seu espaço de estudos</small></span></div>
+      <nav class="nav">
+        <a href="#hoje">Hoje</a><a href="#estudos" aria-current="page">Estudos</a><a href="#organizacao">Organização</a><a href="#alfred">Alfred</a><a href="#projetos">Projetos</a><a href="#mais">Mais</a>
+      </nav>
+      <div class="sidebar-note">Seus materiais e seu progresso permanecem no dispositivo.</div>
+    </aside>
+    <header class="mobile-header">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><span><strong>ALFRED</strong><small>Estudos</small></span></div>
+      <button type="button" aria-label="Abrir mais opções">Mais</button>
+    </header>
+    <main class="main" id="estudos">
+      <div class="page-heading">
+        <div><span class="eyebrow">Aprender no seu ritmo</span><h1>Estudos</h1><p>Disciplinas, materiais e atividades em um só espaço.</p></div>
+        <span class="local-pill">● Dados locais</span>
+      </div>
+      <p class="demo-notice"><strong>Protótipo visual.</strong> O conteúdo abaixo é apenas texto demonstrativo para revisar a interface. Não representa material acadêmico nem conteúdo gerado por IA.</p>
+      <div class="layout">
+        <section class="panel unit-panel" aria-labelledby="units-title">
+          <span class="tag">Navegação contextual</span><h2 id="units-title" style="margin-top:6px">Unidades de exemplo</h2>
+          <p>Esta coluna representa a lista de unidades da disciplina selecionada.</p>
+          <article class="unit-card"><strong>Unidade de demonstração</strong><p>Uma descrição curta para testar quebras de linha em telas estreitas.</p><button type="button" aria-pressed="true">Abrir unidade</button></article>
+          <p class="footnote">No aplicativo, esta área usa as unidades e os materiais já salvos.</p>
+        </section>
+        <section class="panel lesson-panel" aria-labelledby="lesson-title">
+          <div class="lesson-head"><div><span class="tag">Aula em etapas</span><h2 id="lesson-title">Prévia de aprendizagem visual</h2></div><span class="lesson-count" id="stepCount">Etapa 1 de 4</span></div>
+          <nav class="steps" aria-label="Etapas da aula">
+            <button type="button" data-step="0" aria-current="step"><span>01</span>Explicação</button>
+            <button type="button" data-step="1"><span>02</span>Exemplo</button>
+            <button type="button" data-step="2"><span>03</span>Verificação</button>
+            <button type="button" data-step="3"><span>04</span>Fonte</button>
+          </nav>
+          <div class="progress"><span id="progressLabel">Progresso visual</span><progress id="progress" max="4" value="1" aria-labelledby="progressLabel"></progress></div>
+          <section class="stage" aria-live="polite" aria-labelledby="stageTitle">
+            <span class="tag" id="stageTag">Demonstração de interface</span>
+            <h3 id="stageTitle">Explicação</h3>
+            <p id="stageText">Uma aula real nesta etapa mostraria aqui o texto que já foi salvo com o material, sem criar uma resposta fictícia.</p>
+            <div class="source" id="sourceText" hidden>Área reservada para o trecho original vinculado à aula.</div>
+          </section>
+          <div class="controls"><button type="button" id="previous" disabled>Etapa anterior</button><button type="button" class="primary" id="next">Próxima etapa</button></div>
+          <p class="footnote">A pessoa revisa a fonte e confirma a conclusão. Este protótipo não salva dados.</p>
+        </section>
+      </div>
+    </main>
+    <nav class="bottom-nav" aria-label="Navegação principal">
+      <a href="#hoje"><span aria-hidden="true">◷</span>Hoje</a><a href="#estudos" aria-current="page"><span aria-hidden="true">▤</span>Estudos</a><a href="#organizacao"><span aria-hidden="true">▦</span>Organização</a><a href="#alfred"><span aria-hidden="true">✦</span>Alfred</a><a href="#projetos"><span aria-hidden="true">▣</span>Projetos</a>
+    </nav>
+  </div>
+  <script>
+    const stages=[
+      ['Explicação','Uma aula real nesta etapa mostraria aqui o texto que já foi salvo com o material, sem criar uma resposta fictícia.'],
+      ['Exemplo','A interface apresenta exemplos que já pertencem à aula salva e mantém a origem acessível.'],
+      ['Verificação','A pergunta serve para autoavaliação; o protótipo não calcula nota nem inventa correção.'],
+      ['Fonte','Confira o trecho original que fundamenta a aula antes de marcar o aprendizado.']
+    ];
+    let current=0;
+    const buttons=[...document.querySelectorAll('[data-step]')];
+    function showStep(index){current=Math.max(0,Math.min(stages.length-1,index));const [title,text]=stages[current];document.querySelector('#stageTitle').textContent=title;document.querySelector('#stageText').textContent=text;document.querySelector('#sourceText').hidden=current!==3;document.querySelector('#stepCount').textContent=`Etapa ${current+1} de ${stages.length}`;document.querySelector('#progress').value=current+1;document.querySelector('#previous').disabled=current===0;document.querySelector('#next').textContent=current===stages.length-1?'Concluir prévia':'Próxima etapa';buttons.forEach((button,i)=>{if(i===current)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current')})}
+    buttons.forEach(button=>button.addEventListener('click',()=>showStep(Number(button.dataset.step))));
+    document.querySelector('#previous').addEventListener('click',()=>showStep(current-1));
+    document.querySelector('#next').addEventListener('click',()=>showStep(current===stages.length-1?0:current+1));
+  </script>
+</body>
+</html>
