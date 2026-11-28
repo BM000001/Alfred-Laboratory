@@ -24,13 +24,14 @@ export function PrivateStudiesSession({ build }: { build?: string }) {
     }
     void check();
     window.addEventListener('focus', check);
-    return () => { active?.abort(); window.removeEventListener('focus', check); };
+    window.addEventListener('alfred-studies-session', check);
+    return () => { active?.abort(); window.removeEventListener('focus', check); window.removeEventListener('alfred-studies-session', check); };
   }, [enabled]);
   if (!enabled) return null;
   return <aside aria-label="Estado da prévia" style={{display:'flex', flexWrap:'wrap', alignItems:'center', gap:'.75rem'}}>
     <small>Versão {build?.split(' · ')[0] ?? 'local'}</small>
     <small role="status">{status}</small>
     <a href="/cdn-cgi/access/logout" target="_blank" rel="noopener noreferrer">Renovar sessão</a>
-    <small>Após sair, abra a prévia na nova aba para entrar novamente.</small>
+    <small>Após sair, <a href="/" target="_blank" rel="noopener noreferrer">entre novamente na prévia</a> e retorne a esta aba.</small>
   </aside>;
 }

@@ -157,7 +157,7 @@ function App() {
     <header className="masthead">
       <a className="wordmark" href={import.meta.env.BASE_URL} aria-label="Alfred, início"
         onClick={(event) => { event.preventDefault(); navigate('inicio'); }}>
-        <img src={brandImage} alt="" /><span>alfred</span>
+        <img src={`${import.meta.env.BASE_URL}brand/alfred-mark.svg`} onError={event => { event.currentTarget.onerror = null; if (event.currentTarget.src !== brandImage) event.currentTarget.src = brandImage; }} alt="" /><span>alfred</span>
       </a>
       <nav className="primary-navigation" aria-label="Navegação principal">
         {navigation.map(({ id, label, icon }) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined}

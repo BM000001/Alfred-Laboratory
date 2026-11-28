@@ -121,8 +121,14 @@ export async function postPrivateStudyRequest(
     throw new Error('Sem conexão com a prévia de IA. O material continua neste dispositivo.');
   }
   if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400) ||
-      response.status === 401 || response.status === 403) {
-    throw new Error('O Cloudflare Access requer uma sessão válida. Entre na prévia com a conta permitida.');
+      response.status === 401) {
+    window.dispatchEvent(new Event('alfred-studies-session'));
+    throw new Error('A sessão do Cloudflare Access expirou ou é inválida. Use Renovar sessão e tente novamente.');
+  }
+  if (response.status === 403) {
+    const denial = await response.json().catch(() => ({}));
+    throw new Error(denial?.error === 'origin' ? 'A origem da solicitação foi recusada. Abra a prévia privada.'
+      : 'A conta atual não tem permissão para usar a IA desta prévia.');
   }
   if (response.status === 429) {
     const retryAfter = response.headers.get('Retry-After');
