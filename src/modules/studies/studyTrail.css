@@ -137,3 +137,8 @@
 .sorting-map svg foreignObject { color: var(--ink); }
 .sorting-blockly { block-size: 21rem; min-inline-size: 0; position: relative; }
 .sorting-code { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.study-lesson-map ul { list-style: none; margin-inline-start: 1rem; border-inline-start: 2px solid var(--edge); padding-inline-start: 1rem; }
+.study-lesson-map li { margin-block: .35rem; }
+.study-lesson-map button { min-height: 44px; }
+.study-visual-stage textarea { display: block; width: 100%; min-height: 5rem; }

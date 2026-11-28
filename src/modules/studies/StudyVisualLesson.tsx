@@ -18,12 +18,25 @@ export function StudyVisualLesson({ lesson, learned, onComplete }: {
 }) {
   const [step, setStep] = useState(0);
   const current = sections[step];
+  const [showMap, setShowMap] = useState(false);
+  const [draft, setDraft] = useState('');
 
   return <div className="study-visual-lesson">
     <div className="study-quiz-progress" aria-live="polite">
       <span>Etapa {step + 1} de {sections.length}</span>
       <progress aria-label="Progresso da aula visual" value={step + 1} max={sections.length} />
     </div>
+    <button type="button" className="text-action" aria-expanded={showMap} onClick={() => setShowMap(!showMap)}>
+      Mapa da aula
+    </button>
+    {showMap && <section aria-label="Mapa da aula" className="study-lesson-map">
+      <h5>{lesson.title}</h5>
+      <ul>{sections.map((section, index) => <li key={section.id}>
+        <button type="button" onClick={() => { setStep(index); setShowMap(false); }}>
+          {section.label}
+        </button>
+      </li>)}</ul>
+    </section>}
     <nav className="study-visual-steps" aria-label="Etapas da aula">
       {sections.map((section, index) => <button key={section.id} type="button"
         aria-current={step === index ? 'step' : undefined}
@@ -38,8 +51,11 @@ export function StudyVisualLesson({ lesson, learned, onComplete }: {
       {current.id === 'check' && <>
         <h5>Verificação de compreensão</h5>
         <p>{lesson.check}</p>
+        <label>Sua resposta
+          <textarea value={draft} maxLength={2000} onChange={event => setDraft(event.target.value)} />
+        </label>
         <details><summary>Conferir resposta fundamentada no material</summary><p>{lesson.answer}</p></details>
-        <p className="field-label">Responda mentalmente ou nas suas anotações. A resposta não é enviada nem corrigida automaticamente.</p>
+        <p className="field-label">Rascunho temporário para comparar com o material. O texto não é enviado nem corrigido automaticamente.</p>
       </>}
       {current.id === 'source' && <details open><summary>Consultar material de origem</summary>
         <blockquote>{lesson.sourceExcerpt}</blockquote>

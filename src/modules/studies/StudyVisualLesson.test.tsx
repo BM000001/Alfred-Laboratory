@@ -21,7 +21,7 @@ describe('StudyVisualLesson', () => {
     expect(screen.getByText(lesson.example)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Etapa 3: Verificação' }));
     expect(screen.getByText(lesson.check)).toBeInTheDocument();
-    expect(screen.getByText(/não é enviada nem corrigida automaticamente/)).toBeInTheDocument();
+    expect(screen.getByText(/não é enviado nem corrigido automaticamente/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Etapa 4: Material de origem' }));
     expect(screen.getByText(lesson.sourceExcerpt)).toBeInTheDocument();
   });
@@ -33,6 +33,16 @@ describe('StudyVisualLesson', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Etapa 4: Material de origem' }));
     fireEvent.click(screen.getByRole('button', { name: 'Marcar como aprendido' }));
     expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it('permite escolher um quadro pelo mapa e comparar um rascunho local', () => {
+    render(<StudyVisualLesson lesson={lesson} learned={false} onComplete={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', {name:'Mapa da aula'}));
+    fireEvent.click(screen.getByRole('button', {name:'Verificação'}));
+    fireEvent.change(screen.getByLabelText('Sua resposta'), {target:{value:'Hipótese local'}});
+    fireEvent.click(screen.getByRole('button', {name:'Próxima etapa'}));
+    fireEvent.click(screen.getByRole('button', {name:'Etapa anterior'}));
+    expect(screen.getByLabelText('Sua resposta')).toHaveValue('Hipótese local');
   });
 
   it('indica conclusão persistida e impede gravá-la novamente', () => {
