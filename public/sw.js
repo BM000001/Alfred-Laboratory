@@ -1,4 +1,5 @@
 const IS_LABORATORY_SCOPE = new URL(self.registration.scope).pathname.startsWith('/Alfred-Laboratory/');
+const PRIVATE_PREVIEW = new URL(self.registration.scope).hostname === 'alfred-studies-iphone-preview.alfred-bm-laboratory.workers.dev';
 const IS_DEMO = new URL(self.registration.scope).pathname === '/Alfred-Laboratory/studies-app/';
 const CACHE_PREFIX = IS_DEMO ? 'studies-demo-' : IS_LABORATORY_SCOPE ? 'laboratory-alfred-' : 'alfred-';
 const SHELL_BUILD = '__ALFRED_SHELL_BUILD__';
@@ -19,7 +20,7 @@ async function cacheAppShell() {
   ];
 
   // Only activate once the new shell and its fingerprinted entrypoints are usable.
-  const response = await fetch(new Request(scope.href, { cache: 'reload' }));
+  const response = await fetch(new Request(scope.href, { cache: 'reload', redirect: 'error' }));
   if (!response.ok) throw new Error('Não foi possível atualizar o shell.');
   const html = await response.clone().text();
   const servedBuild = html.match(/<meta name="alfred-build" content="(?:[a-f0-9]{7}|local) · ([a-f0-9]{16})"\s*\/>/)?.[1];
@@ -31,11 +32,11 @@ async function cacheAppShell() {
   if (!assetUrls.some((url) => url.endsWith('.js')) || !assetUrls.some((url) => url.endsWith('.css'))) {
     throw new Error('O shell não identifica os arquivos da interface.');
   }
-  await cache.addAll([...new Set(assetUrls)].map((url) => new Request(url, { cache: 'reload' })));
+  await cache.addAll([...new Set(assetUrls)].map((url) => new Request(url, { cache: 'reload', redirect: 'error' })));
   await cache.put(scope.href, response.clone());
   await cache.put(new URL('index.html', scope).href, response);
   await Promise.allSettled(urls.slice(2).map(async (url) => {
-    const asset = await fetch(new Request(url, { cache: 'reload' }));
+    const asset = await fetch(new Request(url, { cache: 'reload', redirect: 'error' }));
     if (asset.ok) await cache.put(url, asset);
   }));
 }
@@ -63,6 +64,9 @@ self.addEventListener('fetch', (event) => {
   const scope = new URL(self.registration.scope);
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
 
+  if (PRIVATE_PREVIEW && (url.pathname.startsWith('/cdn-cgi/') || url.pathname.startsWith('/api/') ||
+      (request.mode === 'navigate' && self.navigator.onLine !== false))) return;
+
   const isOcrAsset = url.pathname.includes(scope.pathname + 'ocr/');
   const isFingerprintedEntrypoint = url.pathname.startsWith(scope.pathname + 'assets/') && /-[\w-]{8,}\.(?:m?js|css)$/.test(url.pathname);
   const isBlocklyMedia = url.pathname.startsWith(scope.pathname + 'blockly-media/');
@@ -85,7 +89,7 @@ self.addEventListener('fetch', (event) => {
       const response = await fetch(request.mode === 'navigate' ? request.url : request, request.mode === 'navigate' ? { cache: 'reload' } : undefined);
       // The offline navigation shell and its entrypoints are installed together.
       // A live request may be ahead of this worker during a Pages rollout.
-      if (request.mode !== 'navigate' && response.ok && response.type === 'basic') await cache.put(request, response.clone());
+      if (request.mode !== 'navigate' && response.ok && !response.redirected && response.type === 'basic') await cache.put(request, response.clone());
       return response;
     } catch (error) {
       if (cached) return cached;

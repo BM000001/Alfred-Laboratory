@@ -376,7 +376,7 @@ export function StudyMaterialImporter({ disciplineId, unit, onProcessed, uploadO
           : <button className="text-action" type="button" disabled={saving} onClick={() => void resume(file, topic)}>Retomar processamento</button>}
       </article>;
     })}
-    <p className="study-material-privacy">Privacidade: o material é extraído e preservado localmente. A geração por IA ainda não foi configurada nesta tela. PDFs digitalizados continuam exigindo OCR local acionado na área Arquivos antes de serem usados aqui. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
+    <p className="study-material-privacy">Privacidade: o material é extraído e preservado localmente. A geração remota exige uma sessão autorizada e seu consentimento para enviar os trechos selecionados. PDFs digitalizados continuam exigindo OCR local acionado na área Arquivos antes de serem usados aqui. Arquivos até 10 MB; DOCX/PPTX até 25 MB descompactados.</p>
   </section>;
 }
 

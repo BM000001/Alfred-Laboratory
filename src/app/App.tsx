@@ -1,3 +1,5 @@
+import { PrivateStudiesSession } from '../modules/studies/PrivateStudiesSession';
+import brandImage from '../../public/brand/alfred-mark.svg?inline';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Agenda } from '../modules/Agenda';
 import { AgendaEditor } from '../modules/AgendaEditor';
@@ -155,7 +157,7 @@ function App() {
     <header className="masthead">
       <a className="wordmark" href={import.meta.env.BASE_URL} aria-label="Alfred, início"
         onClick={(event) => { event.preventDefault(); navigate('inicio'); }}>
-        <img src={`${import.meta.env.BASE_URL}brand/alfred-mark.svg`} alt="" /><span>alfred</span>
+        <img src={brandImage} alt="" /><span>alfred</span>
       </a>
       <nav className="primary-navigation" aria-label="Navegação principal">
         {navigation.map(({ id, label, icon }) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined}
@@ -180,6 +182,7 @@ function App() {
       {page !== 'inicio' && page !== 'assistente' && page !== 'projetos' && !(page === 'estudos' && studyDisciplineOpen) && <header className="page-heading">
         <h1>{pages[page][0]}</h1>{pages[page][1] && <p>{pages[page][1]}</p>}
       </header>}
+      {page === 'estudos' && <PrivateStudiesSession build={build} />}
       {page === 'estudos' && <Studies initialUnit={studyStart} onActions={(list) => { studyActions.current = list; }} onDisciplineOpenChange={setStudyDisciplineOpen} />}
       {page === 'notas' && <Notes revision={revision} />}
       {page === 'ia' && <section className="entry-panel" aria-labelledby="studies-ai-title">
